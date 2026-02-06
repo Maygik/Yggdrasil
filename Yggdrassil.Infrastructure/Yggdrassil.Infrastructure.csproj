@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Resources\QcSnippets\hitbox.qci" />
+    <None Remove="Resources\QcSnippets\qc_animation_female.qc" />
+    <None Remove="Resources\QcSnippets\qc_animation_female_npc.qc" />
+    <None Remove="Resources\QcSnippets\qc_animation_hostile_npc.qc" />
+    <None Remove="Resources\QcSnippets\qc_animation_male.qc" />
+    <None Remove="Resources\QcSnippets\qc_animation_male_npc.qc" />
+    <None Remove="Resources\QcSnippets\qc_animation_ragdoll.qc" />
+    <None Remove="Resources\QcSnippets\qc_core.qc" />
+    <None Remove="Resources\QcSnippets\qc_ik.qc" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\QcSnippets\hitbox.qci" />
+    <EmbeddedResource Include="Resources\QcSnippets\qc_animation_female.qc" />
+    <EmbeddedResource Include="Resources\QcSnippets\qc_animation_female_npc.qc" />
+    <EmbeddedResource Include="Resources\QcSnippets\qc_animation_hostile_npc.qc" />
+    <EmbeddedResource Include="Resources\QcSnippets\qc_animation_male.qc" />
+    <EmbeddedResource Include="Resources\QcSnippets\qc_animation_male_npc.qc" />
+    <EmbeddedResource Include="Resources\QcSnippets\qc_animation_ragdoll.qc" />
+    <EmbeddedResource Include="Resources\QcSnippets\qc_core.qc" />
+    <EmbeddedResource Include="Resources\QcSnippets\qc_ik.qc" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Yggdrassil.Application\Yggdrassil.Application.csproj" />
+    <ProjectReference Include="..\Yggdrassil.Domain\Yggdrassil.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
