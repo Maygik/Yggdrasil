@@ -31,6 +31,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AssimpNet" Version="4.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Yggdrassil.Application\Yggdrassil.Application.csproj" />
     <ProjectReference Include="..\Yggdrassil.Domain\Yggdrassil.Domain.csproj" />
   </ItemGroup>

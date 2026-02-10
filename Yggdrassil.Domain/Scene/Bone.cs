@@ -11,7 +11,8 @@ namespace Yggdrassil.Domain.Scene
     /// Includes transformation data and parent-child relationships.
     /// Does not perform animation or transform logic.
     /// </summary>
-    internal class Bone
+    public class Bone : Transform
     {
+        public string Name { get; set; } = string.Empty;
     }
 }

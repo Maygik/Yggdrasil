@@ -1,470 +1,145 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Numerics;
 
 namespace Yggdrassil.Domain.Scene
 {
-    public class Vector3
+    /// <summary>
+    /// Generic vector structure supporting int and float types with variable dimensions.
+    /// </summary>
+    /// <typeparam name="T">The numeric type (int or float)</typeparam>
+    public struct Vector<T> : IEquatable<Vector<T>>
+        where T : struct, INumber<T>
     {
-        // Backing fields for X, Y, Z to allow for change tracking and caching of length calculations.
-        private float _x;
-        private float _y;
-        private float _z;
+        private readonly T[] _components;
 
-        // Properties for X, Y, Z with change tracking to mark the vector as dirty when any component changes, which is useful for caching calculations like length.
-        public float X
+        public int Dimensions => _components.Length;
+
+        public T this[int index]
         {
-            get
-            {
-                return _x;
-            }
-            set
-            {
-                if (_x != value)
-                {
-                    _x = value;
-                    dirty = true;
-                }
-            }
-        }
-        public float Y
-        {
-            get
-            {
-                return _y;
-            }
-            set
-            {
-                if (_y != value)
-                {
-                    _y = value;
-                    dirty = true;
-                }
-            }
-        }
-        public float Z
-        {
-            get
-            {
-                return _z;
-            }
-            set
-            {
-                if (_z != value)
-                {
-                    _z = value;
-                    dirty = true;
-                }
-            }
-        }
-        // Constructor for easy initialization of the vector.
-        public Vector3(float x = 0, float y = 0, float z = 0)
-        {
-            _x = x;
-            _y = y;
-            _z = z;
-            dirty = true; // Mark as dirty since we have new values.
-        }
-        // Override ToString for easy debugging and visualization of the vector.
-        public override string ToString()
-        {
-            return $"({_x}, {_y}, {_z})";
+            get => _components[index];
+            set => _components[index] = value;
         }
 
-        // Caching length for performance, since it can be expensive to calculate and is often used in vector operations.
-        private bool dirty = true;
-        private float _cached_length = -1;
-        public float Length
+        public Vector(params T[] components)
         {
-            get
-            {
-                if (dirty)
-                {
-                    _cached_length = MathF.Sqrt(X * X + Y * Y + Z * Z);
-                    dirty = false;
-                }
-                return _cached_length;
-            }
+            _components = new T[components.Length];
+            Array.Copy(components, _components, components.Length);
         }
 
-        // Cheaper to calculate than Length, and often used in comparisons, so we provide it as well.
-        public float LengthSquared
+        public Vector(int dimensions)
         {
-            get
-            {
-                return X * X + Y * Y + Z * Z;
-            }
+            _components = new T[dimensions];
         }
 
-
-        public static Vector3 operator +(Vector3 a, Vector3 b)
+        public T X
         {
-            return new Vector3(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
-        }
-        public static Vector3 operator -(Vector3 a, Vector3 b)
-        {
-            return new Vector3(a.X - b.X, a.Y - b.Y, a.Z - b.Z);
+            get => Dimensions > 0 ? _components[0] : default;
+            set { if (Dimensions > 0) _components[0] = value; }
         }
 
-        public static Vector3 operator *(Vector3 a, float scalar)
+        public T Y
         {
-            return new Vector3(a.X * scalar, a.Y * scalar, a.Z * scalar);
-        }
-        public static Vector3 operator *(float scalar, Vector3 a)
-        {
-            return new Vector3(a.X * scalar, a.Y * scalar, a.Z * scalar);
-        }
-        public static Vector3 operator /(Vector3 a, float scalar)
-        {
-            return new Vector3(a.X / scalar, a.Y / scalar, a.Z / scalar);
+            get => Dimensions > 1 ? _components[1] : default;
+            set { if (Dimensions > 1) _components[1] = value; }
         }
 
-
-        public static float Dot(Vector3 a, Vector3 b)
+        public T Z
         {
-            return a.X * b.X + a.Y * b.Y + a.Z * b.Z;
+            get => Dimensions > 2 ? _components[2] : default;
+            set { if (Dimensions > 2) _components[2] = value; }
         }
 
-        public static Vector3 Cross(Vector3 a, Vector3 b)
+        public T W
         {
-            return new Vector3(
-                a.Y * b.Z - a.Z * b.Y,
-                a.Z * b.X - a.X * b.Z,
-                a.X * b.Y - a.Y * b.X
-            );
+            get => Dimensions > 3 ? _components[3] : default;
+            set { if (Dimensions > 3) _components[3] = value; }
         }
+
+        public static Vector<T> operator +(Vector<T> a, Vector<T> b)
+        {
+            if (a.Dimensions != b.Dimensions)
+                throw new ArgumentException("Vectors must have the same dimensions");
+
+            var result = new T[a.Dimensions];
+            for (int i = 0; i < a.Dimensions; i++)
+                result[i] = a[i] + b[i];
+            return new Vector<T>(result);
+        }
+
+        public static Vector<T> operator -(Vector<T> a, Vector<T> b)
+        {
+            if (a.Dimensions != b.Dimensions)
+                throw new ArgumentException("Vectors must have the same dimensions");
+
+            var result = new T[a.Dimensions];
+            for (int i = 0; i < a.Dimensions; i++)
+                result[i] = a[i] - b[i];
+            return new Vector<T>(result);
+        }
+
+        public static Vector<T> operator *(Vector<T> v, T scalar)
+        {
+            var result = new T[v.Dimensions];
+            for (int i = 0; i < v.Dimensions; i++)
+                result[i] = v[i] * scalar;
+            return new Vector<T>(result);
+        }
+
+        public bool Equals(Vector<T> other)
+        {
+            if (Dimensions != other.Dimensions) return false;
+            for (int i = 0; i < Dimensions; i++)
+                if (!_components[i].Equals(other._components[i]))
+                    return false;
+            return true;
+        }
+
+        public override bool Equals(object? obj) => obj is Vector<T> other && Equals(other);
+
+        public override int GetHashCode()
+        {
+            var hash = new HashCode();
+            foreach (var component in _components)
+                hash.Add(component);
+            return hash.ToHashCode();
+        }
+
+        public override string ToString() => $"({string.Join(", ", _components)})";
     }
 
-    public class Vector2
+    // Convenient aliases for common vector types
+    public struct Vector2<T>(T x, T y) where T : struct, INumber<T>
     {
-        // Backing fields for X, Y, Z to allow for change tracking and caching of length calculations.
-        private float _x;
-        private float _y;
-        private float _z;
-
-        // Properties for X, Y, Z with change tracking to mark the vector as dirty when any component changes, which is useful for caching calculations like length.
-        public float X
-        {
-            get
-            {
-                return _x;
-            }
-            set
-            {
-                if (_x != value)
-                {
-                    _x = value;
-                    dirty = true;
-                }
-            }
-        }
-        public float Y
-        {
-            get
-            {
-                return _y;
-            }
-            set
-            {
-                if (_y != value)
-                {
-                    _y = value;
-                    dirty = true;
-                }
-            }
-        }
-        // Constructor for easy initialization of the vector.
-        public Vector2(float x = 0, float y = 0)
-        {
-            _x = x;
-            _y = y;
-            dirty = true; // Mark as dirty since we have new values.
-        }
-        // Override ToString for easy debugging and visualization of the vector.
-        public override string ToString()
-        {
-            return $"({_x}, {_y})";
-        }
-
-        // Caching length for performance, since it can be expensive to calculate and is often used in vector operations.
-        private bool dirty = true;
-        private float _cached_length = -1;
-        public float Length
-        {
-            get
-            {
-                if (dirty)
-                {
-                    _cached_length = MathF.Sqrt(X * X + Y * Y);
-                    dirty = false;
-                }
-                return _cached_length;
-            }
-        }
-
-        // Cheaper to calculate than Length, and often used in comparisons, so we provide it as well.
-        public float LengthSquared
-        {
-            get
-            {
-                return X * X + Y * Y;
-            }
-        }
-
-        public static Vector2 operator +(Vector2 a, Vector2 b)
-        {
-            return new Vector2(a.X + b.X, a.Y + b.Y);
-        }
-        public static Vector2 operator -(Vector2 a, Vector2 b)
-        {
-            return new Vector2(a.X - b.X, a.Y - b.Y);
-        }
-        public static Vector2 operator *(Vector2 a, float scalar)
-        {
-            return new Vector2(a.X * scalar, a.Y * scalar);
-        }
-        public static Vector2 operator *(float scalar, Vector2 a)
-        {
-            return new Vector2(a.X * scalar, a.Y * scalar);
-        }
-        public static Vector2 operator /(Vector2 a, float scalar)
-        {
-            return new Vector2(a.X / scalar, a.Y / scalar);
-        }
+        public T X = x;
+        public T Y = y;
+        
+        public static implicit operator Vector<T>(Vector2<T> v) => new(v.X, v.Y);
     }
 
-
-    public class Vector3i
+    public struct Vector3<T>(T x, T y, T z) where T : struct, INumber<T>
     {
-        // Backing fields for X, Y, Z to allow for change tracking and caching of length calculations.
-        private int _x;
-        private int _y;
-        private int _z;
+        public T X = x;
+        public T Y = y;
+        public T Z = z;
+        
+        public static implicit operator Vector<T>(Vector3<T> v) => new(v.X, v.Y, v.Z);
 
-        // Properties for X, Y, Z with change tracking to mark the vector as dirty when any component changes, which is useful for caching calculations like length.
-        public int X
-        {
-            get
-            {
-                return _x;
-            }
-            set
-            {
-                if (_x != value)
-                {
-                    _x = value;
-                    dirty = true;
-                }
-            }
-        }
-        public int Y
-        {
-            get
-            {
-                return _y;
-            }
-            set
-            {
-                if (_y != value)
-                {
-                    _y = value;
-                    dirty = true;
-                }
-            }
-        }
-        public int Z
-        {
-            get
-            {
-                return _z;
-            }
-            set
-            {
-                if (_z != value)
-                {
-                    _z = value;
-                    dirty = true;
-                }
-            }
-        }
-        // Constructor for easy initialization of the vector.
-        public Vector3i(int x = 0, int y = 0, int z = 0)
-        {
-            _x = x;
-            _y = y;
-            _z = z;
-            dirty = true; // Mark as dirty since we have new values.
-        }
-        // Override ToString for easy debugging and visualization of the vector.
-        public override string ToString()
-        {
-            return $"({_x}, {_y}, {_z})";
-        }
-
-        // Caching length for performance, since it can be expensive to calculate and is often used in vector operations.
-        private bool dirty = true;
-        private float _cached_length = -1;
-        public float Length
-        {
-            get
-            {
-                if (dirty)
-                {
-                    _cached_length = MathF.Sqrt((float)(X * X + Y * Y + Z * Z));
-                    dirty = false;
-                }
-                return _cached_length;
-            }
-        }
-
-        // Cheaper to calculate than Length, and often used in comparisons, so we provide it as well.
-        public float LengthSquared
-        {
-            get
-            {
-                return X * X + Y * Y + Z * Z;
-            }
-        }
-
-        public Vector3 Vector3
-        {
-            get
-            {
-                return new Vector3(X, Y, Z);
-            }
-        }
-
-        public static Vector3i operator +(Vector3i a, Vector3i b)
-        {
-            return new Vector3i(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
-        }
-        public static Vector3i operator -(Vector3i a, Vector3i b)
-        {
-            return new Vector3i(a.X - b.X, a.Y - b.Y, a.Z - b.Z);
-        }
-        public static Vector3i operator *(Vector3i a, int scalar)
-        {
-            return new Vector3i(a.X * scalar, a.Y * scalar, a.Z * scalar);
-        }
-        public static Vector3i operator *(int scalar, Vector3i a)
-        {
-            return new Vector3i(a.X * scalar, a.Y * scalar, a.Z * scalar);
-        }
-        public static Vector3i operator /(Vector3i a, int scalar)
-        {
-            return new Vector3i(a.X / scalar, a.Y / scalar, a.Z / scalar);
-        }
-
+        public Vector2<T> xy => new(X, Y);
     }
 
-
-    public class Vector2i
+    public struct Vector4<T>(T x, T y, T z, T w) where T : struct, INumber<T>
     {
-        // Backing fields for X, Y, Z to allow for change tracking and caching of length calculations.
-        private int _x;
-        private int _y;
-        private int _z;
-
-        // Properties for X, Y, Z with change tracking to mark the vector as dirty when any component changes, which is useful for caching calculations like length.
-        public int X
-        {
-            get
-            {
-                return _x;
-            }
-            set
-            {
-                if (_x != value)
-                {
-                    _x = value;
-                    dirty = true;
-                }
-            }
-        }
-        public int Y
-        {
-            get
-            {
-                return _y;
-            }
-            set
-            {
-                if (_y != value)
-                {
-                    _y = value;
-                    dirty = true;
-                }
-            }
-        }
-        // Constructor for easy initialization of the vector.
-        public Vector2i(int x = 0, int y = 0)
-        {
-            _x = x;
-            _y = y;
-            dirty = true; // Mark as dirty since we have new values.
-        }
-        // Override ToString for easy debugging and visualization of the vector.
-        public override string ToString()
-        {
-            return $"({_x}, {_y})";
-        }
-
-        // Caching length for performance, since it can be expensive to calculate and is often used in vector operations.
-        private bool dirty = true;
-        private float _cached_length = -1;
-        public float Length
-        {
-            get
-            {
-                if (dirty)
-                {
-                    _cached_length = MathF.Sqrt((float)(X * X + Y * Y));
-                    dirty = false;
-                }
-                return _cached_length;
-            }
-        }
-
-        // Cheaper to calculate than Length, and often used in comparisons, so we provide it as well.
-        public float LengthSquared
-        {
-            get
-            {
-                return X * X + Y * Y;
-            }
-        }
-
-        public Vector2 Vector2
-        {
-            get
-            {
-                return new Vector2(X, Y);
-            }
-        }
-
-        public static Vector2i operator +(Vector2i a, Vector2i b)
-        {
-            return new Vector2i(a.X + b.X, a.Y + b.Y);
-        }
-        public static Vector2i operator -(Vector2i a, Vector2i b)
-        {
-            return new Vector2i(a.X - b.X, a.Y - b.Y);
-        }
-        public static Vector2i operator *(Vector2i a, int scalar)
-        {
-            return new Vector2i(a.X * scalar, a.Y * scalar);
-        }
-        public static Vector2i operator *(int scalar, Vector2i a)
-        {
-            return new Vector2i(a.X * scalar, a.Y * scalar);
-        }
-        public static Vector2i operator /(Vector2i a, int scalar)
-        {
-            return new Vector2i(a.X / scalar, a.Y / scalar);
-        }
+        public T X = x;
+        public T Y = y;
+        public T Z = z;
+        public T W = w;
+        
+        public static implicit operator Vector<T>(Vector4<T> v) => new(v.X, v.Y, v.Z, v.W);
     }
-
 
 }
+
+// Usage examples (add to a separate file or use as needed):
+// using Vector2i = Yggdrassil.Domain.Scene.Vector2<int>;
+// using Vector3f = Yggdrassil.Domain.Scene.Vector3<float>;
+// using Vector4i = Yggdrassil.Domain.Scene.Vector4<int>;

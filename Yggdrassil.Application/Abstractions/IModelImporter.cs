@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Yggdrassil.Domain.Scene;
 
 namespace Yggdrassil.Application.Abstractions
 {
@@ -11,5 +12,6 @@ namespace Yggdrassil.Application.Abstractions
     /// </summary>
     public interface IModelImporter
     {
+        SceneModel ImportModel(string filePath);
     }
 }
