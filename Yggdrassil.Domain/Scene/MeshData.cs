@@ -24,7 +24,7 @@ namespace Yggdrassil.Domain.Scene
         
         // .SMD defines each vertex of each face separately, so we can just store faces as tuples of vertex indices.
         public List<Tuple<int,int,int>> Faces { get; set; } = new List<Tuple<int,int,int>>(); 
-        public List<string> Materials { get; set; } = new List<string>(); // List of materials for each face
+        public List<string> MaterialsByFace { get; set; } = new List<string>(); // List of materials for each face
 
 
 

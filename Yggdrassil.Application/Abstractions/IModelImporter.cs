@@ -12,6 +12,6 @@ namespace Yggdrassil.Application.Abstractions
     /// </summary>
     public interface IModelImporter
     {
-        SceneModel ImportModel(string filePath);
+        Task<SceneModel> ImportModel(string filePath);
     }
 }

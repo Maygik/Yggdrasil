@@ -1,4 +1,32 @@
-﻿using Assimp;
+﻿// TODO: FIX THIS SHIT
+// It's really horrible to work with assimp
+// But I don't want to write my own model importer, so here we are.
+// Nightmare nightmare nightmare nightmare
+
+
+
+// Overview of how it SHOULD be done instead of this:
+// 1. Load the model using assimp, with minimal post-processing (just triangulation and maybe normal generation if needed)
+// 2. Traverse the assimp scene graph and build a mapping of node names to their associated meshes and materials.
+// This will allow us to preserve the original mesh structure and material assignments from the source model, which is important for bodygroups.
+// 3. For each node in the assimp scene graph, merge the meshes associated with that node into a single mesh,
+// applying the node's transformation to the vertices. This way we can preserve the original object structure from the source model, while still having a single mesh for each object part.
+// 4. For each merged mesh, assign materials to the faces based on the assimp material index, using the mapping we built in step 2.
+// 5. Add the merged mesh to the internal scene model's mesh list, which will be used for exporting to source engine formats.
+
+
+
+// This results in a clean and organized internal scene representation that closely matches the original source model's structure, while still being suitable for
+// exporting to source engine formats. It also avoids the issues caused by assimp's tendency to break up meshes by material, which can lead to a messy and disorganized
+// internal representation if not handled properly.
+
+
+
+
+
+
+
+using Assimp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,11 +49,11 @@ namespace Yggdrassil.Infrastructure.Import
     /// </summary>
     public class AssimpModelImporter : IModelImporter
     {
-        public static readonly string[] SupportedExtensions = new string[] { ".obj", ".fbx", ".dae", ".blend" };
+        public static readonly string[] SupportedExtensions = new string[] { ".obj", ".fbx", ".dae", ".glb", ".gltf" };
 
         // Loads a model from filePath using assimp
         // Converts the assimp scene into a SceneModel, which is an internal representation of the model's geometry
-        public SceneModel ImportModel(string filePath)
+        public async Task<SceneModel> ImportModel(string filePath)
         {
             // Check that file path exists
             if (!File.Exists(filePath))
@@ -77,6 +105,7 @@ namespace Yggdrassil.Infrastructure.Import
             // Populate the bone list by traversing the assimp scene and finding all nodes that are referenced as bones in the meshes
 
             var rootNode = assimpScene.RootNode;
+            Dictionary<string, Bone> boneDictionary = new Dictionary<string, Bone>();
             void TraverseBoneNodes(Assimp.Node node)
             {
                 foreach (var child in node.Children)
@@ -91,7 +120,24 @@ namespace Yggdrassil.Infrastructure.Import
                             Name = child.Name,
                             LocalMatrix = child.Transform.ToMatrix4x4() // Convert assimp's 4x4 matrix to our internal format
                         };
-                        internalScene.RootBone ??= internalBone; // If root bone is null, set it to this bone. This assumes that the first bone we encounter is the root bone, which is usually the case.
+                        if (internalScene.RootBone == null)
+                        {
+                            internalScene.RootBone = internalBone; // If this is the first bone we find, set it as the root bone
+                        }
+                        else
+                        {
+                            // Find the parent bone in the internal scene model's bone hierarchy, and add this bone as a child
+                            if (boneDictionary.TryGetValue(node.Name, out Bone parentBone))
+                            {
+                                parentBone.Children.Add(internalBone);
+                            }
+                            else
+                            {
+                                // If the parent bone is not found, it means we haven't processed the parent node yet. This can happen if the bones are not in a strict parent-child order in the assimp scene graph. In this case, we can just add the bone to the dictionary and link it later when we find its parent.
+                                // This is a bit of a hack, but it should work as long as we eventually find all the bones and their parents.
+                                boneDictionary[child.Name] = internalBone;
+                            }
+                        }
                         TraverseBoneNodes(child); // Recursively traverse child nodes to find more bones
                     }
                 }
@@ -122,10 +168,13 @@ namespace Yggdrassil.Infrastructure.Import
                         // Probably not though, since we applied PreTransformVertifes
                         // Don't do it for now
 
+                        int baseVertex = internalMesh.Vertices.Count; // Keep track of the base vertex index for this mesh, so we can correctly offset the face indices when merging
+
                         foreach (var vertex in mesh.Vertices)
                         {
                             internalMesh.Vertices.Add(vertex.ToVector3());
                         }
+
                         foreach (var normal in mesh.Normals)
                         {
                             internalMesh.Normals.Add(normal.ToVector3());
@@ -151,7 +200,7 @@ namespace Yggdrassil.Infrastructure.Import
                                 throw new NotSupportedException($"Only triangular faces are supported. Found a face with {face.IndexCount} indices.");
                             }
                             internalMesh.Faces.Add(Tuple.Create(face.Indices[0], face.Indices[1], face.Indices[2]));
-                            internalMesh.Materials.Add(assimpScene.Materials[mesh.MaterialIndex].Name); // Assign material name based on the mesh's material index
+                            internalMesh.MaterialsByFace.Add(assimpScene.Materials[mesh.MaterialIndex].Name); // Assign material name based on the mesh's material index
                         }
 
                         // Bone weights are a bit more complicated, as they require us to map the bone names to the internal bone hierarchy, and then assign the weights to the vertices. We also need to handle the case where a vertex is influenced by multiple bones, which is common in skinned meshes.
@@ -179,8 +228,17 @@ namespace Yggdrassil.Infrastructure.Import
 
                         // TODO: Blend shapes
 
+                        // End of mesh merging for this node
                     }
+
+                    // After merging all meshes for this node, we should have a single mesh that represents the entire object part,
+                    // with correctly assigned materials and bone weights.
+                    // We can then add this merged mesh to the internal scene model's mesh list, which will be used for exporting to source engine formats.
+
+                    // Add the merged mesh to the internal scene model's mesh list
+                    internalScene.Meshes.Add(internalMesh);
                 }
+
                 // Recursively merge meshes for child nodes
                 foreach (var child in node.Children)
                 {
@@ -188,9 +246,12 @@ namespace Yggdrassil.Infrastructure.Import
                 }
             }
 
+            // Start merging meshes from the root node
+            MergeMeshesAtNode(rootNode);
 
+            // At this point, we have the fully populated internal scene model
 
-            throw new NotImplementedException("Mesh merging and conversion to internal format not implemented yet.");
+            return internalScene;
         }
 
         private Assimp.Scene ImportAssimp(string filePath)
