@@ -1,45 +1,18 @@
-﻿// TODO: FIX THIS SHIT
-// It's really horrible to work with assimp
-// But I don't want to write my own model importer, so here we are.
-// Nightmare nightmare nightmare nightmare
-
-
-
-// Overview of how it SHOULD be done instead of this:
-// 1. Load the model using assimp, with minimal post-processing (just triangulation and maybe normal generation if needed)
-// 2. Traverse the assimp scene graph and build a mapping of node names to their associated meshes and materials.
-// This will allow us to preserve the original mesh structure and material assignments from the source model, which is important for bodygroups.
-// 3. For each node in the assimp scene graph, merge the meshes associated with that node into a single mesh,
-// applying the node's transformation to the vertices. This way we can preserve the original object structure from the source model, while still having a single mesh for each object part.
-// 4. For each merged mesh, assign materials to the faces based on the assimp material index, using the mapping we built in step 2.
-// 5. Add the merged mesh to the internal scene model's mesh list, which will be used for exporting to source engine formats.
-
-
-
-// This results in a clean and organized internal scene representation that closely matches the original source model's structure, while still being suitable for
-// exporting to source engine formats. It also avoids the issues caused by assimp's tendency to break up meshes by material, which can lead to a messy and disorganized
-// internal representation if not handled properly.
-
-
-
-
-
-
-
-using Assimp;
+﻿using Assimp;
+using Assimp.Unmanaged;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Yggdrassil.Application.Abstractions;
 using Yggdrassil.Domain.Scene;
-
-using Vector3 = Yggdrassil.Domain.Scene.Vector3<float>;
-using Vector2 = Yggdrassil.Domain.Scene.Vector2<float>;
 using Bone = Yggdrassil.Domain.Scene.Bone;
 using Matrix4x4 = Yggdrassil.Domain.Scene.Matrix4x4;
+using Vector2 = Yggdrassil.Domain.Scene.Vector2<float>;
+using Vector3 = Yggdrassil.Domain.Scene.Vector3<float>;
 
 namespace Yggdrassil.Infrastructure.Import
 {
@@ -53,7 +26,25 @@ namespace Yggdrassil.Infrastructure.Import
 
         // Loads a model from filePath using assimp
         // Converts the assimp scene into a SceneModel, which is an internal representation of the model's geometry
-        public async Task<SceneModel> ImportModel(string filePath)
+        public Task<SceneModel> ImportModelAsync(string filePath) => Task.FromResult(ImportModelSync(filePath));
+        private SceneModel ImportModelSync(string filePath)
+        {
+            ValidateFilePath(filePath);
+            
+            Assimp.Scene assimpScene = ImportAssimp(filePath);
+            
+            Dictionary<string, List<int>> nodeMeshMapping = BuildNodeMeshMapping(assimpScene);
+            List<MeshData> meshes = ProcessMeshes(assimpScene);
+            Bone? rootBone = BuildSkeletonHierarchy(assimpScene);
+            
+            SceneModel sceneModel = CreateSceneModel(filePath, nodeMeshMapping, meshes, rootBone, assimpScene);
+            
+            return sceneModel;
+        }
+
+        // Make sure it's a valid filepath and a supported format before we try
+        // Throws exceptions if the file is not found or the format is not supported, which can be caught and handled by the caller.
+        private void ValidateFilePath(string filePath)
         {
             // Check that file path exists
             if (!File.Exists(filePath))
@@ -66,192 +57,319 @@ namespace Yggdrassil.Infrastructure.Import
             {
                 throw new NotSupportedException($"File format {extension} is not supported. Supported formats are: {string.Join(", ", SupportedExtensions)}");
             }
+        }
 
-            Assimp.Scene assimpScene = ImportAssimp(filePath);
-
-
-            // Convert to internal SceneModel format
-            SceneModel internalScene = new();
-
-            // Assimp supports multiple meshes per scene, but each mesh can only have one material.
-            // Source engine supports multiple meshes, each with multiple materials.
-            // How does assimp store the separate "objects" in a scene?
-            // It stores them as separate meshes, but they can be linked together with nodes. Each node can have a transformation and a list of meshes. This allows for hierarchical models with multiple parts.
-            // Alright, we need to merge each assimp node into a single mesh, and assign materials to each face based on the assimp material index. This way we can preserve the material assignments while still having a single mesh for the entire model.
-
-            // We need distinct nodes for each object "part" that will become a bodygroup
-            // These would normally be separate meshes in something like blender
-            // But assimp separates things into independent meshes for every material, which is really annoying to work with.
-            // So we need to merge all meshes that were previously part of the same object, then merge all objects that share the same material together, and assign materials to the faces
-            // Problem is: how do we determine what used to be together?
-            // How does assimp's imported hierarchy look in terms of armature and the REAL meshes, not the weird divided ones?
-            // Is it Armature > Real Mesh alongside Armature > Bones
-            // Or is it some weird mixture?
-            // We need to separate out the bone hierarchy from the real meshes, and then merge the real meshes
-            // We CANNOT just merge by material index, because that would merge together meshes that were originally separate objects, which is really bad for bodygroups.
-            // We MUST preserve the original mesh structure, before assimp broke everything.
-
-            // Steps:
-            // 1. Recursively traverse the assimp scene graph, starting from the root node
-            // 2. For each node, merge all meshes associated with that node into a single mesh, applying the node's transformation to the vertices
-            // 3. For each merged mesh, assign materials to the faces based on the assimp material index
-            // 4. Add the merged mesh to the internal scene model
-            // 5. Recursively traverse the child nodes and repeat the process
-
-            // This way we can preserve the original mesh structure, while still having a single mesh for each object part, and correctly assigned materials for bodygroups.
-
-            // List of real meshes we want to use for bodygroups. These are the meshes that were originally separate objects in the source model, before assimp broke them up by material.
-
-            // Populate the bone list by traversing the assimp scene and finding all nodes that are referenced as bones in the meshes
-
-            var rootNode = assimpScene.RootNode;
-            Dictionary<string, Bone> boneDictionary = new Dictionary<string, Bone>();
-            void TraverseBoneNodes(Assimp.Node node)
+        // Builds a mapping of node names to the list of mesh indices that are attached.
+        // Used to combine meshes together by node, since assimp separates a single "real" mesh into separate meshes
+        // on a node by material. Whereas source engine will want combined meshes for bodygroups.
+        private Dictionary<string, List<int>> BuildNodeMeshMapping(Assimp.Scene assimpScene)
+        {
+            Dictionary<string, List<int>> nodeMeshMapping = new Dictionary<string, List<int>>();
+            
+            void MapMeshes(Assimp.Node parentNode)
             {
-                foreach (var child in node.Children)
+                foreach (var node in parentNode.Children)
                 {
-                    // Check if this node is a bone in any of the meshes
-                    bool isBone = assimpScene.Meshes.Any(mesh => mesh.Bones.Any(bone => bone.Name == child.Name));
-                    if (isBone)
+                    // Only add nodes that actually have meshes attached
+                    if (node.MeshCount > 0)
                     {
-                        // If it is a bone, add it to the internal scene model's bone hierarchy
-                        Bone internalBone = new()
-                        {
-                            Name = child.Name,
-                            LocalMatrix = child.Transform.ToMatrix4x4() // Convert assimp's 4x4 matrix to our internal format
-                        };
-                        if (internalScene.RootBone == null)
-                        {
-                            internalScene.RootBone = internalBone; // If this is the first bone we find, set it as the root bone
-                        }
-                        else
-                        {
-                            // Find the parent bone in the internal scene model's bone hierarchy, and add this bone as a child
-                            if (boneDictionary.TryGetValue(node.Name, out Bone parentBone))
-                            {
-                                parentBone.Children.Add(internalBone);
-                            }
-                            else
-                            {
-                                // If the parent bone is not found, it means we haven't processed the parent node yet. This can happen if the bones are not in a strict parent-child order in the assimp scene graph. In this case, we can just add the bone to the dictionary and link it later when we find its parent.
-                                // This is a bit of a hack, but it should work as long as we eventually find all the bones and their parents.
-                                boneDictionary[child.Name] = internalBone;
-                            }
-                        }
-                        TraverseBoneNodes(child); // Recursively traverse child nodes to find more bones
+                        nodeMeshMapping[node.Name] = node.MeshIndices.ToList();
                     }
+                    MapMeshes(node);
                 }
             }
-            TraverseBoneNodes(rootNode);
-            // All bones should now be in the bone hierachy
+            
+            MapMeshes(assimpScene.RootNode);
+            return nodeMeshMapping;
+        }
 
-            // Now we need to merge the meshes for each node, and assign materials to the faces
-            // Create them, then put them in the internal scene model's mesh list, which will be used for exporting to source engine formats
-            // internalScene.Meshes
-
-            void MergeMeshesAtNode(Assimp.Node node)
+        // Processes all meshes in the assimp scene converting them to the internal structure
+        private List<MeshData> ProcessMeshes(Assimp.Scene assimpScene)
+        {
+            List<MeshData> meshes = new List<MeshData>();
+            
+            foreach (var mesh in assimpScene.Meshes)
             {
-                // Get all meshes associated with this node
-                var meshes = node.MeshIndices.Select(index => assimpScene.Meshes[index]).ToList();
-                if (meshes.Count > 0)
+                MeshData meshData = ProcessSingleMesh(mesh, assimpScene);
+                meshes.Add(meshData);
+            }
+            
+
+            return meshes;
+        }
+
+        // Converts a single assimp mesh into the internal meshdata structure
+        private MeshData ProcessSingleMesh(Assimp.Mesh mesh, Assimp.Scene assimpScene)
+        {
+            MeshData meshData = new();
+            meshData.Name = mesh.Name;
+            
+            ProcessVertexData(mesh, meshData);
+            ProcessFaceData(mesh, meshData, assimpScene);
+            ProcessUVData(mesh, meshData);
+            ProcessBoneWeights(mesh, meshData);
+            
+            return meshData;
+        }
+
+        // Converts vertex positions, normals, tangents, and bitangents from the assimp mesh to the internal meshdata structure.
+        private void ProcessVertexData(Assimp.Mesh mesh, MeshData meshData)
+        {
+            meshData.Vertices = mesh.Vertices.Select(v => v.ToVector3()).ToList();
+            meshData.Normals = mesh.Normals.Select(n => n.ToVector3()).ToList();
+            
+            if (mesh.HasTangentBasis)
+            {
+                meshData.Tangents = mesh.Tangents.Select(t => t.ToVector3()).ToList();
+                meshData.BiTangents = mesh.BiTangents.Select(bt => bt.ToVector3()).ToList();
+            }
+            else
+            {
+                meshData.Tangents = Enumerable.Repeat(new Vector3(0, 0, 0), mesh.VertexCount).ToList();
+                meshData.BiTangents = Enumerable.Repeat(new Vector3(0, 0, 0), mesh.VertexCount).ToList();
+                Console.WriteLine($"Warning: Mesh {mesh.Name} has no tangents or bitangents. Filling with empty vectors. This may cause issues with viewport rendering.");
+            }
+        }
+
+        // Converts face indices and material assignments from the assimp mesh to the internal meshdata structure.
+        // Ensures triangles, even though assimp should have already triangulated them.
+        private void ProcessFaceData(Assimp.Mesh mesh, MeshData meshData, Assimp.Scene assimpScene)
+        {
+            meshData.Faces = new List<Tuple<int, int, int>>(mesh.FaceCount);
+            
+            for (int i = 0; i < mesh.FaceCount; i++)
+            {
+                var face = mesh.Faces[i];
+                if (face.IndexCount != 3)
                 {
-                    MeshData internalMesh = new()
-                    {
-                        Name = node.Name, // Use the node name for the mesh name, as this is usually the original object name in the source model
-                    };
-                    for (int i = 0; i < meshes.Count; i++)
-                    {
-                        var mesh = meshes[i];
-                        // Append vertices, normals, uvs, and faces to the internal mesh
-
-                        // TODO: See if node transformation required.
-                        // Probably not though, since we applied PreTransformVertifes
-                        // Don't do it for now
-
-                        int baseVertex = internalMesh.Vertices.Count; // Keep track of the base vertex index for this mesh, so we can correctly offset the face indices when merging
-
-                        foreach (var vertex in mesh.Vertices)
-                        {
-                            internalMesh.Vertices.Add(vertex.ToVector3());
-                        }
-
-                        foreach (var normal in mesh.Normals)
-                        {
-                            internalMesh.Normals.Add(normal.ToVector3());
-                        }
-
-                        foreach (var tangent in mesh.Tangents)
-                        {
-                            internalMesh.Tangents.Add(tangent.ToVector3());
-                        }
-                        foreach (var bitangent in mesh.BiTangents)
-                        {
-                            internalMesh.BiTangents.Add(bitangent.ToVector3());
-                        }
-
-                        foreach (var uv in mesh.TextureCoordinateChannels[0]) // Assuming only one UV channel for now
-                        {
-                            internalMesh.UVs.Add(uv.ToVector3().xy);
-                        }
-                        foreach (var face in mesh.Faces)
-                        {
-                            if (face.IndexCount != 3)
-                            {
-                                throw new NotSupportedException($"Only triangular faces are supported. Found a face with {face.IndexCount} indices.");
-                            }
-                            internalMesh.Faces.Add(Tuple.Create(face.Indices[0], face.Indices[1], face.Indices[2]));
-                            internalMesh.MaterialsByFace.Add(assimpScene.Materials[mesh.MaterialIndex].Name); // Assign material name based on the mesh's material index
-                        }
-
-                        // Bone weights are a bit more complicated, as they require us to map the bone names to the internal bone hierarchy, and then assign the weights to the vertices. We also need to handle the case where a vertex is influenced by multiple bones, which is common in skinned meshes.
-                        // PAIN AND SUFFERING
-
-                        for (int j = 0; j < mesh.Vertices.Count; j++)
-                        {
-                            internalMesh.BoneWeights.Add(new List<Tuple<string, float>>());
-                        }
-                        foreach (var bone in mesh.Bones)
-                        {
-                            string boneName = bone.Name;
-                            foreach (var weight in bone.VertexWeights)
-                            {
-                                // Does this work?
-                                // Will the vertex index match between original hierarchy, and the internal one?
-                                // It should, since we are merging meshes at the node level, and the vertex indices are local to the mesh. As long as we append the vertices in the same order as they appear in the mesh, the indices should match up correctly.
-                                // TODO: Test this thoroughly, as bone weights are really important for skinned meshes, and any mismatch in vertex indices could lead to completely broken animations.
-                                int vertexId = weight.VertexID;
-                                float vertexWeight = weight.Weight;
-                                internalMesh.BoneWeights[vertexId].Add(Tuple.Create(boneName, vertexWeight));
-                            }
-                        }
-
-
-                        // TODO: Blend shapes
-
-                        // End of mesh merging for this node
-                    }
-
-                    // After merging all meshes for this node, we should have a single mesh that represents the entire object part,
-                    // with correctly assigned materials and bone weights.
-                    // We can then add this merged mesh to the internal scene model's mesh list, which will be used for exporting to source engine formats.
-
-                    // Add the merged mesh to the internal scene model's mesh list
-                    internalScene.Meshes.Add(internalMesh);
+                    throw new Exception($"Non-triangular face found in mesh {mesh.Name}. All faces must be triangles. Face index: {i}");
                 }
+                meshData.Faces.Add(Tuple.Create(face.Indices[0], face.Indices[1], face.Indices[2]));
+            }
+            
+            meshData.Material = assimpScene.Materials[mesh.MaterialIndex].Name;
+        }
 
-                // Recursively merge meshes for child nodes
-                foreach (var child in node.Children)
+        // Converts UV coords from assimp to internal
+        // Assigned 0,0 if no UVs are present
+        private void ProcessUVData(Assimp.Mesh mesh, MeshData meshData)
+        {
+            if (mesh.HasTextureCoords(0) && mesh.TextureCoordinateChannels[0].Count > 0)
+            {
+                meshData.UVs = mesh.TextureCoordinateChannels[0].Select(uv => uv.ToVector2()).ToList();
+            }
+            else
+            {
+                meshData.UVs = Enumerable.Repeat(new Vector2(0, 0), mesh.VertexCount).ToList();
+                Console.WriteLine($"Warning: Mesh {mesh.Name} has no UVs. Filling with empty UVs. This may cause issues with texturing in source engine formats.");
+            }
+        }
+
+        // Converts bone weights from assimp to internal structure.
+        // Creates a list of bone-weight pairs for each vertex, sorted by weight descending.
+        private void ProcessBoneWeights(Assimp.Mesh mesh, MeshData meshData)
+        {
+            var weightsList = Enumerable.Range(0, mesh.VertexCount)
+                                    .Select(_ => new List<Tuple<string, float>>())
+                                    .ToList();
+
+            // Populate the weights list with bone-weight pairs for each vertex
+            foreach (var bone in mesh.Bones)
+            {
+                foreach (var weight in bone.VertexWeights)
                 {
-                    MergeMeshesAtNode(child);
+                    weightsList[weight.VertexID].Add(Tuple.Create(bone.Name, weight.Weight));
                 }
             }
 
-            // Start merging meshes from the root node
-            MergeMeshesAtNode(rootNode);
+            // Sort into descending order and normalize
+            foreach (var vertexWeights in weightsList)
+            {
+                vertexWeights.Sort((a, b) => b.Item2.CompareTo(a.Item2));
+                
+                // Normalize and limit to 4 weights per vertex
+                float totalWeight = vertexWeights.Take(4).Sum(w => w.Item2);
+                if (totalWeight > 0)
+                {
+                    for (int i = 0; i < vertexWeights.Count && i < 4; i++)
+                    {
+                        vertexWeights[i] = Tuple.Create(vertexWeights[i].Item1, vertexWeights[i].Item2 / totalWeight);
+                    }
+                    if (vertexWeights.Count > 4)
+                    {
+                        vertexWeights.RemoveRange(4, vertexWeights.Count - 4);
+                    }
+                }
+            }
 
-            // At this point, we have the fully populated internal scene model
+            meshData.BoneWeights = weightsList;
+        }
 
-            return internalScene;
+        // Builds the skeleton hierarchy from the assimp scene.
+        // Surprisingly complex since assimp doesn't differentiate bones
+        private Bone? BuildSkeletonHierarchy(Assimp.Scene assimpScene)
+        {
+            Dictionary<string, Assimp.Node> skeletonNodes = FindSkeletonNodes(assimpScene);
+            List<string> rootBoneNames = FindRootBones(skeletonNodes);
+    
+            ValidateRootBones(rootBoneNames);
+    
+            if (rootBoneNames.Count == 0)
+            {
+                Console.WriteLine("Warning: No root bone found in the model. Importing as prop.");
+                return null;
+            }
+    
+            return ConvertNodesToBones(skeletonNodes, rootBoneNames[0]);
+        }
+
+        // Finds all nodes in the assimp scene that are part of the skeleton.
+        // First finds all nodes that are directly referenced by bones in the meshes,
+        // then finds any helper nodes that are parents of those nodes
+        private Dictionary<string, Assimp.Node> FindSkeletonNodes(Assimp.Scene assimpScene)
+        {
+            Dictionary<string, Assimp.Node> skeletonNodes = new Dictionary<string, Assimp.Node>();
+    
+            // Recursively searches for all bones with weight influences
+            void FindDeformBones(Assimp.Node parentNode, Assimp.Mesh mesh)
+            {
+                foreach (var node in parentNode.Children)
+                {
+                    if (mesh.Bones.Any(b => b.Name == node.Name))
+                    {
+                        skeletonNodes[node.Name] = node;
+                    }
+                    FindDeformBones(node, mesh);
+                }
+            }
+            // Start searching for deform bones from each mesh
+            foreach (var mesh in assimpScene.Meshes)
+            {
+                FindDeformBones(assimpScene.RootNode, mesh);
+            }
+
+            // Searches for any helper bones that are parents of the deform bones
+            // These are bones with no weight influences, but are still important for the skeleton hierarchy
+            // Could be dummy bones for positions, or sockets
+            // Common in XPS models, where the core limbs have no weight influences, but are still important for the skeleton hierarchy
+            var deformBoneNodes = skeletonNodes.Values.ToList();
+            foreach (var deformBoneNode in deformBoneNodes)
+            {
+                for (var n = deformBoneNode; n != null; n = n.Parent)
+                {
+                    if (!skeletonNodes.ContainsKey(n.Name))
+                    {
+                        skeletonNodes[n.Name] = n;
+                    }
+                }
+            }
+
+            return skeletonNodes;
+        }
+
+        // Finds root bones in the skeleton hierarchy. Root bones are bones that have no parent bone.
+        private List<string> FindRootBones(Dictionary<string, Assimp.Node> skeletonNodes)
+        {
+            List<string> rootBones = new();
+    
+            foreach (var kvp in skeletonNodes)
+            {
+                string boneName = kvp.Key;
+                Assimp.Node node = kvp.Value;
+
+                // Check if has any parent at all
+                if (node.Parent == null)
+                {
+                    rootBones.Add(boneName);
+                    continue;
+                }
+
+                // Check if it has a parent, but the parent isn't a bone node
+                string parentName = node.Parent.Name;    
+                if (!skeletonNodes.ContainsKey(parentName))
+                {
+                    rootBones.Add(boneName);
+                }
+            }
+    
+            return rootBones;
+        }
+
+        // Makes sure that there is exactly 0 or 1 root bones in the hierarchy
+        // 0 means it can be treated as a prop
+        // 1 means it can be treated as a normal model with a skeleton
+        private void ValidateRootBones(List<string> rootBones)
+        {
+            if (rootBones.Count > 1)
+            {
+                Console.WriteLine("Warning: Multiple root bones found in the model. This can cause issues with exporting to source engine formats. Root bones found:");
+                foreach (var boneName in rootBones)
+                {
+                    Console.WriteLine($"- {boneName}");
+                }
+                throw new Exception("Multiple root bones found in the model. This can cause issues with exporting to source engine formats. See warning log for details.");
+            }
+        }
+
+        // Converts the skeleton nodes into the internal bone structure, preserving the hierarchy and local transforms.
+        private Bone ConvertNodesToBones(Dictionary<string, Assimp.Node> skeletonNodes, string rootBoneName)
+        {
+            Assimp.Node rootNode = skeletonNodes[rootBoneName];
+            Bone rootBone = new Bone(rootNode.Name);
+            rootBone.LocalMatrix = rootNode.Transform.ToMatrix4x4();
+
+            // Recursively convert child nodes that are part of the skeleton into child bones, preserving the hierarchy and local transforms.
+            void ConvertChildBones(Assimp.Node parentNode, Bone parentBone)
+            {
+                foreach (var node in parentNode.Children)
+                {
+                    if (skeletonNodes.ContainsKey(node.Name))
+                    {
+                        Bone bone = new Bone(node.Name);
+                        bone.LocalMatrix = node.Transform.ToMatrix4x4();
+                        parentBone.AddChild(bone);
+                        ConvertChildBones(node, bone);
+                    }
+                }
+            }
+    
+            ConvertChildBones(rootNode, rootBone);
+    
+            return rootBone;
+        }
+
+        // Creates the final SceneModel by combining the node-mesh mapping, processed meshes, and skeleton hierarchy.
+        private SceneModel CreateSceneModel(string filePath, Dictionary<string, List<int>> nodeMeshMapping, List<MeshData> meshes, Bone? rootBone, Assimp.Scene assimpScene)
+        {
+            SceneModel sceneModel = new SceneModel();
+            sceneModel.Name = Path.GetFileNameWithoutExtension(filePath);
+    
+            foreach (var kvp in nodeMeshMapping)
+            {
+                string nodeName = kvp.Key;
+                List<int> meshIndices = kvp.Value;
+                
+                // Skip nodes with no meshes
+                if (meshIndices.Count == 0)
+                    continue;
+                
+                MeshGroup meshGroup = new MeshGroup();
+                meshGroup.Name = nodeName;
+                // Set the local transform of the mesh group to match the node
+                // Else uses normal identity matrix, which *should* be fine
+                meshGroup.LocalMatrix = assimpScene.RootNode.FindNode(nodeName)?.Transform.ToMatrix4x4() ?? new Matrix4x4();
+
+                foreach (int meshIndex in meshIndices)
+                {
+                    meshGroup.Meshes.Add(meshes[meshIndex]);
+                }
+    
+                sceneModel.MeshGroups.Add(meshGroup);
+            }
+    
+            sceneModel.RootBone ??= rootBone;
+    
+            return sceneModel;
         }
 
         private Assimp.Scene ImportAssimp(string filePath)
@@ -264,18 +382,14 @@ namespace Yggdrassil.Infrastructure.Import
             context.SetConfig(new Assimp.Configs.RemoveComponentConfig(
                 Assimp.ExcludeComponent.Cameras |       // Cameras are unused
                 Assimp.ExcludeComponent.Lights |        // Lights are unused
-                Assimp.ExcludeComponent.Animations |    // Animations are outside the scope of this project
                 Assimp.ExcludeComponent.Colors          // Colors unusable in source
                 ));
 
             // Actually import the model
             Assimp.Scene assimpScene = context.ImportFile(filePath,
                     PostProcessSteps.GenerateNormals |          // Generate normals if they are missing
-                    PostProcessSteps.JoinIdenticalVertices |    // Remove duplicate vertices. I hate modellers for this.
                     PostProcessSteps.Triangulate |              // Triangulaate all faces.
-                    PostProcessSteps.PreTransformVertices |     // Apply all transformations to vertices. If not baked, makes it horrible to debug.
-                    PostProcessSteps.FlipUVs |                  // Flip UV coordinates. Needed for correct texture mapping.
-                    PostProcessSteps.CalculateTangentSpace      // Calculate tangent and bitangent vectors. Makes normal mapping and phong work properly.
+                    PostProcessSteps.CalculateTangentSpace      // Calculate tangent and bitangent vectors. Makes normal mapping and phong work properly."
                     );
 
             return assimpScene;
@@ -287,6 +401,11 @@ namespace Yggdrassil.Infrastructure.Import
         public static Vector3<float> ToVector3(this Assimp.Vector3D v)
         {
             return new Vector3<float>(v.X, v.Y, v.Z);
+        }
+
+        public static Vector2<float> ToVector2(this Assimp.Vector3D v)
+        {
+            return new Vector2<float>(v.X, v.Y);
         }
 
         public static Vector2<float> ToVector2(this Assimp.Vector2D v)

@@ -22,6 +22,24 @@ namespace Yggdrassil.Domain.QC
 
         public AnimationProfile AnimationProfile { get; set; } = AnimationProfile.None;
         public QcFeatures Features { get; set; } = new();
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"$modelname \"{ModelPath}\"");
+            sb.AppendLine($"$cdmaterials \"{string.Join(" ", CdMaterialsPaths)}\"");
+            sb.AppendLine($"$surfaceprop \"{SurfaceProp}\"");
+            sb.AppendLine($"$illumposition \"{IllumBone}\"");
+            if (Bodygroups.Count > 0)
+            {
+                sb.AppendLine("$bodygroups");
+                foreach (var bg in Bodygroups)
+                {
+                    sb.AppendLine($"\t\"{bg.Name}\" {{ {string.Join(" ", bg.Submeshes)} }}");
+                }
+            }
+            return sb.ToString();
+        }
     }
 
     public record Bodygroup (string Name, List<string> Submeshes);

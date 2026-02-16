@@ -16,10 +16,28 @@ namespace Yggdrassil.Domain.Project
         public string Name { get; set; } = "MyProject";
         public QcConfig Qc { get; set; } = new();
         public BuildSettings Build { get; set; } = new();
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Project: {Name}");
+            sb.AppendLine("QC Config:");
+            sb.AppendLine(Qc.ToString());
+            sb.AppendLine("Build Settings:");
+            sb.AppendLine(Build.ToString());
+            return sb.ToString();
+        }
     }
 
     public sealed class BuildSettings
     {
         public string OutputDirectory { get; set; } = "";
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Output Directory: {OutputDirectory}");
+            return sb.ToString();
+        }
     }
 }

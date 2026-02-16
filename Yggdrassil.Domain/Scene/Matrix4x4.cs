@@ -11,7 +11,7 @@ namespace Yggdrassil.Domain.Scene
     {
         public float[,] M { get; } = new float[4, 4];
 
-        public Matrix4x4() {  }
+        public Matrix4x4() { }
 
         public Matrix4x4(float[,] values)
         {
@@ -53,6 +53,7 @@ namespace Yggdrassil.Domain.Scene
             M[2, 0] = m20; M[2, 1] = m21; M[2, 2] = m22; M[2, 3] = m23;
             M[3, 0] = m30; M[3, 1] = m31; M[3, 2] = m32; M[3, 3] = m33;
         }
+
 
         public float[] GetRow(int row)
         {
@@ -153,7 +154,55 @@ namespace Yggdrassil.Domain.Scene
             return sb.ToString();
         }
 
+        public string ToHumanString()
+        {
+            StringBuilder sb = new StringBuilder();
+            // Format the matrix in a readable way
+            // Make sure to align the columns for better readability
+            for (int i = 0; i < 4; i++)
+            {
+                // Format each element to 4 decimal places and align them in columns
+                sb.AppendLine(string.Format("{0,10:F4} {1,10:F4} {2,10:F4} {3,10:F4}", M[i, 0], M[i, 1], M[i, 2], M[i, 3]));
+            }
+
+            return sb.ToString();
+        }
 
 
+        public Vector3<float> GetScale()
+        {
+            return new Vector3<float>
+            {
+                X = (float)Math.Sqrt(M[0, 0] * M[0, 0] + M[1, 0] * M[1, 0] + M[2, 0] * M[2, 0]),
+                Y = (float)Math.Sqrt(M[0, 1] * M[0, 1] + M[1, 1] * M[1, 1] + M[2, 1] * M[2, 1]),
+                Z = (float)Math.Sqrt(M[0, 2] * M[0, 2] + M[1, 2] * M[1, 2] + M[2, 2] * M[2, 2])
+            };
+        }
+
+
+        public static Matrix4x4 CreateScaling(Vector3<float> scale)
+        {
+            return new Matrix4x4(
+                scale.X, 0, 0, 0,
+                0, scale.Y, 0, 0,
+                0, 0, scale.Z, 0,
+                0, 0, 0, 1
+            );
+
+        }
+
+        public void SetScale(Vector3<float> scale)
+        {
+            var currentScale = GetScale();
+            var scaleFactor = new Vector3<float>(scale.X / currentScale.X, scale.Y / currentScale.Y, scale.Z / currentScale.Z);
+            var scalingMatrix = CreateScaling(scaleFactor);
+            for (int i = 0; i < 4; i++)
+            {
+                for (int j = 0; j < 4; j++)
+                {
+                    M[i, j] = scalingMatrix.M[i, j] * M[i, j];
+                }
+            }
+        }
     }
 }

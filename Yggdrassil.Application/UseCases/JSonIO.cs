@@ -13,7 +13,7 @@ namespace Yggdrassil.Application.UseCases
     /// </summary>
     public static class JSonIO
     {
-        public static Project Load(string projectFilePath)
+        public static Project LoadProject(string projectFilePath)
         {
             // For simplicity, we assume the project file is a JSON file that can be deserialized into a Project object.
             if (!File.Exists(projectFilePath))

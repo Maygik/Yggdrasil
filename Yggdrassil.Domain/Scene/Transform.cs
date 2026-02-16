@@ -13,6 +13,16 @@ namespace Yggdrassil.Domain.Scene
         public Transform? Parent { get; set; }
         public List<Transform> Children { get; set; } = new List<Transform>();
 
+        public Transform(Vector3 position, Quaternion rotation, Vector3 scale)
+        {
+
+        }
+
+        public Transform()
+            : this(Vector3.Zero, new Quaternion(), Vector3.One)
+        {
+        }
+
         public void AddChild(Transform child)
         {
             child.Parent = this;
@@ -60,6 +70,34 @@ namespace Yggdrassil.Domain.Scene
             {
                 LocalMatrix = value.ToMatrix() * LocalMatrix;
             }
+        }
+
+        public Vector3 Scale
+        {
+            get
+            {
+                return LocalMatrix.GetScale();
+            }
+            set
+            {
+                LocalMatrix.SetScale(value);
+            }
+        }
+
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+
+            // Transform matrix
+            sb.AppendLine("Local Matrix:");
+            sb.AppendLine(LocalMatrix.ToString());
+            // Human readable position, rotation, scale
+            sb.AppendLine($"Position: {Position}");
+            sb.AppendLine($"Rotation: {Rotation}");
+            sb.AppendLine($"Scale: {Scale}");
+
+            return sb.ToString();
         }
     }
 }

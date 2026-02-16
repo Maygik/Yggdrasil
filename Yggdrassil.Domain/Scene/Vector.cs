@@ -114,6 +114,8 @@ namespace Yggdrassil.Domain.Scene
         public T Y = y;
         
         public static implicit operator Vector<T>(Vector2<T> v) => new(v.X, v.Y);
+        public static readonly Vector2<T> Zero = new(T.CreateChecked(0), T.CreateChecked(0));
+        public static readonly Vector2<T> One = new(T.CreateChecked(1), T.CreateChecked(1));
     }
 
     public struct Vector3<T>(T x, T y, T z) where T : struct, INumber<T>
@@ -125,6 +127,9 @@ namespace Yggdrassil.Domain.Scene
         public static implicit operator Vector<T>(Vector3<T> v) => new(v.X, v.Y, v.Z);
 
         public Vector2<T> xy => new(X, Y);
+
+        public static readonly Vector3<T> Zero = new(T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0));
+        public static readonly Vector3<T> One = new(T.CreateChecked(1), T.CreateChecked(1), T.CreateChecked(1));
     }
 
     public struct Vector4<T>(T x, T y, T z, T w) where T : struct, INumber<T>
@@ -135,6 +140,12 @@ namespace Yggdrassil.Domain.Scene
         public T W = w;
         
         public static implicit operator Vector<T>(Vector4<T> v) => new(v.X, v.Y, v.Z, v.W);
+        
+        public Vector3<T> xyz => new(X, Y, Z);
+        public Vector2<T> xy => new(X, Y);
+
+        public static readonly Vector4<T> Zero = new(T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0));
+        public static readonly Vector4<T> Identity = new(T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(1));
     }
 
 }
