@@ -60,6 +60,7 @@ namespace Yggdrassil.Cli.Commands
 
                 var pipeline = new BuildPipeline();
                 pipeline.AddStep(new GenerateQCStep(Services.Assembler));
+                pipeline.AddStep(new ExportMeshStep(Services.GeneralExporter));
                 pipeline.AddStep(new WriteBuildLogStep());
 
                 // Load the specified project file

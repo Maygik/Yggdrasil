@@ -38,5 +38,10 @@ namespace Yggdrassil.Cli.Parsing
         }
 
 
+        public static bool HasFlag(string[] args, string flagName)
+        {
+            return args.Any(arg => arg.Equals(flagName, StringComparison.OrdinalIgnoreCase));
+        }
+
     }
 }

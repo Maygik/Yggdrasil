@@ -9,7 +9,7 @@ namespace Yggdrassil.Application.Pipeline
     public enum BuildSeverity { Info, Warning, Error }
 
     public sealed record BuildMessage(BuildSeverity Severity, string Code, string Message);
-    // Kind examples: "qc", "qci", "log"
+    // Code examples: "qc", "qci", "log"
 
     public sealed class BuildResult
     {

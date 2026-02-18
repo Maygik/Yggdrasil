@@ -23,7 +23,7 @@ namespace Yggdrassil.Domain.Scene
         public List<Blendshape> Blendshapes { get; set; } = new List<Blendshape>(); // List of blendshapes for this mesh
         
         // .SMD defines each vertex of each face separately, so we can just store faces as tuples of vertex indices.
-        public List<Tuple<int,int,int>> Faces { get; set; } = new List<Tuple<int,int,int>>(); 
+        public List<Face> Faces { get; set; } = new List<Face>(); 
         public string Material { get; set; } = string.Empty; // Material name for this mesh. This is used during QC generation to assign the correct $cdmaterials path.
 
         public override string ToString()
@@ -96,7 +96,7 @@ namespace Yggdrassil.Domain.Scene
             for (int i = 0; i < Faces.Count; i++)
             {
                 var face = Faces[i];
-                sb.AppendLine($"\t{i}: ({face.Item1}, {face.Item2}, {face.Item3})");
+                sb.AppendLine($"\t{i}: ({face.Vertex1}, {face.Vertex2}, {face.Vertex3})");
             }
             sb.AppendLine($"Material Name: {Material}");
             sb.AppendLine($"------------------------------");
@@ -146,5 +146,56 @@ namespace Yggdrassil.Domain.Scene
             }
             return sb.ToString();
         }
+    }
+
+
+    // Internal face class, for iterating through vertices securely
+    public class Face
+    {
+        public int Vertex1 { get; set; }
+        public int Vertex2 { get; set; }
+        public int Vertex3 { get; set; }
+        public Face(int v1, int v2, int v3)
+        {
+            Vertex1 = v1;
+            Vertex2 = v2;
+            Vertex3 = v3;
+        }
+        public override string ToString()
+        {
+            return $"({Vertex1}, {Vertex2}, {Vertex3})";
+        }
+        public int this[int index]
+        {
+            get
+            {
+                return index switch
+                {
+                    0 => Vertex1,
+                    1 => Vertex2,
+                    2 => Vertex3,
+                    _ => throw new IndexOutOfRangeException("Face only has 3 vertices indexed from 0 to 2.")
+                };
+            }
+            set
+            {
+                switch (index)
+                {
+                    case 0:
+                        Vertex1 = value;
+                        break;
+                    case 1:
+                        Vertex2 = value;
+                        break;
+                    case 2:
+                        Vertex3 = value;
+                        break;
+                    default:
+                        throw new IndexOutOfRangeException("Face only has 3 vertices indexed from 0 to 2.");
+                }
+            }
+        }
+
+        public static int VertexCount => 3;
     }
 }

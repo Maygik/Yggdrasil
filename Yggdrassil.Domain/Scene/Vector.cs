@@ -116,6 +116,7 @@ namespace Yggdrassil.Domain.Scene
         public static implicit operator Vector<T>(Vector2<T> v) => new(v.X, v.Y);
         public static readonly Vector2<T> Zero = new(T.CreateChecked(0), T.CreateChecked(0));
         public static readonly Vector2<T> One = new(T.CreateChecked(1), T.CreateChecked(1));
+        public override string ToString() => $"({X}, {Y})";
     }
 
     public struct Vector3<T>(T x, T y, T z) where T : struct, INumber<T>
@@ -130,6 +131,8 @@ namespace Yggdrassil.Domain.Scene
 
         public static readonly Vector3<T> Zero = new(T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0));
         public static readonly Vector3<T> One = new(T.CreateChecked(1), T.CreateChecked(1), T.CreateChecked(1));
+
+        public override string ToString() => $"({X}, {Y}, {Z})";
     }
 
     public struct Vector4<T>(T x, T y, T z, T w) where T : struct, INumber<T>
@@ -146,6 +149,7 @@ namespace Yggdrassil.Domain.Scene
 
         public static readonly Vector4<T> Zero = new(T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0));
         public static readonly Vector4<T> Identity = new(T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(1));
+        public override string ToString() => $"({X}, {Y}, {Z}, {W})";
     }
 
 }

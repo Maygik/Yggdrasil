@@ -10,6 +10,7 @@ using System.Xml.Linq;
 using Yggdrassil.Application.Abstractions;
 using Yggdrassil.Domain.Scene;
 using Bone = Yggdrassil.Domain.Scene.Bone;
+using Face = Yggdrassil.Domain.Scene.Face;
 using Matrix4x4 = Yggdrassil.Domain.Scene.Matrix4x4;
 using Vector2 = Yggdrassil.Domain.Scene.Vector2<float>;
 using Vector3 = Yggdrassil.Domain.Scene.Vector3<float>;
@@ -31,12 +32,19 @@ namespace Yggdrassil.Infrastructure.Import
         {
             ValidateFilePath(filePath);
             
+            Console.WriteLine($"Importing model from file: {filePath}");
             Assimp.Scene assimpScene = ImportAssimp(filePath);
             
+            Console.WriteLine($"Successfully imported model. Processing scene data...");
             Dictionary<string, List<int>> nodeMeshMapping = BuildNodeMeshMapping(assimpScene);
+
+            Console.WriteLine($"Processing {assimpScene.MeshCount} meshes...");
             List<MeshData> meshes = ProcessMeshes(assimpScene);
+
+            Console.WriteLine($"Building skeleton hierarchy...");
             Bone? rootBone = BuildSkeletonHierarchy(assimpScene);
             
+            Console.WriteLine($"Creating scene model...");
             SceneModel sceneModel = CreateSceneModel(filePath, nodeMeshMapping, meshes, rootBone, assimpScene);
             
             return sceneModel;
@@ -103,12 +111,20 @@ namespace Yggdrassil.Infrastructure.Import
         {
             MeshData meshData = new();
             meshData.Name = mesh.Name;
-            
-            ProcessVertexData(mesh, meshData);
-            ProcessFaceData(mesh, meshData, assimpScene);
-            ProcessUVData(mesh, meshData);
-            ProcessBoneWeights(mesh, meshData);
-            
+
+            try
+            {
+                ProcessVertexData(mesh, meshData);
+                ProcessFaceData(mesh, meshData, assimpScene);
+                ProcessUVData(mesh, meshData);
+                ProcessBoneWeights(mesh, meshData);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing mesh {mesh.Name}: {ex.Message}");
+                throw new Exception($"Error processing mesh {mesh.Name}: {ex.Message}", ex);
+            }
+
             return meshData;
         }
 
@@ -135,7 +151,7 @@ namespace Yggdrassil.Infrastructure.Import
         // Ensures triangles, even though assimp should have already triangulated them.
         private void ProcessFaceData(Assimp.Mesh mesh, MeshData meshData, Assimp.Scene assimpScene)
         {
-            meshData.Faces = new List<Tuple<int, int, int>>(mesh.FaceCount);
+            meshData.Faces = new List<Face>(mesh.FaceCount);
             
             for (int i = 0; i < mesh.FaceCount; i++)
             {
@@ -144,7 +160,7 @@ namespace Yggdrassil.Infrastructure.Import
                 {
                     throw new Exception($"Non-triangular face found in mesh {mesh.Name}. All faces must be triangles. Face index: {i}");
                 }
-                meshData.Faces.Add(Tuple.Create(face.Indices[0], face.Indices[1], face.Indices[2]));
+                meshData.Faces.Add(new Face(face.Indices[0], face.Indices[1], face.Indices[2]));
             }
             
             meshData.Material = assimpScene.Materials[mesh.MaterialIndex].Name;
@@ -209,7 +225,10 @@ namespace Yggdrassil.Infrastructure.Import
         // Surprisingly complex since assimp doesn't differentiate bones
         private Bone? BuildSkeletonHierarchy(Assimp.Scene assimpScene)
         {
-            Dictionary<string, Assimp.Node> skeletonNodes = FindSkeletonNodes(assimpScene);
+            Dictionary<string, Tuple<Assimp.Node, bool>> skeletonNodes = FindSkeletonNodes(assimpScene);
+
+            TrimExtraNodes(assimpScene, skeletonNodes);
+
             List<string> rootBoneNames = FindRootBones(skeletonNodes);
     
             ValidateRootBones(rootBoneNames);
@@ -220,62 +239,136 @@ namespace Yggdrassil.Infrastructure.Import
                 return null;
             }
     
+
             return ConvertNodesToBones(skeletonNodes, rootBoneNames[0]);
         }
+
+
+        private void TrimExtraNodes(Assimp.Scene assimpScene, Dictionary<string, Tuple<Assimp.Node, bool>> skeletonNodes)
+        {
+            bool HasBoneDescendant(Assimp.Node node)
+            {
+                if (skeletonNodes.ContainsKey(node.Name)) return true;
+                return node.Children.Any(HasBoneDescendant);
+            }
+
+            List<string> badNodes = new();
+
+            // Trims the extra nodes from the start (e.g. armature, rootnode) until we reach the hips, first deform bone, or first node with multiple children.
+            void FindSkeletonRoot(Assimp.Node node)
+            {
+                var boneChildren = node.Children.Where(c => HasBoneDescendant(c)).ToList();
+
+                if (boneChildren.Count == 1)
+                {
+                    badNodes.Add(node.Name);
+                    FindSkeletonRoot(boneChildren[0]);  // fixed: boneChildren[0] not Children[0]
+                }
+            }
+
+            FindSkeletonRoot(assimpScene.RootNode);
+
+            // Delete the bad nodes
+            foreach (var badNode in badNodes)
+            {
+                Console.WriteLine($"Trimming extra node from skeleton: {badNode}");
+                skeletonNodes.Remove(badNode);
+            }
+        }
+
 
         // Finds all nodes in the assimp scene that are part of the skeleton.
         // First finds all nodes that are directly referenced by bones in the meshes,
         // then finds any helper nodes that are parents of those nodes
-        private Dictionary<string, Assimp.Node> FindSkeletonNodes(Assimp.Scene assimpScene)
+        private Dictionary<string, Tuple<Assimp.Node, bool>> FindSkeletonNodes(Assimp.Scene assimpScene)
         {
-            Dictionary<string, Assimp.Node> skeletonNodes = new Dictionary<string, Assimp.Node>();
-    
-            // Recursively searches for all bones with weight influences
-            void FindDeformBones(Assimp.Node parentNode, Assimp.Mesh mesh)
-            {
-                foreach (var node in parentNode.Children)
-                {
-                    if (mesh.Bones.Any(b => b.Name == node.Name))
-                    {
-                        skeletonNodes[node.Name] = node;
-                    }
-                    FindDeformBones(node, mesh);
-                }
-            }
-            // Start searching for deform bones from each mesh
+            Dictionary<string, Tuple<Assimp.Node, bool>> skeletonNodes = new();
+
+            HashSet<string> deformBoneNames = new();
             foreach (var mesh in assimpScene.Meshes)
             {
-                FindDeformBones(assimpScene.RootNode, mesh);
+                foreach (var bone in mesh.Bones)
+                {
+                    deformBoneNames.Add(bone.Name);
+                }
             }
 
-            // Searches for any helper bones that are parents of the deform bones
+            // Find the nodes that are directly referenced by bones in the meshes
+            void FindNodesByName(Assimp.Node node)
+            {
+                if (deformBoneNames.Contains(node.Name))
+                {
+                    skeletonNodes[node.Name] = new Tuple<Assimp.Node, bool>(node, true);
+                }
+                foreach (var child in node.Children)
+                {
+                    FindNodesByName(child);
+                }
+            }
+
+            FindNodesByName(assimpScene.RootNode);
+
+
+            // Searches for any helper bones that are parents of or in between the deform bones
             // These are bones with no weight influences, but are still important for the skeleton hierarchy
             // Could be dummy bones for positions, or sockets
             // Common in XPS models, where the core limbs have no weight influences, but are still important for the skeleton hierarchy
             var deformBoneNodes = skeletonNodes.Values.ToList();
+
             foreach (var deformBoneNode in deformBoneNodes)
             {
-                for (var n = deformBoneNode; n != null; n = n.Parent)
+                for (var n = deformBoneNode.Item1; n != null; n = n.Parent)
                 {
                     if (!skeletonNodes.ContainsKey(n.Name))
                     {
-                        skeletonNodes[n.Name] = n;
+                        // Only add if this node has at least one child
+                        bool hasSkeletonChild = n.Children.Any(c => skeletonNodes.ContainsKey(c.Name));
+
+                        // Only add helper nodes that look like bones (not "Armature", "Scene", etc.)
+                        if (hasSkeletonChild)
+                        {
+                            skeletonNodes[n.Name] = new Tuple<Assimp.Node, bool>(n, false);
+                        }
+                        else
+                        {
+                            break;
+                        }
                     }
                 }
+            }
+
+            // Also search for raw children of the deform bones, since sometimes those are important (like having all fingers)
+
+            void AddChildNodes(Assimp.Node node)
+            {
+                foreach (var child in node.Children)
+                {
+                    if (!skeletonNodes.ContainsKey(child.Name))
+                    {
+                        skeletonNodes[child.Name] = new Tuple<Assimp.Node, bool>(child, false);
+                        AddChildNodes(child);
+                    }
+                }
+            }
+
+            foreach (var deformBoneNode in deformBoneNodes)
+            {
+                AddChildNodes(deformBoneNode.Item1);
             }
 
             return skeletonNodes;
         }
 
+
         // Finds root bones in the skeleton hierarchy. Root bones are bones that have no parent bone.
-        private List<string> FindRootBones(Dictionary<string, Assimp.Node> skeletonNodes)
+        private List<string> FindRootBones(Dictionary<string, Tuple<Assimp.Node, bool>> skeletonNodes)
         {
             List<string> rootBones = new();
     
             foreach (var kvp in skeletonNodes)
             {
                 string boneName = kvp.Key;
-                Assimp.Node node = kvp.Value;
+                Assimp.Node node = kvp.Value.Item1;
 
                 // Check if has any parent at all
                 if (node.Parent == null)
@@ -309,14 +402,36 @@ namespace Yggdrassil.Infrastructure.Import
                 }
                 throw new Exception("Multiple root bones found in the model. This can cause issues with exporting to source engine formats. See warning log for details.");
             }
+
         }
 
         // Converts the skeleton nodes into the internal bone structure, preserving the hierarchy and local transforms.
-        private Bone ConvertNodesToBones(Dictionary<string, Assimp.Node> skeletonNodes, string rootBoneName)
+        private Bone ConvertNodesToBones(Dictionary<string, Tuple<Assimp.Node, bool>> skeletonNodes, string rootBoneName)
         {
-            Assimp.Node rootNode = skeletonNodes[rootBoneName];
+            Assimp.Node rootNode = skeletonNodes[rootBoneName].Item1;
+
             Bone rootBone = new Bone(rootNode.Name);
+
+            // Get rootBone's world matrix from the root node
             rootBone.LocalMatrix = rootNode.Transform.ToMatrix4x4();
+
+            // TODO: Add an additional transform for the model as a whole so that we can fix the rotation for models that are exported in the wrong orientation (e.g. lying down instead of standing up).
+            // This is a common issue with fbx exports, where the model is rotated 90 degrees on the X axis.
+            // We can detect this by checking if the root bone has a rotation of 90 degrees on the X axis, and if so, we can apply an additional transform to rotate it back to the correct orientation.
+            // This way we can preserve the original transforms of the bones, which is important for animations to work correctly.
+            // But I don't want to apply this fix to all models, since some models are exported with the correct orientation, and applying the fix to those models would mess up their animations.
+            // Maybe just add UI options for the user to apply this fix if they want, and try to automatically detect if the fix is needed by checking the root bone's rotation?
+            // Alternatively, just a simple "Is not above pelvis by a certain threshold" to show a warning might work
+            // Then scale that threshold based on euclidean distance between them, so like 20% of the distance between head and pelvis
+
+
+            // Debug output rootBone transform
+            Console.WriteLine($"Root bone: {rootBone.Name}");
+            Console.WriteLine($"Local matrix: {rootBone.LocalMatrix.ToHumanString()}");
+            Console.WriteLine($"Position: {rootBone.LocalPosition.ToString()}");
+            Console.WriteLine($"Rotation: {rootBone.LocalRotation.EulerAngles.ToString()}");
+            Console.WriteLine($"Scale: {rootBone.LocalScale.ToString()}");
+
 
             // Recursively convert child nodes that are part of the skeleton into child bones, preserving the hierarchy and local transforms.
             void ConvertChildBones(Assimp.Node parentNode, Bone parentBone)

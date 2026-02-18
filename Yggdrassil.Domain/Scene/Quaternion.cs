@@ -209,19 +209,23 @@ namespace Yggdrassil.Domain.Scene
             {
                 // Implementation based on standard conversion from quaternion to Euler angles (in radians)
                 float ysqr = Y * Y;
+
                 // roll (x-axis rotation)
                 float t0 = +2.0f * (W * X + Y * Z);
                 float t1 = +1.0f - 2.0f * (X * X + ysqr);
                 float roll = (float)Math.Atan2(t0, t1);
+
                 // pitch (y-axis rotation)
                 float t2 = +2.0f * (W * Y - Z * X);
-                t2 = t2 > 1.0f ? 1.0f : t2;
-                t2 = t2 < -1.0f ? -1.0f : t2;
+                t2 = Math.Clamp(t2, -1.0f, 1.0f);
                 float pitch = (float)Math.Asin(t2);
+
                 // yaw (z-axis rotation)
                 float t3 = +2.0f * (W * Z + X * Y);
                 float t4 = +1.0f - 2.0f * (ysqr + Z * Z);
                 float yaw = (float)Math.Atan2(t3, t4);
+
+
                 return new Vector3(roll, pitch, yaw);
             }
         }
@@ -242,5 +246,10 @@ namespace Yggdrassil.Domain.Scene
                 z: cr * cp * sy - sr * sp * cy
             );
         }
-    }            
+
+        public override string ToString()
+        {
+            return $"Quaternion(W: {W}, X: {X}, Y: {Y}, Z: {Z})";
+        }
+    }  
 }

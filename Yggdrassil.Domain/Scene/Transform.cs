@@ -15,7 +15,22 @@ namespace Yggdrassil.Domain.Scene
 
         public Transform(Vector3 position, Quaternion rotation, Vector3 scale)
         {
+            LocalMatrix = Matrix4x4.Identity();
 
+            var r = rotation.ToMatrix();
+
+            foreach (var i in Enumerable.Range(0, 3))
+            {
+                LocalMatrix.M[i, 0] = r.M[i, 0] * scale.X;
+                LocalMatrix.M[i, 1] = r.M[i, 1] * scale.Y;
+                LocalMatrix.M[i, 2] = r.M[i, 2] * scale.Z;
+            }
+
+            r.M[0, 3] = position.X;
+            r.M[1, 3] = position.Y;
+            r.M[2, 3] = position.Z;
+
+            LocalMatrix = r;
         }
 
         public Transform()
@@ -46,7 +61,7 @@ namespace Yggdrassil.Domain.Scene
             }
         }
 
-        public Vector3 Position
+        public Vector3 LocalPosition
         {
             get
             {
@@ -59,20 +74,71 @@ namespace Yggdrassil.Domain.Scene
                 LocalMatrix.M[2, 3] = value.Z;
             }
         }
-        
-        public Quaternion Rotation
+        public Vector3 WorldPosition
         {
             get
             {
-                return Quaternion.FromMatrix(LocalMatrix);
-            }
-            set
-            {
-                LocalMatrix = value.ToMatrix() * LocalMatrix;
+                var worldMatrix = WorldMatrix;
+                return new Vector3(worldMatrix.M[0, 3], worldMatrix.M[1, 3], worldMatrix.M[2, 3]);
             }
         }
 
-        public Vector3 Scale
+        public Quaternion LocalRotation
+        {
+            get
+            {
+                return Quaternion.FromMatrix(RemoveScale(LocalMatrix));
+            }
+            set
+            {
+                var pos = LocalPosition;
+                var scale = LocalScale;
+
+                var r = value.ToMatrix();
+
+                foreach (var i in Enumerable.Range(0, 3))
+                {
+                    LocalMatrix.M[i, 0] = r.M[i, 0] * scale.X;
+                    LocalMatrix.M[i, 1] = r.M[i, 1] * scale.Y;
+                    LocalMatrix.M[i, 2] = r.M[i, 2] * scale.Z;
+                }
+
+                r.M[0, 3] = pos.X;
+                r.M[1, 3] = pos.Y;
+                r.M[2, 3] = pos.Z;
+
+                LocalMatrix = r;
+            }
+        }
+
+        public static Matrix4x4 RemoveScale(Matrix4x4 matrix)
+        {
+            var scale = matrix.GetScale();
+            if (scale.X == 0 || scale.Y == 0 || scale.Z == 0)
+            {
+                return matrix; // Avoid division by zero
+            }
+
+            var r = matrix;
+            for (var i = 0; i < 3; i++)
+            {
+                r.M[i, 0] /= scale.X;
+                r.M[i, 1] /= scale.Y;
+                r.M[i, 2] /= scale.Z;
+            }
+            return r;
+        }
+
+        public Quaternion WorldRotation
+        {
+            get
+            {
+                var worldMatrix = WorldMatrix;
+                return Quaternion.FromMatrix(worldMatrix);
+            }
+        }
+
+        public Vector3 LocalScale
         {
             get
             {
@@ -84,6 +150,14 @@ namespace Yggdrassil.Domain.Scene
             }
         }
 
+        public Vector3 WorldScale
+        {
+            get
+            {
+                var worldMatrix = WorldMatrix;
+                return worldMatrix.GetScale();
+            }
+        }
 
         public override string ToString()
         {
@@ -93,9 +167,9 @@ namespace Yggdrassil.Domain.Scene
             sb.AppendLine("Local Matrix:");
             sb.AppendLine(LocalMatrix.ToString());
             // Human readable position, rotation, scale
-            sb.AppendLine($"Position: {Position}");
-            sb.AppendLine($"Rotation: {Rotation}");
-            sb.AppendLine($"Scale: {Scale}");
+            sb.AppendLine($"Position: {LocalPosition}");
+            sb.AppendLine($"Rotation: {LocalRotation}");
+            sb.AppendLine($"Scale: {LocalScale}");
 
             return sb.ToString();
         }

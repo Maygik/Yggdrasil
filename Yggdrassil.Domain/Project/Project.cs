@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Yggdrassil.Domain.QC;
+using Yggdrassil.Domain.Scene;
 
 namespace Yggdrassil.Domain.Project
 {
@@ -17,6 +18,8 @@ namespace Yggdrassil.Domain.Project
         public QcConfig Qc { get; set; } = new();
         public BuildSettings Build { get; set; } = new();
 
+        public SceneModel Scene { get; set; } = new();
+
         public override string ToString()
         {
             var sb = new StringBuilder();
@@ -25,6 +28,17 @@ namespace Yggdrassil.Domain.Project
             sb.AppendLine(Qc.ToString());
             sb.AppendLine("Build Settings:");
             sb.AppendLine(Build.ToString());
+
+            // Append mesh names
+            if (Scene != null)
+            {
+                sb.AppendLine($"Scene: {Scene.Name}");
+                foreach (var mg in Scene.MeshGroups)
+                {
+                    sb.AppendLine($"\tMesh Group: {mg.Name}");
+                }
+            }
+
             return sb.ToString();
         }
     }

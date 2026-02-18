@@ -2,7 +2,7 @@
   "profiles": {
     "Yggdrassil.Cli": {
       "commandName": "Project",
-      "commandLineArgs": "import \"D:\\!addons\\Bruce Banner - Marvel Rivals\\transfer\\Bruce Banner.fbx\" --out \"C:\\Users\\xande\\source\\repos\\Yggdrassil\\Yggdrassil.Cli\\bin\\Debug\\net8.0\\out\""
+      "commandLineArgs": "convert \"D:\\!addons\\Shery\\transfer\\shery.fbx\" --out \"C:\\Users\\xande\\source\\repos\\Yggdrassil\\Yggdrassil.Cli\\bin\\Debug\\net8.0\\out\" --debug"
     }
   }
 }

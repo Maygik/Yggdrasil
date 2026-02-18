@@ -13,5 +13,15 @@ namespace Yggdrassil.Infrastructure.Export
     /// </summary>
     internal class DmxExporter : IMeshExporter
     {
+        public DmxExporter()
+        {
+            // Constructor can be used for any necessary initialization, if needed.
+        }
+        public Task ExportSceneAsync(string folderPath, Domain.Scene.SceneModel scene) => Task.FromResult(ExportScene(folderPath, scene));
+
+        public bool ExportScene(string folderPath, Domain.Scene.SceneModel scene)
+        {
+            throw new NotImplementedException("DmxExporter.ExportScene is not implemented yet.");
+        }
     }
 }

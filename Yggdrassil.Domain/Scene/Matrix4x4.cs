@@ -194,15 +194,16 @@ namespace Yggdrassil.Domain.Scene
         public void SetScale(Vector3<float> scale)
         {
             var currentScale = GetScale();
-            var scaleFactor = new Vector3<float>(scale.X / currentScale.X, scale.Y / currentScale.Y, scale.Z / currentScale.Z);
-            var scalingMatrix = CreateScaling(scaleFactor);
-            for (int i = 0; i < 4; i++)
+            if (currentScale.X == 0 || currentScale.Y == 0 || currentScale.Z == 0)
             {
-                for (int j = 0; j < 4; j++)
-                {
-                    M[i, j] = scalingMatrix.M[i, j] * M[i, j];
-                }
+                return;
             }
+
+            var scaleFactor = new Vector3<float>(scale.X / currentScale.X, scale.Y / currentScale.Y, scale.Z / currentScale.Z);
+            
+            M[0, 0] *= scaleFactor.X; M[1, 0] *= scaleFactor.X; M[2, 0] *= scaleFactor.X;
+            M[0, 1] *= scaleFactor.Y; M[1, 1] *= scaleFactor.Y; M[2, 1] *= scaleFactor.Y;
+            M[0, 2] *= scaleFactor.Z; M[1, 2] *= scaleFactor.Z; M[2, 2] *= scaleFactor.Z;
         }
     }
 }
