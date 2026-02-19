@@ -25,9 +25,9 @@ namespace Yggdrassil.Domain.Scene
             sb.AppendLine($"Model: {Name}");
 
             sb.AppendLine($"Root Bone: {(RootBone != null ? RootBone.Name : "None")}");
-            void PrintBone(Bone bone, string indent = "\t")
+            void PrintBone(Bone bone, string indent = "")
             {
-                sb.AppendLine($"{indent}Bone: {bone.Name}");
+                sb.AppendLine($"{indent}{bone.Name}");
                 foreach (var child in bone.Children)
                 {
                     if (child is Bone childBone)
@@ -35,10 +35,24 @@ namespace Yggdrassil.Domain.Scene
                 }
             }
 
+            // Recursively print the bone hierarchy
             if (RootBone != null)
             {
                 PrintBone(RootBone);
             }
+
+            sb.AppendLine();
+            sb.AppendLine();
+            sb.AppendLine();
+
+
+            // Materials
+            sb.AppendLine($"Materials: {MaterialSettings.Count}");
+            foreach (var kvp in MaterialSettings)
+            {
+                sb.AppendLine($"\tMaterial: {kvp.Key}");
+            }
+
 
             sb.AppendLine();
             sb.AppendLine();
