@@ -15,6 +15,7 @@ namespace Yggdrassil.Domain.Scene
 
         public string Shader = "VertexLitGeneric"; // The shader used by this material. Only VertexLitGeneric is supported for now, but this can be extended in the future if needed.
 
+        public bool Adjusted = false; // Whether this material has been adjusted from the default settings. Used to determine if we need to deal with it at all.
 
         // ----- Parameters -----
         // All null by default, only assigned a value if they are used.

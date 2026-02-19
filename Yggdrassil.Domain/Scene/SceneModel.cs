@@ -50,7 +50,7 @@ namespace Yggdrassil.Domain.Scene
             sb.AppendLine($"Materials: {MaterialSettings.Count}");
             foreach (var kvp in MaterialSettings)
             {
-                sb.AppendLine($"\tMaterial: {kvp.Key}");
+                sb.AppendLine($"\tMaterial: {kvp.Key} {(kvp.Value.Adjusted ? "(Adjusted)" : "(Unedited)")}");
             }
 
 
