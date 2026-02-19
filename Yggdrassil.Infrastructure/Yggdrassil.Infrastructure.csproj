@@ -39,4 +39,8 @@
     <ProjectReference Include="..\Yggdrassil.Domain\Yggdrassil.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Resources\Textures\" />
+  </ItemGroup>
+
 </Project>

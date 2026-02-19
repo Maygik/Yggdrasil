@@ -13,7 +13,7 @@ namespace Yggdrassil.Domain.Scene
     {
         public string Name { get; set; } = "Material"; // The name of the material (VMT filename without extension). Used for reference and export.
 
-        public const string Shader = "VertexLitGeneric"; // The shader used by this material. Only VertexLitGeneric is supported for now, but this can be extended in the future if needed.
+        public string Shader = "VertexLitGeneric"; // The shader used by this material. Only VertexLitGeneric is supported for now, but this can be extended in the future if needed.
 
 
         // ----- Parameters -----
