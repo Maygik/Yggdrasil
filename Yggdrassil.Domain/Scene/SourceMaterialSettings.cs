@@ -27,7 +27,7 @@ namespace Yggdrassil.Domain.Scene
 
         // Adjustment
         public Color3? Tint { get; set; } = null; // $color2 parameter. Used to tint the material. Default is white (no tint).
-        public bool? NoTiny { get; set; } = null; // $notint parameter. Whether to let the model be tinted. Default is true (allow tinting).
+        public bool? NoTint { get; set; } = null; // $notint parameter. Whether to let the model be tinted. Default is true (allow tinting).
 
         // Transparency
         public bool? AlphaTest { get; set; } = null; // Whether to use alpha testing for transparency. Default is false (opaque).
@@ -71,9 +71,5 @@ namespace Yggdrassil.Domain.Scene
         public float? RimLightBoost { get; set; } = null; // $rimlightboost parameter. Strength of the rim light effect. Default is 0.0 (no rim light).
         public Color3? RimLightTint { get { return PhongTint; } set { PhongTint = value; } } // Rim light uses the same tint as the phong reflections, so we can just reuse that parameter.
 
-        public void Test()
-        {
-            RimLightTint = new Color3 { R = 1.0f, G = 0.5f, B = 0.5f };
-        }
     }
 }
