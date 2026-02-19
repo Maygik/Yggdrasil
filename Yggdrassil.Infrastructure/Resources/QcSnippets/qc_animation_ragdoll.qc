@@ -1,3 +1,4 @@
+// Generalised animation sequence for ragdolls.
 $sequence "ragdoll" {
     "anims/proportions"
     activity "ACT_DIERAGDOLL" 1

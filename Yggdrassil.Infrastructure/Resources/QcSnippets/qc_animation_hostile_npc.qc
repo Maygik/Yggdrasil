@@ -1,6 +1,8 @@
-﻿$includemodel "combine_soldier_anims.mdl"
+﻿// Animation sets for a combine NPC.
+$includemodel "combine_soldier_anims.mdl"
 $includemodel "humans/male_shared.mdl"
 
+// Proportion trick setup for males. Combine use the same base.
 $sequence reference "anims/reference_male" fps 1
 
 $animation a_proportions "anims/proportions" subtract reference 0

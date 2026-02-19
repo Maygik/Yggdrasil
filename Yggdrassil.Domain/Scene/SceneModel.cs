@@ -9,10 +9,15 @@ namespace Yggdrassil.Domain.Scene
     public class SceneModel
     {
         public string Name { get; set; } = string.Empty;
+
+        // List of mesh groups in this model. A mesh group is the collection of meshes at a node in assimp.
         public List<MeshGroup> MeshGroups { get; set; } = new List<MeshGroup>();
         
         // The root bone of the skeleton hierarchy. This will be null if the model has no skeleton ie a prop.
         public Bone? RootBone { get; set; } = null;
+
+        // Material settings for this model, keyed by material name. This is used during QC generation to determine $cdmaterials paths and other material-related settings.
+        public Dictionary<string, SourceMaterialSettings> MaterialSettings { get; set; } = new Dictionary<string, SourceMaterialSettings>();
 
         public override string ToString()
         {

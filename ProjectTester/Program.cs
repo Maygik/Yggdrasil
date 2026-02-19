@@ -22,8 +22,8 @@ var project = new Project
         },
         Bodygroups = new List<Bodygroup>
         {
-            new Bodygroup("Body", new List<string> { "body", "body2" }),
-            new Bodygroup("Head", new List<string> { "head", "headwithhat" }),
+            new Bodygroup("Body", new List<string?> { "body", "body2", null }),
+            new Bodygroup("Head", new List<string?> { "head", "headwithhat" }),
 
         },
         IllumBone = "ValveBiped.Bip01_Pelvis",

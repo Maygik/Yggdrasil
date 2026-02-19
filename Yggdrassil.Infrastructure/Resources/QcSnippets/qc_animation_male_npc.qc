@@ -1,8 +1,10 @@
-﻿$includemodel "humans/male_shared.mdl"
+﻿// Animation sets for a friendly male citizen.
+$includemodel "humans/male_shared.mdl"
 $includemodel "humans/male_ss.mdl"
 $includemodel "humans/male_gestures.mdl"
 $includemodel "humans/male_postures.mdl"
 
+// Proportion trick setup for males.
 $sequence reference "anims/reference_male" fps 1
 
 $animation a_proportions "anims/proportions" subtract reference 0

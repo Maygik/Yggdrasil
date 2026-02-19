@@ -35,12 +35,12 @@ namespace Yggdrassil.Domain.QC
                 sb.AppendLine("$bodygroups");
                 foreach (var bg in Bodygroups)
                 {
-                    sb.AppendLine($"\t\"{bg.Name}\" {{ {string.Join(" ", bg.Submeshes)} }}");
+                    sb.AppendLine($"\t\"{bg.Name}\" {{ {string.Join(" ", bg.Submeshes.Select(s => s ?? "blank"))} }}");
                 }
             }
             return sb.ToString();
         }
     }
 
-    public record Bodygroup (string Name, List<string> Submeshes);
+    public record Bodygroup (string Name, List<string?> Submeshes);
 }

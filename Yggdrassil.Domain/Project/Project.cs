@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Yggdrassil.Domain.QC;
+using Yggdrassil.Domain.Rigging;
 using Yggdrassil.Domain.Scene;
 
 namespace Yggdrassil.Domain.Project
@@ -18,7 +19,8 @@ namespace Yggdrassil.Domain.Project
         public QcConfig Qc { get; set; } = new();
         public BuildSettings Build { get; set; } = new();
 
-        public SceneModel Scene { get; set; } = new();
+        public SceneModel Scene { get; set; } = new(); // The imported model, containing meshes and skeleton.
+        public SourceBoneMapping RigMapping { get; set; } = new(); // Maps bones in the scene to source engine bones
 
         public override string ToString()
         {
@@ -28,6 +30,8 @@ namespace Yggdrassil.Domain.Project
             sb.AppendLine(Qc.ToString());
             sb.AppendLine("Build Settings:");
             sb.AppendLine(Build.ToString());
+            sb.AppendLine("Rig Mapping:");
+            sb.AppendLine(RigMapping.ToString());
 
             // Append mesh names
             if (Scene != null)

@@ -22,7 +22,10 @@ namespace Yggdrassil.Infrastructure.QC
                     sb.AppendLine("{");
                     foreach (var option in bodygroup.Submeshes)
                     {
-                        sb.AppendLine($"    studio \"{option}\"");
+                        if (string.IsNullOrEmpty(option))
+                            sb.AppendLine($"\tblank");
+                        else
+                            sb.AppendLine($"\tstudio \"{option}\"");
                     }
                     sb.AppendLine("}");
                 }

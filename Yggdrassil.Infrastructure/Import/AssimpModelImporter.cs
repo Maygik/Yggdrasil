@@ -47,8 +47,12 @@ namespace Yggdrassil.Infrastructure.Import
             Console.WriteLine($"Creating scene model...");
             SceneModel sceneModel = CreateSceneModel(filePath, nodeMeshMapping, meshes, rootBone, assimpScene);
             
+            Console.WriteLine($"Initialising materials...");
+            InitialiseMaterials(sceneModel, assimpScene);
+
             return sceneModel;
         }
+
 
         // Make sure it's a valid filepath and a supported format before we try
         // Throws exceptions if the file is not found or the format is not supported, which can be caught and handled by the caller.
@@ -508,6 +512,34 @@ namespace Yggdrassil.Infrastructure.Import
                     );
 
             return assimpScene;
+        }
+
+        // Initialises the material settings in the scene model based on the materials actually used by the meshes in the assimp scene.
+        // Sometimes assimp imports materials that aren't actually used by any meshes, so we filter those out to avoid confusion.
+        // I loveeee models with 7000 materials so my scripts don't work
+        private void InitialiseMaterials(SceneModel sceneModel, Scene assimpScene)
+        {
+            // Collect all material names actually used by meshes
+            HashSet<string> usedMaterialNames = new HashSet<string>();
+
+            foreach (var meshGroup in sceneModel.MeshGroups)
+            {
+                foreach (var mesh in meshGroup.Meshes)
+                {
+                    usedMaterialNames.Add(mesh.Material);
+                }
+            }
+
+            // Only add materials that are actually used
+            foreach (var assimpMaterial in assimpScene.Materials)
+            {
+                if (usedMaterialNames.Contains(assimpMaterial.Name))
+                {
+                    SourceMaterialSettings materialSettings = new SourceMaterialSettings();
+                    materialSettings.Name = assimpMaterial.Name;
+                    sceneModel.MaterialSettings.TryAdd(assimpMaterial.Name, materialSettings);
+                }
+            }
         }
     }
 

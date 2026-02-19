@@ -112,7 +112,7 @@ namespace Yggdrassil.Domain.Scene
     {
         public T X = x;
         public T Y = y;
-        
+
         public static implicit operator Vector<T>(Vector2<T> v) => new(v.X, v.Y);
         public static readonly Vector2<T> Zero = new(T.CreateChecked(0), T.CreateChecked(0));
         public static readonly Vector2<T> One = new(T.CreateChecked(1), T.CreateChecked(1));
@@ -124,7 +124,7 @@ namespace Yggdrassil.Domain.Scene
         public T X = x;
         public T Y = y;
         public T Z = z;
-        
+
         public static implicit operator Vector<T>(Vector3<T> v) => new(v.X, v.Y, v.Z);
 
         public Vector2<T> xy => new(X, Y);
@@ -141,9 +141,9 @@ namespace Yggdrassil.Domain.Scene
         public T Y = y;
         public T Z = z;
         public T W = w;
-        
+
         public static implicit operator Vector<T>(Vector4<T> v) => new(v.X, v.Y, v.Z, v.W);
-        
+
         public Vector3<T> xyz => new(X, Y, Z);
         public Vector2<T> xy => new(X, Y);
 
@@ -152,6 +152,34 @@ namespace Yggdrassil.Domain.Scene
         public override string ToString() => $"({X}, {Y}, {Z}, {W})";
     }
 
+
+    public struct Color4<T>(T r, T g, T b, T a) where T : struct, INumber<T>
+    {
+        public T R = r;
+        public T G = g;
+        public T B = b;
+        public T A = a;
+        public static implicit operator Vector<T>(Color4<T> c) => new(c.R, c.G, c.B, c.A);
+        public override string ToString() => $"({R}, {G}, {B}, {A})";
+
+        public static Color4<float> FromInt(int iR, int iG, int iB, int iA)
+        {
+            return new Color4<float>(iR / 255f, iG / 255f, iB / 255f, iA / 255f);
+        }
+    }
+    public struct Color3<T>(T r, T g, T b) where T : struct, INumber<T>
+    {
+        public T R = r;
+        public T G = g;
+        public T B = b;
+        public static implicit operator Vector<T>(Color3<T> c) => new(c.R, c.G, c.B);
+        public override string ToString() => $"({R}, {G}, {B})";
+
+        public static Color3<float> FromInt(int iR, int iG, int iB)
+        {
+            return new Color3<float>(iR / 255f, iG / 255f, iB / 255f);
+        }
+    }
 }
 
 // Usage examples (add to a separate file or use as needed):

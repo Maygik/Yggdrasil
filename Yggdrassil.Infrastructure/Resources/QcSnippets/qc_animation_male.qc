@@ -1,5 +1,7 @@
-﻿$includemodel "m_anm.mdl"
+﻿// Animation sets for a male player character.
+$includemodel "m_anm.mdl"
 
+// Proportion trick setup for males.
 $sequence reference "anims/reference_male" fps 1
 
 $animation a_proportions "anims/proportions" subtract reference 0
