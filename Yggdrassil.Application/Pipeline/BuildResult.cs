@@ -16,6 +16,10 @@ namespace Yggdrassil.Application.Pipeline
         public List<BuildArtifact> Artifacts { get; } = new();
         public List<BuildMessage> Messages { get; } = new();
 
+        public BuildStatus Status = BuildStatus.Failed; // Default to Failed, steps must explicitly set to Success or SuccessWithWarnings
+        public List<string> BlockingReasons = new();    // If Status is Blocked, this list should contain machine reasons, e.g. MissingBoneMappings
+        public List<string> NextActions = new();        // Instructions for the user on how to unblock or proceed after the build completes, e.g. "Choose a name for your model"
+
         public bool Success => Messages.All(m => m.Severity != BuildSeverity.Error);
     }
 }
