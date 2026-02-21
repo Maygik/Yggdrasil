@@ -28,17 +28,23 @@ namespace Yggdrassil.Application.Pipeline
             Directory.CreateDirectory(context.Paths.StudioMdlDir);
             Directory.CreateDirectory(context.Paths.LogsDir);
 
-            foreach (var step in _steps)
+            BuildContext contextBeforeStep;
+
+
+            for (int i = 0; i < _steps.Count; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                    await step.RunAsync(context, result, cancellationToken);
+                    // Backup context before running the step in case we need to revert after an error, or redo the step with modified context.
+                    // We need a deep copy
+                    contextBeforeStep = context.Clone();
+                    await _steps[i].RunAsync(context, result, cancellationToken);
                 }
                 catch (Exception ex)
                 {
                     // Catch any unhandled exceptions from steps and convert them into error messages in the build result
-                    result.Messages.Add(new BuildMessage(BuildSeverity.Error, "UnhandledException", $"Step '{step.Name}' threw an exception: {ex.Message}"));
+                    result.Messages.Add(new BuildMessage(BuildSeverity.Error, "UnhandledException", $"Step '{_steps[i].Name}' threw an exception: {ex.Message}"));
 
                     // Stop on first failure to prevent cascading errors, but this could be changed to continue running subsequent steps if desired
                     break;

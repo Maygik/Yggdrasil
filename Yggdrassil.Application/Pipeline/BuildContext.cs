@@ -16,5 +16,15 @@ namespace Yggdrassil.Application.Pipeline
     {
         public required Project Project { get; init; }
         public required ProjectPaths Paths { get; init; }
+
+        public BuildContext Clone()
+        {
+            // Create a deep copy of the BuildContext to ensure that modifications to the clone do not affect the original context.
+            return new BuildContext
+            {
+                Project = this.Project, // Assuming Project is immutable or a reference type that doesn't need deep copying. If not, implement a proper deep copy if necessary.
+                Paths = new ProjectPaths(Paths.OutputDirectory)
+            };
+        }
     }
 }
