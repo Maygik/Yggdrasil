@@ -32,10 +32,17 @@ namespace Yggdrassil.Domain.Project
             }
             try
             {
-                var directory = Directory + ".yggproj";
-                var json = System.Text.Json.JsonSerializer.Serialize(this, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                var directory = Directory + "/" + Name + ".yggproj";
+
                 Console.WriteLine($"Saving project to {directory}...");
-                System.IO.File.WriteAllText(directory, json);
+
+                // For simplicity, we serialize the Project object to JSON and save it to the specified file path.
+                string projectJson = System.Text.Json.JsonSerializer.Serialize(this, new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+                File.WriteAllText(directory, projectJson, new UTF8Encoding(false));
+
                 Console.WriteLine("Project saved successfully.");
                 return true;
             }

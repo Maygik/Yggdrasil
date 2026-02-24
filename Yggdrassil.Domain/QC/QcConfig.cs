@@ -20,6 +20,7 @@ namespace Yggdrassil.Domain.QC
         public string SurfaceProp { get; set; } = "flesh";                              // $surfaceprop value.
         public string IllumBone { get; set; } = "ValveBiped.Bip01_Pelvis";              // $illumposition bone name. Used to reduce lighting artifacts.
 
+        
         public AnimationProfile AnimationProfile { get; set; } = AnimationProfile.None;
         public QcFeatures Features { get; set; } = new();
 

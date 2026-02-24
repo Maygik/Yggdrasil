@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Yggdrassil.Domain.Scene
@@ -204,6 +206,53 @@ namespace Yggdrassil.Domain.Scene
             M[0, 0] *= scaleFactor.X; M[1, 0] *= scaleFactor.X; M[2, 0] *= scaleFactor.X;
             M[0, 1] *= scaleFactor.Y; M[1, 1] *= scaleFactor.Y; M[2, 1] *= scaleFactor.Y;
             M[0, 2] *= scaleFactor.Z; M[1, 2] *= scaleFactor.Z; M[2, 2] *= scaleFactor.Z;
+        }
+
+    }
+
+
+    public class Matrix4x4JsonConverter : JsonConverter<Matrix4x4>
+    {
+        public override Matrix4x4? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType != JsonTokenType.StartArray)
+            {
+                throw new JsonException("Expected start of array.");
+            }
+
+            var values = new float[16];
+            int index = 0;
+
+            reader.Read();
+            while (reader.TokenType != JsonTokenType.EndArray)
+            {
+                if (index >= 16)
+                {
+                    throw new JsonException("Expected 16 elements in the array.");
+                }
+                values[index++] = reader.GetSingle();
+                reader.Read();
+            }
+
+            if (index != 16)
+            {
+                throw new JsonException("Expected 16 elements in the array.");
+            }
+
+            return new Matrix4x4(values);
+        }
+
+        public override void Write(Utf8JsonWriter writer, Matrix4x4 value, JsonSerializerOptions options)
+        {
+            writer.WriteStartArray();
+            for (int i = 0; i < 4; i++)
+            {
+                for (int j = 0; j < 4; j++)
+                {
+                    writer.WriteNumberValue(value.M[i, j]);
+                }
+            }
+            writer.WriteEndArray();
         }
     }
 }

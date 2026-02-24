@@ -15,15 +15,25 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
         // import <model-file>
         public static void Import(string[] args, Project project, Services services)
         {
-            if (args.Length < 2)
+            if (args.Length < 1)
             {
                 Console.WriteLine("Usage: import <model-file>");
                 return;
             }
 
-            string modelFile = args[1];
+            string modelFile = string.Join(" ", args);
             var scene = services.Importer.ImportModelAsync(modelFile).Result;
             project.Scene = scene;
+
+            // Auto-add every mesh group as a bodygroup with a single submodel
+            foreach (var meshGroup in scene.MeshGroups)
+            {
+                if (!project.Qc.Bodygroups.Any(bg => bg.Name == meshGroup.Name))
+                {
+                    project.Qc.Bodygroups.Add(new Domain.QC.Bodygroup(meshGroup.Name, new List<string?>() { meshGroup.Name }));
+                }
+            }
+
         }
 
         public static void Rename(string[] args, Project project)
@@ -38,22 +48,25 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
 
         public static void Output(string[] args, Project project)
         {
-            if (args.Length < 2)
+            if (args.Length < 1)
             {
                 Console.WriteLine("Usage: output <output-directory>");
                 return;
             }
-            string outputDirectory = args[1];
+
+            string outputDirectory = string.Join(" ", args);
             project.Build.OutputDirectory = outputDirectory;
         }
 
-        // export [--out <output-directory>] [--format <smd/dmx>] // Exports the project to the project directory, or to the specified output directory if provided. Optionally specify the export format (default is smd).
+        // export <all/qc/mesh> [--out <output-directory>] [--format <smd/dmx>] // Exports the project to the project directory, or to the specified output directory if provided. Optionally specify the export format (default is smd).
         public static void Export(string[] args, Project project, Services services)
         {
-            if (!string.IsNullOrEmpty(args[0]))
+            if (args.Length < 1)
             {
-                Console.WriteLine("Usage: export [--out <output-directory>] [--format <smd/dmx>]");
+                Console.WriteLine("Usage: export <all/qc/mesh> [--out <output-directory>] [--format <smd/dmx>]");
+                return;
             }
+
             if (project.Scene == null)
             {
                 Console.WriteLine("No scene to export. Please import a model first.");
@@ -73,46 +86,69 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
             }
             if (!string.IsNullOrEmpty(outputDirectory))
             {
-                if (ArgReader.ParseArgument(args, "--format", out string? format))
-                {
-                    if (!string.IsNullOrEmpty(format))
-                    {
-                        if (format == "smd")
-                        {
-                            if (services.SmdExporter != null)
-                            {
-                                services.SmdExporter.ExportSceneAsync(outputDirectory, project.Scene);
-                            }
-                            else
-                            {
-                                services.GeneralExporter.ExportSceneAsync(outputDirectory, project.Scene);
-                            }
-                        }
-                        else if (format == "dmx")
-                        {
-                            if (services.DmxExporter != null)
-                            {
-                                services.DmxExporter.ExportSceneAsync(outputDirectory, project.Scene);
-                            }
-                            else
-                            {
-                                Console.WriteLine("DMX export is not supported. Falling back to general exporter.");
-                                services.GeneralExporter.ExportSceneAsync(outputDirectory, project.Scene);
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine($"Unsupported format: {format}. Supported formats are: smd, dmx. Falling back to general exporter.");
-                            services.GeneralExporter.ExportSceneAsync(outputDirectory, project.Scene);
-                        }
 
-                        return;
+                if (args[0] == "mesh" || args[0] == "all")
+                {
+                    if (ArgReader.ParseArgument(args, "--format", out string? format))
+                    {
+                        if (!string.IsNullOrEmpty(format))
+                        {
+                            if (format == "smd")
+                            {
+                                if (services.SmdExporter != null)
+                                {
+                                    services.SmdExporter.ExportSceneAsync(outputDirectory, project.Scene);
+                                }
+                                else
+                                {
+                                    services.GeneralExporter.ExportSceneAsync(outputDirectory, project.Scene);
+                                }
+                            }
+                            else if (format == "dmx")
+                            {
+                                if (services.DmxExporter != null)
+                                {
+                                    services.DmxExporter.ExportSceneAsync(outputDirectory, project.Scene);
+                                }
+                                else
+                                {
+                                    Console.WriteLine("DMX export is not supported. Falling back to general exporter.");
+                                    services.GeneralExporter.ExportSceneAsync(outputDirectory, project.Scene);
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Unsupported format: {format}. Supported formats are: smd, dmx. Falling back to general exporter.");
+                                services.GeneralExporter.ExportSceneAsync(outputDirectory, project.Scene);
+                            }
+
+                            return;
+                        }
                     }
+
+                    services.GeneralExporter.ExportSceneAsync(outputDirectory, project.Scene);
                 }
 
-                services.GeneralExporter.ExportSceneAsync(outputDirectory, project.Scene);
+                if (args[0] == "qc" || args[0] == "all")
+                {
+                    var qc = services.Assembler.AssembleQc(project.Qc);
+                    System.IO.File.WriteAllText(System.IO.Path.Combine(outputDirectory, $"{project.Name}.qc"), qc);
+                    Console.WriteLine($"QC exporter to {outputDirectory + project.Name}.qc");
+                }
+
             }
 
+        }
+
+        public static void ModelPath(string[] args, Project project)
+        {
+            if (args.Length < 1)
+            {
+                Console.WriteLine("Usage: modelpath <model-path>");
+                return;
+            }
+            string modelPath = string.Join(" ", args);
+            project.Qc.ModelPath = modelPath;
         }
 
         public static void Bind(string[] args, Project project)
@@ -147,11 +183,21 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
             {
                 // Print a summary of the project, not including the below options
 
+                Console.WriteLine();
                 Console.WriteLine($"Project Name: {project.Name}");
                 Console.WriteLine($"Project Directory: {project.Directory}");
-                Console.WriteLine($"Target Animations: {project.Qc.AnimationProfile}");
                 Console.WriteLine($"Output Directory: {project.Build.OutputDirectory}");
+                Console.WriteLine();
+
+                Console.WriteLine($"Model Path: {project.Qc.ModelPath}");
+                Console.WriteLine($"Target Animations: {project.Qc.AnimationProfile}");
                 Console.WriteLine($"Surface Prop: {project.Qc.SurfaceProp}");
+                Console.WriteLine($"Bodygroups: {project.Qc.Bodygroups.Count}");
+                foreach (var bodyGroup in project.Qc.Bodygroups)
+                {
+                    Console.WriteLine($"\tBodygroup: {bodyGroup.Name} Submodels: {string.Join(", ", bodyGroup.Submeshes)}");
+                }
+                Console.WriteLine();
 
                 // Mesh count
                 Console.WriteLine($"Meshes: {project.Scene.MeshGroups.Count}");
@@ -227,17 +273,20 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
                     Console.WriteLine($"Material Path: {materialPath}");
                 }
             }
+
+            Console.WriteLine();
         }
 
 
         public static void AnimationProfile(string[] args, Project project)
         {
-            if (args.Length < 2)
+            if (args.Length < 1)
             {
                 Console.WriteLine("Usage: animprofile <animation-profile>");
                 return;
             }
-            string animProfile = args[1];
+
+            string animProfile = args[0];
 
             //p_male
             //p_female
@@ -250,24 +299,31 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
             {
                 case "p_male":
                     project.Qc.AnimationProfile = Domain.QC.AnimationProfile.MalePlayer;
+                    Console.WriteLine("QC animations will now be generated for a male player");
                     break;
                 case "p_female":
                     project.Qc.AnimationProfile = Domain.QC.AnimationProfile.FemalePlayer;
+                    Console.WriteLine("QC animations will now be generated for a female player");
                     break;
                 case "npc_combine":
                     project.Qc.AnimationProfile = Domain.QC.AnimationProfile.CombineNPC;
+                    Console.WriteLine("QC animations will now be generated for a Combine NPC");
                     break;
                 case "npc_metrocop":
                     project.Qc.AnimationProfile = Domain.QC.AnimationProfile.MetrocopNPC;
+                    Console.WriteLine("QC animations will now be generated for a Metrocop NPC");
                     break;
                 case "npc_male":
                     project.Qc.AnimationProfile = Domain.QC.AnimationProfile.MaleNPC;
+                    Console.WriteLine("QC animations will now be generated for a male NPC");
                     break;
                 case "npc_female":
                     project.Qc.AnimationProfile = Domain.QC.AnimationProfile.FemaleNPC;
+                    Console.WriteLine("QC animations will now be generated for a female NPC");
                     break;
                 case "ragdoll":
                     project.Qc.AnimationProfile = Domain.QC.AnimationProfile.RagdollOnly;
+                    Console.WriteLine("QC animations will now be generated for a Ragdoll");
                     break;
                 default:
                     Console.WriteLine($"Unsupported animation profile: \"{animProfile}\". Supported profiles:");

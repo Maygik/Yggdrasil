@@ -48,6 +48,8 @@ namespace Yggdrassil.Cli.Commands
                 {
                     Directory.CreateDirectory(projectDirectory);
                 }
+
+
                 var projectFilePath = Path.Combine(projectDirectory, $"{projectName}.yggproj");
                 
                 var project = new Domain.Project.Project

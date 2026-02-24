@@ -88,6 +88,9 @@ namespace Yggdrassil.Infrastructure.Export
             // Write the SMD file
             var finalSmd = sb.ToString();
 
+            if (!Directory.Exists(folderPath))
+                Directory.CreateDirectory(folderPath);
+
             System.IO.File.WriteAllText(folderPath + "/" + mesh.Name + ".smd", finalSmd);
             Console.WriteLine($"Exported mesh {mesh.Name} to {folderPath + mesh.Name + ".smd"}");
         }

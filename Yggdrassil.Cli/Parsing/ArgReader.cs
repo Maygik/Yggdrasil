@@ -15,7 +15,7 @@ namespace Yggdrassil.Cli.Parsing
             {
                 if (args[i].Equals(argumentName, StringComparison.OrdinalIgnoreCase))
                 {
-                    value = args[i + 1];
+                    value = NormalizePathArgument(args[i + 1]);
                     return true;
                 }
             }
@@ -23,6 +23,41 @@ namespace Yggdrassil.Cli.Parsing
             return false;
         }
 
+
+        public static string[] ExtractArguments(string argumentString)
+        {
+            // Extracts arguments from a command line string, handling quoted arguments and slashes properly.
+            var args = new List<string>();
+            var currentArg = new StringBuilder();
+            bool inQuotes = false;
+            foreach (var c in argumentString)
+            {
+                if (c == '"')
+                {
+                    inQuotes = !inQuotes; // Toggle the inQuotes flag
+                }
+                else if (char.IsWhiteSpace(c) && !inQuotes)
+                {
+                    if (currentArg.Length > 0)
+                    {
+                        args.Add(currentArg.ToString());
+                        currentArg.Clear();
+                    }
+                }
+                else
+                {
+                    currentArg.Append(c);
+                }
+            }
+
+            // Add the last argument if there is one
+            if (currentArg.Length > 0)
+            {
+                args.Add(currentArg.ToString());
+            }
+
+            return args.ToArray();
+        }
 
 
         // Method to parse the project file path from the arguments.
@@ -32,7 +67,7 @@ namespace Yggdrassil.Cli.Parsing
             // Assuming the project file is the first argument after the command (e.g., "build")
             if (args.Length > 0)
             {
-                return args[0];
+                return NormalizePathArgument(args[0]);
             }
             return null;
         }
@@ -42,7 +77,7 @@ namespace Yggdrassil.Cli.Parsing
             // Assuming the project file is the first argument after the command (e.g., "build")
             if (args.Length >= n)
             {
-                return args[n-1];
+                return NormalizePathArgument(args[n - 1]);
             }
             return null;
         }
@@ -53,5 +88,27 @@ namespace Yggdrassil.Cli.Parsing
             return args.Any(arg => arg.Equals(flagName, StringComparison.OrdinalIgnoreCase));
         }
 
+        // Normalize path arguments by removing quotes and standardizing separators
+        private static string NormalizePathArgument(string argument)
+        {
+            if (string.IsNullOrWhiteSpace(argument))
+            {
+                return argument;
+            }
+
+            // Remove surrounding quotes (single or double)
+            string normalized = argument.Trim();
+            if ((normalized.StartsWith('"') && normalized.EndsWith('"')) ||
+                (normalized.StartsWith('\'') && normalized.EndsWith('\'')))
+            {
+                normalized = normalized[1..^1];
+            }
+
+            // Normalize path separators to the current platform's separator
+            normalized = normalized.Replace('\\', Path.DirectorySeparatorChar)
+                                  .Replace('/', Path.DirectorySeparatorChar);
+
+            return normalized;
+        }
     }
 }
