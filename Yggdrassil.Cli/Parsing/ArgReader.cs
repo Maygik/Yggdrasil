@@ -37,6 +37,16 @@ namespace Yggdrassil.Cli.Parsing
             return null;
         }
 
+        public static string? ParseNParameter(string[] args, int n)
+        {
+            // Assuming the project file is the first argument after the command (e.g., "build")
+            if (args.Length >= n)
+            {
+                return args[n-1];
+            }
+            return null;
+        }
+
 
         public static bool HasFlag(string[] args, string flagName)
         {

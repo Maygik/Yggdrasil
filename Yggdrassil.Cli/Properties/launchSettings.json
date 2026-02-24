@@ -2,7 +2,7 @@
   "profiles": {
     "Yggdrassil.Cli": {
       "commandName": "Project",
-      "commandLineArgs": "convert \"D:\\!addons\\Shery\\transfer\\shery.fbx\" --out \"C:\\Users\\xande\\source\\repos\\Yggdrassil\\Yggdrassil.Cli\\bin\\Debug\\net8.0\\out\" --debug"
+      "commandLineArgs": "new \"test_project\" \"C:\\Users\\AWatson21\\Desktop\\Ygg\""
     }
   }
 }
