@@ -20,6 +20,22 @@ namespace Yggdrassil.Domain.Scene
         public string Name { get; set; } = string.Empty;
         public bool IsDeform { get; set; } = true; // Whether this bone has a direct influence on the mesh.
 
+        public Bone? FindBoneInChildren(string name)
+        {
+            foreach (var child in Children)
+            {
+                if (child is Bone childBone)
+                {
+                    if (childBone.Name == name)
+                        return childBone;
+                    var found = childBone.FindBoneInChildren(name);
+                    if (found != null)
+                        return found;
+                }
+            }
+            return null;
+        }
+
         public Bone(string name, Vector3 position, Quaternion rotation, Vector3 scale) : base(position, rotation, scale)
         {
             Name = name;

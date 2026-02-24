@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Yggdrassil.Cli.Composition;
 using Yggdrassil.Cli.Parsing;
 using Yggdrassil.Domain.Project;
+using Yggdrassil.Domain.Scene;
 
 namespace Yggdrassil.Cli.Commands.ProjectEditing
 {
@@ -138,6 +139,56 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
 
             }
 
+        }
+
+        public static void Scale(string[] args, Project project)
+        {
+            if (args.Length < 1)
+            {
+                Console.WriteLine("Usage: scale <scale-factor>");
+            }
+            float scaleFactor;
+            string scaleArg = args[0];
+            if (float.TryParse(scaleArg, out scaleFactor))
+            {
+                if (project.Scene == null)
+                {
+                    Console.WriteLine("No scene to scale. Please import a model first.");
+                    return;
+                }
+
+                if (project.Scene.RootBone != null)
+                {
+                    Console.WriteLine("Scaling model using root bone transformation...");
+                    project.Scene.RootBone.LocalMatrix *= Yggdrassil.Domain.Scene.Matrix4x4.CreateUniformScaling(scaleFactor);
+                }
+
+                else
+                {
+                    // No root bone, must scale all vertex positions manually
+                    Console.WriteLine("No root bone found. Scaling all vertex positions manually...");
+                    foreach (var meshGroup in project.Scene.MeshGroups)
+                    {
+                        foreach (var mesh in meshGroup.Meshes)
+                        {
+                            for (int i = 0; i < mesh.Vertices.Count; i++)
+                            {
+                                var vertex = mesh.Vertices[i];
+                                vertex.X *= scaleFactor;
+                                vertex.Y *= scaleFactor;
+                                vertex.Z *= scaleFactor;
+                                mesh.Vertices[i] = vertex;
+                            }
+                        }
+                    }
+                }
+
+                Console.WriteLine($"Finished scaling model by a factor of {scaleFactor}");
+            }
+            else
+            {
+                Console.WriteLine($"Invalid scale factor: {scaleArg}");
+            }
         }
 
         public static void ModelPath(string[] args, Project project)
@@ -273,7 +324,73 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
                     Console.WriteLine($"Material Path: {materialPath}");
                 }
             }
+            else if (type == "bounds")
+            {
+                if (project.Scene.MeshGroups.Count > 0)
+                {
+                    Yggdrassil.Domain.Scene.Vector3<float> highestVertex = new Yggdrassil.Domain.Scene.Vector3<float>(float.MinValue, float.MinValue, float.MinValue);
+                    Yggdrassil.Domain.Scene.Vector3<float> lowestVertex = new Yggdrassil.Domain.Scene.Vector3<float>(float.MaxValue, float.MaxValue, float.MaxValue);
+                    foreach (var meshGroup in project.Scene.MeshGroups)
+                    {
+                        foreach (var mesh in meshGroup.Meshes)
+                        {
+                            if (project.Scene.RootBone != null)
+                            {
+                                for (int i = 0; i < mesh.Vertices.Count; i++)
+                                {
+                                    var vertex = mesh.Vertices[i];
+                                    var transformedVertex = new Vector3<float>(0, 0, 0);
+                                    foreach (var weight in mesh.BoneWeights[i])
+                                    {
+                                        var bone = project.Scene.RootBone.FindBoneInChildren(weight.Item1);
+                                        if (bone != null)
+                                        {
+                                            var matrix = bone.WorldMatrix;
+                                            var weightedVertex = new Vector3<float>(
+                                                vertex.X * weight.Item2,
+                                                vertex.Y * weight.Item2,
+                                                vertex.Z * weight.Item2
+                                            );
 
+                                            // Transform the vertex
+                                            transformedVertex.X += weightedVertex.X * matrix.M00 + weightedVertex.Y * matrix.M01 + weightedVertex.Z * matrix.M02 + matrix.M03;
+                                            transformedVertex.Y += weightedVertex.X * matrix.M10 + weightedVertex.Y * matrix.M11 + weightedVertex.Z * matrix.M12 + matrix.M13;
+                                            transformedVertex.Z += weightedVertex.X * matrix.M20 + weightedVertex.Y * matrix.M21 + weightedVertex.Z * matrix.M22 + matrix.M23;
+                                        }
+                                    }
+
+                                    // Check the position using the transformed vertex position
+                                    if (transformedVertex.X > highestVertex.X) highestVertex.X = transformedVertex.X;
+                                    else if (transformedVertex.X < lowestVertex.X) lowestVertex.X = transformedVertex.X;
+                                    if (transformedVertex.Y > highestVertex.Y) highestVertex.Y = transformedVertex.Y;
+                                    else if (transformedVertex.Y < lowestVertex.Y) lowestVertex.Y = transformedVertex.Y;
+                                    if (transformedVertex.Z > highestVertex.Z) highestVertex.Z = transformedVertex.Z;
+                                    else if (transformedVertex.Z < lowestVertex.Z) lowestVertex.Z = transformedVertex.Z;
+                                }
+                            }
+                            foreach (var vertex in mesh.Vertices)
+                            {
+                                // Foreach vertex, check the position using the scaled vertex position through bones, if any
+                                if (vertex.X > highestVertex.X) highestVertex.X = vertex.X;
+                                if (vertex.Y > highestVertex.Y) highestVertex.Y = vertex.Y;
+                                if (vertex.Z > highestVertex.Z) highestVertex.Z = vertex.Z;
+                                if (vertex.X < lowestVertex.X) lowestVertex.X = vertex.X;
+                                if (vertex.Y < lowestVertex.Y) lowestVertex.Y = vertex.Y;
+                                if (vertex.Z < lowestVertex.Z) lowestVertex.Z = vertex.Z;
+                            }
+                        }
+                    }
+                    Console.WriteLine($"Model Bounds:");
+                    Console.WriteLine($"\tUpper Bound: ({highestVertex.X}, {highestVertex.Y}, {highestVertex.Z})");
+                    Console.WriteLine($"\tLower Bound: ({lowestVertex.X}, {lowestVertex.Y}, {lowestVertex.Z})");
+                    Console.WriteLine($"\tSize: ({highestVertex.X - lowestVertex.X}, {highestVertex.Y - lowestVertex.Y}, {highestVertex.Z - lowestVertex.Z})");
+                    Console.WriteLine($"\tTotal Height: {highestVertex.Z - lowestVertex.Z}");
+                }
+                else
+                {
+                    Console.WriteLine($"Model has no meshes, cannot calculate bounds.");
+                }
+            }
             Console.WriteLine();
         }
 

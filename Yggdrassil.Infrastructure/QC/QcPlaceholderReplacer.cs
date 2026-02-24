@@ -36,22 +36,16 @@ namespace Yggdrassil.Infrastructure.QC
                 result = result.Replace("@BODYGROUPS@", string.Empty);
             }
 
-            // Handle $cdmaterials. If multiple paths, we need to generate a conditional block.
-            if (config.CdMaterialsPaths.Count == 1)
+            // $cdmaterials
+            // Generate conditional block for multiple cdmaterials paths
+            var cdmsb = new StringBuilder();
+            foreach (var mat in config.CdMaterialsPaths)
             {
-                result = result.Replace("@MATERIAL_LINES@", config.CdMaterialsPaths[0]);
+                cdmsb.AppendLine($"$cdmaterials \"{mat}\"");
             }
-            else
-            {
-                // Generate conditional block for multiple cdmaterials paths
-                var sb = new StringBuilder();
-                foreach (var mat in config.CdMaterialsPaths)
-                {
-                    sb.AppendLine($"$cdmaterials \"{mat}\"");
-                }
-                sb.AppendLine("$cdmaterials \"\"");
-                result = result.Replace("@MATERIAL_LINES@", sb.ToString());
-            }
+            cdmsb.AppendLine("$cdmaterials \"\"");
+            result = result.Replace("@MATERIAL_LINES@", cdmsb.ToString());
+
             result = result.Replace("@SURFACE_PROP@", config.SurfaceProp);
             result = result.Replace("@ILLUM_POSITION@", config.IllumBone);
             return result;

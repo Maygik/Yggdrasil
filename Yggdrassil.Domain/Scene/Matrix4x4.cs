@@ -56,6 +56,23 @@ namespace Yggdrassil.Domain.Scene
             M[3, 0] = m30; M[3, 1] = m31; M[3, 2] = m32; M[3, 3] = m33;
         }
 
+        // Indexer properties for matrix elements
+        public float M00 { get => M[0, 0]; set => M[0, 0] = value; }
+        public float M01 { get => M[0, 1]; set => M[0, 1] = value; }
+        public float M02 { get => M[0, 2]; set => M[0, 2] = value; }
+        public float M03 { get => M[0, 3]; set => M[0, 3] = value; }
+        public float M10 { get => M[1, 0]; set => M[1, 0] = value; }
+        public float M11 { get => M[1, 1]; set => M[1, 1] = value; }
+        public float M12 { get => M[1, 2]; set => M[1, 2] = value; }
+        public float M13 { get => M[1, 3]; set => M[1, 3] = value; }
+        public float M20 { get => M[2, 0]; set => M[2, 0] = value; }
+        public float M21 { get => M[2, 1]; set => M[2, 1] = value; }
+        public float M22 { get => M[2, 2]; set => M[2, 2] = value; }
+        public float M23 { get => M[2, 3]; set => M[2, 3] = value; }
+        public float M30 { get => M[3, 0]; set => M[3, 0] = value; }
+        public float M31 { get => M[3, 1]; set => M[3, 1] = value; }
+        public float M32 { get => M[3, 2]; set => M[3, 2] = value; }
+        public float M33 { get => M[3, 3]; set => M[3, 3] = value; }
 
         public float[] GetRow(int row)
         {
@@ -193,6 +210,15 @@ namespace Yggdrassil.Domain.Scene
 
         }
 
+        public static Matrix4x4 CreateScaling(float x, float y, float z)
+        {
+            return CreateScaling(new Vector3<float>(x, y, z));
+        }
+        public static Matrix4x4 CreateUniformScaling(float scale)
+        {
+            return CreateScaling(new Vector3<float>(scale, scale, scale));
+        }
+
         public void SetScale(Vector3<float> scale)
         {
             var currentScale = GetScale();
@@ -207,6 +233,15 @@ namespace Yggdrassil.Domain.Scene
             M[0, 1] *= scaleFactor.Y; M[1, 1] *= scaleFactor.Y; M[2, 1] *= scaleFactor.Y;
             M[0, 2] *= scaleFactor.Z; M[1, 2] *= scaleFactor.Z; M[2, 2] *= scaleFactor.Z;
         }
+
+
+
+
+
+
+
+
+
 
     }
 

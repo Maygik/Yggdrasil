@@ -24,6 +24,18 @@ namespace Yggdrassil.Infrastructure.QC
 
         public string AssembleQc(QcConfig config)
         {
+            // Make sure the config has meshes
+            if (config.Bodygroups == null || config.Bodygroups.Count == 0 || config.Bodygroups.Any(bg => bg.Submeshes == null || bg.Submeshes.Count == 0))
+            {
+                throw new InvalidOperationException("QcConfig must have at least one bodygroup with meshes defined.");
+            }
+            var firstBodygroup = config.Bodygroups.First();
+            if (firstBodygroup.Submeshes == null || firstBodygroup.Submeshes.Count == 0)
+            {
+                throw new InvalidOperationException("First bodygroup must have at least one submesh.");
+            }
+
+
             var sb = new StringBuilder();
 
             // Start with the core template which includes the basic structure and common directives
@@ -56,6 +68,10 @@ namespace Yggdrassil.Infrastructure.QC
                     break;
                 case AnimationProfile.MetrocopNPC:
                     sb.Append(_qcTemplateStore.Get("anim_metrocop_npc"));
+                    break;
+                case AnimationProfile.None:
+                    var firstMeshName = firstBodygroup.Submeshes[0];
+                    sb.Append($"$sequence \"idle\" \"{firstMeshName}\"");
                     break;
             }
 

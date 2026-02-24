@@ -14,7 +14,7 @@ namespace Yggdrassil.Domain.QC
     public sealed class QcConfig
     {
         public string ModelPath { get; set; } = "myaddon/my_model";                     // $modelname path, relative to models/ folder, without file extension.        
-        public List<string> CdMaterialsPaths { get; set; } = new List<string> { "" };   // Relative paths to read materials from. "" means root materials folder.
+        public List<string> CdMaterialsPaths { get; set; } = new List<string> { };   // Relative paths to read materials from. "" means root materials folder.
         public List<Bodygroup> Bodygroups { get; set; } = new();      // Bodygroup definitions. Tuple: (bodygroup name, list of submeshes)
 
         public string SurfaceProp { get; set; } = "flesh";                              // $surfaceprop value.

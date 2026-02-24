@@ -150,6 +150,7 @@ namespace Yggdrassil.Domain.Scene
             }
         }
 
+
         public Vector3 WorldScale
         {
             get

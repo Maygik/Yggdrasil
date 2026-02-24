@@ -98,8 +98,11 @@ namespace Yggdrassil.Cli.Commands
                             Console.WriteLine("\tlist slots");
                             Console.WriteLine("\tlist bodygroups");
                             Console.WriteLine("\tlist materialpaths");
+                            Console.WriteLine("\tlist bounds");
 
                             Console.WriteLine();
+                            Console.WriteLine("Scales the model by the specified factor.");
+                            Console.WriteLine("\tscale <scale-factor>");
                             Console.WriteLine("Sets the compiled model path for the .mdl file. Relative to the addon folder.");
                             Console.WriteLine("\tmodelpath <relative-path>");
                             Console.WriteLine("Sets the target animation set to use");
@@ -173,6 +176,12 @@ namespace Yggdrassil.Cli.Commands
                                 }
 
                             }
+                        case "scale":
+                            Commands.ProjectEditing.ProjectCommands.Scale(commandArgs, project);
+                            break;
+                        case "modelpath":
+                            Commands.ProjectEditing.ProjectCommands.ModelPath(commandArgs, project);
+                            break;
                         case "bind":
                             Commands.ProjectEditing.ProjectCommands.Bind(commandArgs, project);
                             break;
