@@ -68,11 +68,11 @@ namespace Yggdrassil.Infrastructure.Export
 
             // Add the shared start (nodes + skeleton)
             sb.Append(sharedStart);
-            
+
 
             // 3: Triangles
             // Defines mesh geometry
-            
+
             // Start of the block
             sb.AppendLine("triangles");
 
@@ -138,12 +138,12 @@ namespace Yggdrassil.Infrastructure.Export
             return sb.ToString();
         }
 
-        public string BuildSkeleton(Domain.Scene.SceneModel scene)
+        public string BuildSkeleton(Domain.Scene.SceneModel scene, int frame = 0)
         {
             var sb = new StringBuilder();
             sb.AppendLine("skeleton");
 
-            sb.AppendLine("time 0"); // Not supporting animation, so just write a single frame at time 0
+            sb.AppendLine($"time {frame}"); // Not supporting animation, so just write a single frame at time 0
 
             // For each bone, write a line with the format: <bone_id> <pos_x> <pos_y> <pos_z> <rot_x> <rot_y> <rot_z>
             // where pos is the position of the bone relative to its parent, and rot is the rotation of the bone in Euler angles (in radians) relative to its parent.
@@ -246,6 +246,36 @@ namespace Yggdrassil.Infrastructure.Export
 
 
             return sb.ToString();
+        }
+
+
+        public Task ExportAnimationAsync(string folderPath, string animationName, Domain.Scene.SceneModel scene) => Task.FromResult(ExportAnimation(folderPath, animationName, scene));
+        public bool ExportAnimation(string folderPath, string animationName, Domain.Scene.SceneModel scene)
+        {
+            try
+            {
+                var sb = new StringBuilder();
+
+                sb.AppendLine($"version 1"); // Only supporting version 1, it's the most widely used one
+                sb.AppendLine(BuildNodes(scene, out var boneIds));
+                sb.AppendLine(BuildSkeleton(scene));
+                sb.AppendLine(BuildSkeleton(scene, frame: 1)); // For now just write a second frame identical to the first one, this is the default animation
+
+                var finalSmd = sb.ToString();
+
+                if (!Directory.Exists(folderPath))
+                    Directory.CreateDirectory(folderPath);
+
+                System.IO.File.WriteAllText(folderPath + "/" + animationName + ".smd", finalSmd);
+
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error exporting animation: {ex.Message}");
+                return false;
+            }
         }
     }
 }

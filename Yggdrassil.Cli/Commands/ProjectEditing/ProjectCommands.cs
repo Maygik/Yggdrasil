@@ -204,31 +204,33 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
 
         public static void Bind(string[] args, Project project)
         {
-            if (args.Length < 3)
+            if (args.Length < 2)
             {
                 Console.WriteLine("Usage: bind <bone-name> <bone-slot>");
                 return;
             }
-            string sourceBone = args[1];
-            string targetBone = args[2];
+            string sourceBone = args[0];
+            string targetBone = args[1];
 
-            project.RigMapping.GetRigSlotFromName(targetBone).AssignedBone = sourceBone;
+            var slot = project.RigMapping.GetRigSlotFromName(targetBone);
+            slot.AssignedBone = sourceBone;
+            Console.WriteLine($"Bound bone \"{sourceBone}\" to slot \"{slot.DisplayName}\"");
         }
 
         public static void Unbind(string[] args, Project project)
         {
-            if (args.Length < 2)
+            if (args.Length < 1)
             {
                 Console.WriteLine("Usage: unbind <bone-slot>");
                 return;
             }
-            string targetBone = args[1];
+            string targetBone = args[0];
             project.RigMapping.GetRigSlotFromName(targetBone).AssignedBone = null;
         }
 
         public static void List(string[] args, Project project)
         {
-            var type = args.Length > 1 ? args[1].ToLower() : "summary";
+            var type = args.Length == 1 ? args[0].ToLower() : "summary";
 
             if (type == "summary")
             {
@@ -299,11 +301,10 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
             }
             else if (type == "slots")
             {
-                var enumerator = project.RigMapping.GetEnumerator();
-                while (enumerator.MoveNext())
+                for (int i = 0; i < project.RigMapping.Count; i++)
                 {
-                    var slot = enumerator.Current;
-                    Console.WriteLine($"Slot: {slot.DisplayName} Valve Bone: {slot.AssignedBone} | Assigned Bone: {(slot.AssignedBone != null ? slot.AssignedBone : "")}");
+                    var slot = project.RigMapping[i];
+                    Console.WriteLine($"{i} Slot: {slot.DisplayName} Valve Bone: {slot.LogicalBone} | Assigned Bone: {(slot.AssignedBone != null ? slot.AssignedBone : "")}");
                 }
             }
             else if (type == "bodygroups")

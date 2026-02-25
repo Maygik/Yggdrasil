@@ -12,5 +12,6 @@ namespace Yggdrassil.Application.Abstractions
     public interface IMeshExporter
     {
         Task ExportSceneAsync(string folderPath, Domain.Scene.SceneModel scene);
+        Task ExportAnimationAsync(string folderPath, string animationName, Domain.Scene.SceneModel scene);
     }
 }

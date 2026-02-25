@@ -14,84 +14,153 @@ namespace Yggdrassil.Domain.Rigging
     {
         public RigSlot GetRigSlotFromName(string name)
         {
+            // Check if works as an integer index first
+            if (int.TryParse(name, out int index))
+            {
+                if (index >= 0 && index < Count)
+                    return this[index];
+                else
+                    throw new ArgumentOutOfRangeException(nameof(name), $"Index must be between 0 and {Count - 1}");
+            }
+
             if (HeadAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
                 return HeadSlot;
 
-            // Add additional mappings as needed, e.g.:
             if (NeckAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
                 return NeckSlot;
 
-            // ...add more mappings for other slots/aliases here...
+            if (Spine4Alias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return Spine4Slot;
+
+            if (Spine2Alias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return Spine2Slot;
+
+            if (Spine1Alias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return Spine1Slot;
+
+            if (SpineAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return SpineSlot;
+
+            if (PelvisAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return PelvisSlot;
+
+            if (LeftClavicleAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return LeftClavicleSlot;
+
+            if (LeftUpperArmAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return LeftUpperArmSlot;
+
+            if (LeftForearmAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return LeftForearmSlot;
+
+            if (LeftHandAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return LeftHandSlot;
+
+            if (RightClavicleAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return RightClavicleSlot;
+
+            if (RightUpperArmAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return RightUpperArmSlot;
+
+            if (RightForearmAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return RightForearmSlot;
+
+            if (RightHandAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return RightHandSlot;
+
+            if (LeftThighAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return LeftThighSlot;
+
+            if (LeftCalfAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return LeftCalfSlot;
+
+            if (LeftFootAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return LeftFootSlot;
+
+            if (LeftToesAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return LeftToesSlot;
+
+            if (RightThighAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return RightThighSlot;
+
+            if (RightCalfAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return RightCalfSlot;
+
+            if (RightFootAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return RightFootSlot;
+
+            if (RightToesAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return RightToesSlot;
 
             throw new ArgumentException($"No RigSlot found for name: {name}", nameof(name));
         }
 
-        /// <summary>
-        /// Provides an enumerator to iterate through all RigSlots in this mapping.
-        /// </summary>
-        /// <returns>An enumerator of all RigSlots.</returns>
-        public IEnumerator<RigSlot> GetEnumerator()
+        // Allow accessing by index
+        public RigSlot this[int index]
         {
-            yield return HeadSlot;
-            yield return NeckSlot;
-            yield return Spine4Slot;
-            yield return Spine2Slot;
-            yield return Spine1Slot;
-            yield return SpineSlot;
-            yield return PelvisSlot;
-
-            yield return LeftClavicleSlot;
-            yield return LeftUpperArmSlot;
-            yield return LeftForearmSlot;
-            yield return LeftHandSlot;
-
-            yield return RightClavicleSlot;
-            yield return RightUpperArmSlot;
-            yield return RightForearmSlot;
-            yield return RightHandSlot;
-
-            yield return LeftThighSlot;
-            yield return LeftCalfSlot;
-            yield return LeftFootSlot;
-            yield return LeftToesSlot;
-
-            yield return RightThighSlot;
-            yield return RightCalfSlot;
-            yield return RightFootSlot;
-            yield return RightToesSlot;
-
-            yield return LeftHandThumb1Slot;
-            yield return LeftHandThumb2Slot;
-            yield return LeftHandThumb3Slot;
-            yield return LeftHandIndex1Slot;
-            yield return LeftHandIndex2Slot;
-            yield return LeftHandIndex3Slot;
-            yield return LeftHandMiddle1Slot;
-            yield return LeftHandMiddle2Slot;
-            yield return LeftHandMiddle3Slot;
-            yield return LeftHandRing1Slot;
-            yield return LeftHandRing2Slot;
-            yield return LeftHandRing3Slot;
-            yield return LeftHandPinky1Slot;
-            yield return LeftHandPinky2Slot;
-            yield return LeftHandPinky3Slot;
-
-            yield return RightHandThumb1Slot;
-            yield return RightHandThumb2Slot;
-            yield return RightHandThumb3Slot;
-            yield return RightHandIndex1Slot;
-            yield return RightHandIndex2Slot;
-            yield return RightHandIndex3Slot;
-            yield return RightHandMiddle1Slot;
-            yield return RightHandMiddle2Slot;
-            yield return RightHandMiddle3Slot;
-            yield return RightHandRing1Slot;
-            yield return RightHandRing2Slot;
-            yield return RightHandRing3Slot;
-            yield return RightHandPinky1Slot;
-            yield return RightHandPinky2Slot;
-            yield return RightHandPinky3Slot;
+            get
+            {
+                return index switch
+                {
+                    0 => HeadSlot,
+                    1 => NeckSlot,
+                    2 => Spine4Slot,
+                    3 => Spine2Slot,
+                    4 => Spine1Slot,
+                    5 => SpineSlot,
+                    6 => PelvisSlot,
+                    7 => LeftClavicleSlot,
+                    8 => LeftUpperArmSlot,
+                    9 => LeftForearmSlot,
+                    10 => LeftHandSlot,
+                    11 => RightClavicleSlot,
+                    12 => RightUpperArmSlot,
+                    13 => RightForearmSlot,
+                    14 => RightHandSlot,
+                    15 => LeftThighSlot,
+                    16 => LeftCalfSlot,
+                    17 => LeftFootSlot,
+                    18 => LeftToesSlot,
+                    19 => RightThighSlot,
+                    20 => RightCalfSlot,
+                    21 => RightFootSlot,
+                    22 => RightToesSlot,
+                    23 => LeftHandThumb1Slot,
+                    24 => LeftHandThumb2Slot,
+                    25 => LeftHandThumb3Slot,
+                    26 => LeftHandIndex1Slot,
+                    27 => LeftHandIndex2Slot,
+                    28 => LeftHandIndex3Slot,
+                    29 => LeftHandMiddle1Slot,
+                    30 => LeftHandMiddle2Slot,
+                    31 => LeftHandMiddle3Slot,
+                    32 => LeftHandRing1Slot,
+                    33 => LeftHandRing2Slot,
+                    34 => LeftHandRing3Slot,
+                    35 => LeftHandPinky1Slot,
+                    36 => LeftHandPinky2Slot,
+                    37 => LeftHandPinky3Slot,
+                    38 => RightHandThumb1Slot,
+                    39 => RightHandThumb2Slot,
+                    40 => RightHandThumb3Slot,
+                    41 => RightHandIndex1Slot,
+                    42 => RightHandIndex2Slot,
+                    43 => RightHandIndex3Slot,
+                    44 => RightHandMiddle1Slot,
+                    45 => RightHandMiddle2Slot,
+                    46 => RightHandMiddle3Slot,
+                    47 => RightHandRing1Slot,
+                    48 => RightHandRing2Slot,
+                    49 => RightHandRing3Slot,
+                    50 => RightHandPinky1Slot,
+                    51 => RightHandPinky2Slot,
+                    52 => RightHandPinky3Slot,
+                    _ => throw new ArgumentOutOfRangeException(nameof(index), index, "Index must be between 0 and 52")
+                };
+            }
         }
+
+        public int Count => 53; // Total number of RigSlots defined
 
 
         public RigSlot HeadSlot { get; set; } = new RigSlot(                "ValveBiped.Bip01_Head1",           "Head");
