@@ -228,21 +228,110 @@ namespace Yggdrassil.Domain.Scene
             }
 
             var scaleFactor = new Vector3<float>(scale.X / currentScale.X, scale.Y / currentScale.Y, scale.Z / currentScale.Z);
-            
+
             M[0, 0] *= scaleFactor.X; M[1, 0] *= scaleFactor.X; M[2, 0] *= scaleFactor.X;
             M[0, 1] *= scaleFactor.Y; M[1, 1] *= scaleFactor.Y; M[2, 1] *= scaleFactor.Y;
             M[0, 2] *= scaleFactor.Z; M[1, 2] *= scaleFactor.Z; M[2, 2] *= scaleFactor.Z;
         }
 
 
+        public bool TryInvertAffine(out Matrix4x4 inverse, float epsilon = 1e-8f)
+        {
+            // Try to invert the matrix assuming it's an affine transform (no perspective). If the matrix is not invertible, return false.
+            // We're only really using Matrix for transforms, so it should be fine
+
+            // Yeah this is black magic
+
+            inverse = new Matrix4x4();
+            if (Math.Abs(M[3, 0]) > epsilon || Math.Abs(M[3, 1]) > epsilon || Math.Abs(M[3, 2]) > epsilon || Math.Abs(M[3, 3] - 1f) > epsilon)
+            {
+                return false; // Not an affine matrix
+            }
+
+            float det = M[0, 0] * (M[1, 1] * M[2, 2] - M[1, 2] * M[2, 1]) -
+                        M[0, 1] * (M[1, 0] * M[2, 2] - M[1, 2] * M[2, 0]) +
+                        M[0, 2] * (M[1, 0] * M[2, 1] - M[1, 1] * M[2, 0]);
+
+            if (Math.Abs(det) < epsilon)
+            {
+                return false; // Not invertible
+            }
+
+            float invDet = 1.0f / det;
+
+            // Inverse of the upper-left 3x3 part
+            float m00 = (M[1, 1] * M[2, 2] - M[1, 2] * M[2, 1]) * invDet;
+            float m01 = (M[0, 2] * M[2, 1] - M[0, 1] * M[2, 2]) * invDet;
+            float m02 = (M[0, 1] * M[1, 2] - M[0, 2] * M[1, 1]) * invDet;
+
+            float m10 = (M[1, 2] * M[2, 0] - M[1, 0] * M[2, 2]) * invDet;
+            float m11 = (M[0, 0] * M[2, 2] - M[0, 2] * M[2, 0]) * invDet;
+            float m12 = (M[0, 2] * M[1, 0] - M[0, 0] * M[1, 2]) * invDet;
+
+            float m20 = (M[1, 0] * M[2, 1] - M[1, 1] * M[2, 0]) * invDet;
+            float m21 = (M[0, 1] * M[2, 0] - M[0, 0] * M[2, 1]) * invDet;
+            float m22 = (M[0, 0] * M[1, 1] - M[0, 1] * M[1, 0]) * invDet;
+
+            // Translation
+            float tx = M[0, 3];
+            float ty = M[1, 3];
+            float tz = M[2, 3];
+
+
+            // Inverse translation = -R^-1 * T
+            float itx = -(m00 * tx + m01 * ty + m02 * tz);
+            float ity = -(m10 * tx + m11 * ty + m12 * tz);
+            float itz = -(m20 * tx + m21 * ty + m22 * tz);
+
+            inverse.M[0, 0] = m00; inverse.M[0, 1] = m01; inverse.M[0, 2] = m02; inverse.M[0, 3] = itx;
+            inverse.M[1, 0] = m10; inverse.M[1, 1] = m11; inverse.M[1, 2] = m12; inverse.M[1, 3] = ity;
+            inverse.M[2, 0] = m20; inverse.M[2, 1] = m21; inverse.M[2, 2] = m22; inverse.M[2, 3] = itz;
+            inverse.M[3, 0] = 0; inverse.M[3, 1] = 0; inverse.M[3, 2] = 0; inverse.M[3, 3] = 1;
+
+            return true;
+        }
+
+        public Matrix4x4 Invert()
+        {
+            // Return the inverse of of the matrix
+
+            if (TryInvertAffine(out Matrix4x4 inverse))
+            {
+                return inverse;
+            }
+            else
+            {
+                throw new InvalidOperationException("Matrix is not invertible.");
+            }
+        }
 
 
 
 
+        // Allow Vector4<float> to be multiplied by Matrix4x4, treating the vector as a row vector (v * M)
+        public static Vector4<float> operator *(Vector4<float> v, Matrix4x4 m)
+        {
+            return new Vector4<float>
+            {
+                X = v.X * m.M[0, 0] + v.Y * m.M[1, 0] + v.Z * m.M[2, 0] + v.W * m.M[3, 0],
+                Y = v.X * m.M[0, 1] + v.Y * m.M[1, 1] + v.Z * m.M[2, 1] + v.W * m.M[3, 1],
+                Z = v.X * m.M[0, 2] + v.Y * m.M[1, 2] + v.Z * m.M[2, 2] + v.W * m.M[3, 2],
+                W = v.X * m.M[0, 3] + v.Y * m.M[1, 3] + v.Z * m.M[2, 3] + v.W * m.M[3, 3]
+            };
+        }
 
 
-
-
+        // Allow multiplying the matrix by a Vector4<float> on the right (M * v), treating the vector as a column vector
+        public static Vector4<float> operator *(Matrix4x4 m, Vector4<float> v)
+        {
+            return new Vector4<float>
+            {
+                X = m.M[0, 0] * v.X + m.M[0, 1] * v.Y + m.M[0, 2] * v.Z + m.M[0, 3] * v.W,
+                Y = m.M[1, 0] * v.X + m.M[1, 1] * v.Y + m.M[1, 2] * v.Z + m.M[1, 3] * v.W,
+                Z = m.M[2, 0] * v.X + m.M[2, 1] * v.Y + m.M[2, 2] * v.Z + m.M[2, 3] * v.W,
+                W = m.M[3, 0] * v.X + m.M[3, 1] * v.Y + m.M[3, 2] * v.Z + m.M[3, 3] * v.W
+            };
+        }
     }
 
 

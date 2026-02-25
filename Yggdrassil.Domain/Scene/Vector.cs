@@ -104,6 +104,7 @@ namespace Yggdrassil.Domain.Scene
             return hash.ToHashCode();
         }
 
+
         public override string ToString() => $"({string.Join(", ", _components)})";
     }
 
@@ -132,23 +133,53 @@ namespace Yggdrassil.Domain.Scene
         public static readonly Vector3<T> Zero = new(T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0));
         public static readonly Vector3<T> One = new(T.CreateChecked(1), T.CreateChecked(1), T.CreateChecked(1));
 
+        public static Vector3<T> operator *(Vector3<T> v, T scalar)
+            => new(v.X * scalar, v.Y * scalar, v.Z * scalar);
+
+        public static Vector3<T> operator +(Vector3<T> a, Vector3<T> b)
+            => new(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
+
+        public static Vector3<T> operator -(Vector3<T> a, Vector3<T> b)
+            => new(a.X - b.X, a.Y - b.Y, a.Z - b.Z);
+
+        public static Vector3<T> operator /(Vector3<T> v, T scalar)
+            => new(v.X / scalar, v.Y / scalar, v.Z / scalar);
+
         public override string ToString() => $"({X}, {Y}, {Z})";
+
     }
 
-    public struct Vector4<T>(T x, T y, T z, T w) where T : struct, INumber<T>
+    public struct Vector4<T> where T : struct, INumber<T>
     {
-        public T X = x;
-        public T Y = y;
-        public T Z = z;
-        public T W = w;
+        public T X;
+        public T Y;
+        public T Z;
+        public T W;
 
-        public static implicit operator Vector<T>(Vector4<T> v) => new(v.X, v.Y, v.Z, v.W);
+        public Vector4(T x, T y, T z, T w)
+        {
+            X = x;
+            Y = y;
+            Z = z;
+            W = w;
+        }
+
+        public Vector4(T[] components) : this(
+            components.Length > 0 ? components[0] : default,
+            components.Length > 1 ? components[1] : default,
+            components.Length > 2 ? components[2] : default,
+            components.Length > 3 ? components[3] : default)
+        {
+            if (components.Length != 4)
+                throw new ArgumentException("Array must have exactly 4 components", nameof(components));
+        }
 
         public Vector3<T> xyz => new(X, Y, Z);
         public Vector2<T> xy => new(X, Y);
 
         public static readonly Vector4<T> Zero = new(T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0));
         public static readonly Vector4<T> Identity = new(T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(1));
+        public static implicit operator Vector<T>(Vector4<T> v) => new(v.X, v.Y, v.Z, v.W);
         public override string ToString() => $"({X}, {Y}, {Z}, {W})";
     }
 

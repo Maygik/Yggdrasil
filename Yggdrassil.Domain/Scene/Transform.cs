@@ -15,22 +15,9 @@ namespace Yggdrassil.Domain.Scene
 
         public Transform(Vector3 position, Quaternion rotation, Vector3 scale)
         {
-            LocalMatrix = Matrix4x4.Identity();
-
-            var r = rotation.ToMatrix();
-
-            foreach (var i in Enumerable.Range(0, 3))
-            {
-                LocalMatrix.M[i, 0] = r.M[i, 0] * scale.X;
-                LocalMatrix.M[i, 1] = r.M[i, 1] * scale.Y;
-                LocalMatrix.M[i, 2] = r.M[i, 2] * scale.Z;
-            }
-
-            r.M[0, 3] = position.X;
-            r.M[1, 3] = position.Y;
-            r.M[2, 3] = position.Z;
-
-            LocalMatrix = r;
+            LocalPosition = position;
+            LocalRotation = rotation;
+            LocalScale = scale;
         }
 
         public Transform()
@@ -81,6 +68,25 @@ namespace Yggdrassil.Domain.Scene
                 var worldMatrix = WorldMatrix;
                 return new Vector3(worldMatrix.M[0, 3], worldMatrix.M[1, 3], worldMatrix.M[2, 3]);
             }
+            set
+            {
+                // We need to adjust the local position based on the parent's world matrix such that the world position becomes the desired value.
+                // This is done by multiplying the desired world position by the inverse of the parent's world matrix.
+                if (Parent != null)
+                {
+                    var parentWorldMatrix = Parent.WorldMatrix;
+                    var parentWorldMatrixInverse = parentWorldMatrix.Invert();
+
+                    // This multiplication might need to be the other way around. Just test it and see if it works. If not, swap the order of multiplication.
+                    var localPositionHomogeneous = parentWorldMatrixInverse * new Vector4<float>(value.X, value.Y, value.Z, 1);
+
+                    LocalPosition = new Vector3<float>(localPositionHomogeneous.X, localPositionHomogeneous.Y, localPositionHomogeneous.Z);
+                }
+                else
+                {
+                    LocalPosition = value; // No parent, so local position is the same as world position
+                }
+            }
         }
 
         public Quaternion LocalRotation
@@ -91,23 +97,15 @@ namespace Yggdrassil.Domain.Scene
             }
             set
             {
-                var pos = LocalPosition;
+                // Set the local rotation
+                // Preserve scale and position
                 var scale = LocalScale;
+                var position = LocalPosition;
 
-                var r = value.ToMatrix();
-
-                foreach (var i in Enumerable.Range(0, 3))
-                {
-                    LocalMatrix.M[i, 0] = r.M[i, 0] * scale.X;
-                    LocalMatrix.M[i, 1] = r.M[i, 1] * scale.Y;
-                    LocalMatrix.M[i, 2] = r.M[i, 2] * scale.Z;
-                }
-
-                r.M[0, 3] = pos.X;
-                r.M[1, 3] = pos.Y;
-                r.M[2, 3] = pos.Z;
-
-                LocalMatrix = r;
+                var rotationMatrix = value.ToMatrix();
+                LocalMatrix = rotationMatrix;
+                LocalMatrix.SetScale(scale);
+                LocalPosition = position;
             }
         }
 
