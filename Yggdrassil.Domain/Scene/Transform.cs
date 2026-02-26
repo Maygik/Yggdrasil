@@ -132,7 +132,7 @@ namespace Yggdrassil.Domain.Scene
             get
             {
                 var worldMatrix = WorldMatrix;
-                return Quaternion.FromMatrix(worldMatrix);
+                return Quaternion.FromMatrix(RemoveScale(worldMatrix));
             }
             set
             {
