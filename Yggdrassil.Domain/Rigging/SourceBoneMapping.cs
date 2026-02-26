@@ -12,7 +12,7 @@ namespace Yggdrassil.Domain.Rigging
     /// </summary>
     public class SourceBoneMapping
     {
-        public RigSlot GetRigSlotFromName(string name)
+        public RigSlot? TryGetRigSlotFromName(string name)
         {
             // Check if works as an integer index first
             if (int.TryParse(name, out int index))

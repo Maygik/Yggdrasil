@@ -66,7 +66,7 @@ namespace Yggdrassil.Infrastructure.Export
             foreach (var kvp in proportionsBones)
             {
                 // Check if bone exists in original mapping
-                var slot = project.RigMapping.GetRigSlotFromName(kvp.Key);
+                var slot = project.RigMapping.TryGetRigSlotFromName(kvp.Key);
                 if (slot == null || slot.AssignedBone == null)
                 {
                     Console.WriteLine($"Bone {kvp.Key} has not been set in rig mapping, skipping.");

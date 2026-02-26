@@ -255,5 +255,53 @@ namespace Yggdrassil.Domain.Scene
         {
             return $"Quaternion(W: {W}, X: {X}, Y: {Y}, Z: {Z})";
         }
+
+        public Quaternion Invert()
+        {
+            return new Quaternion(-X, -Y, -Z, W);
+        }
+
+
+        // Returns the shortest rotation from "from" to "to". Both "from" and "to" are expected to be normalized vectors.
+        public static Quaternion FromToRotation(Vector3<float> from, Vector3<float> to)
+        {
+            float dot = from.X * to.X + from.Y * to.Y + from.Z * to.Z;
+            if (dot > 0.999999f)
+            {
+                // Vectors are nearly identical, return identity quaternion
+                return Identity;
+            }
+            else if (dot < -0.999999f)
+            {
+                // Vectors are opposite, find an orthogonal vector for rotation axis
+                Vector3<float> orthogonal = Math.Abs(from.X) < 0.1f ? new Vector3<float>(1, 0, 0) : new Vector3<float>(0, 1, 0);
+                Vector3<float> axis = new Vector3<float>(
+                    from.Y * orthogonal.Z - from.Z * orthogonal.Y,
+                    from.Z * orthogonal.X - from.X * orthogonal.Z,
+                    from.X * orthogonal.Y - from.Y * orthogonal.X
+                );
+                float pitch = (float)Math.Atan2(axis.Y, axis.X);
+                float roll = (float)Math.Atan2(axis.Z, Math.Sqrt(axis.X * axis.X + axis.Y * axis.Y));
+                float yaw = 0; // No yaw rotation needed for 180-degree turn
+                return FromEulerAngles(roll, pitch, yaw);
+            }
+            else
+            {
+                // General case
+                Vector3<float> cross = new Vector3<float>(
+                    from.Y * to.Z - from.Z * to.Y,
+                    from.Z * to.X - from.X * to.Z,
+                    from.X * to.Y - from.Y * to.X
+                );
+                float s = (float)Math.Sqrt((1 + dot) * 2);
+                float invs = 1 / s;
+                return new Quaternion(
+                    w: s * 0.5f,
+                    x: cross.X * invs,
+                    y: cross.Y * invs,
+                    z: cross.Z * invs
+                );
+            }
+        }
     }  
 }

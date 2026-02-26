@@ -134,6 +134,22 @@ namespace Yggdrassil.Domain.Scene
                 var worldMatrix = WorldMatrix;
                 return Quaternion.FromMatrix(worldMatrix);
             }
+            set
+            {
+                // We need to adjust the local rotation based on the parent's world rotation such that the world rotation becomes the desired value.
+                if (Parent != null)
+                {
+                    var parentWorldRotation = Parent.WorldRotation;
+                    var parentWorldRotationInverse = parentWorldRotation.Invert();
+                    var localRotation = parentWorldRotationInverse * value;
+                    LocalRotation = localRotation;
+                }
+                else
+                {
+                    // No parent, so local rotation is the same as world rotation
+                    LocalRotation = value; // No parent, so local rotation is the same as world rotation
+                }
+            }
         }
 
         public Vector3 LocalScale

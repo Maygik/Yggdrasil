@@ -147,6 +147,16 @@ namespace Yggdrassil.Domain.Scene
 
         public override string ToString() => $"({X}, {Y}, {Z})";
 
+
+        public Vector3<T> Normalised()
+        {
+            var sum = X * X + Y * Y + Z * Z;
+            var length = T.CreateChecked(MathF.Sqrt(float.CreateChecked(sum)));
+            if (length == T.Zero)
+                return new Vector3<T>(T.Zero, T.Zero, T.Zero);
+            return new Vector3<T>(X / length, Y / length, Z / length);
+        }
+
     }
 
     public struct Vector4<T> where T : struct, INumber<T>

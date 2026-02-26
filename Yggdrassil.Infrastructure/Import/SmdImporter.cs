@@ -177,9 +177,14 @@ namespace Yggdrassil.Infrastructure.Import
                         float uvX = float.Parse(vertexParts[6]);
                         float uvY = float.Parse(vertexParts[7]);
                         int numWeights = int.Parse(vertexParts[8]);
-                        vertex.Position = new Vector3<float>(posX, posY, posZ);
-                        vertex.Normal = new Vector3<float>(normalX, normalY, normalZ);
-                        vertex.UV = new Vector2<float>(uvX, uvY);
+                        
+                        var meshData = currentMesh.Meshes.First(m => m.Material == materialName);
+                        meshData.Vertices.Add(new Vector3<float>(posX, posY, posZ));
+                        meshData.Normals.Add(new Vector3<float>(normalX, normalY, normalZ));
+                        meshData.UVs.Add(new Vector2<float>(uvX, uvY));
+
+                        List<Tuple<string, float>> boneWeights = new List<Tuple<string, float>>();
+
                         for (int j = 0; j < numWeights; j++)
                         {
                             string boneId = vertexParts[9 + j * 2];
@@ -189,16 +194,21 @@ namespace Yggdrassil.Infrastructure.Import
                                 throw new FormatException($"The SMD file references a bone with id '{boneId}' in the triangles section that does not exist in the nodes section.");
                             }
                             Bone bone = bonesById[boneId];
-                            vertex.Weights.Add((bone, weight));
+                            boneWeights.Add(new Tuple<string, float>(bone.Name, weight));
                         }
-                        currentMesh.Vertices.Add(vertex);
+                        meshData.BoneWeights.Add(boneWeights);
+
                         currentIndex++;
                     }
-                    sceneModel.MeshGroups.Add(currentMesh);
                 }
+
+                // Add the mesh group to the scene model after we've built it
+                sceneModel.MeshGroups.Add(currentMesh);
             }
 
 
+            // We have now parsed all the sections we care about, we can ignore the rest of the file if there are any other sections
+            return sceneModel;
 
         }
     }

@@ -36,6 +36,24 @@ namespace Yggdrassil.Domain.Scene
             return null;
         }
 
+        public List<Bone> GetAllDescendantsAndSelf()
+        {
+            List<Bone> result = new List<Bone>();
+            void Traverse(Bone bone)
+            {
+                result.Add(bone);
+                foreach (var child in bone.Children)
+                {
+                    if (child is Bone childBone)
+                    {
+                        Traverse(childBone);
+                    }
+                }
+            }
+            Traverse(this);
+            return result;
+        }
+
         public Bone(string name, Vector3 position, Quaternion rotation, Vector3 scale) : base(position, rotation, scale)
         {
             Name = name;

@@ -212,7 +212,7 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
             string sourceBone = args[0];
             string targetBone = args[1];
 
-            var slot = project.RigMapping.GetRigSlotFromName(targetBone);
+            var slot = project.RigMapping.TryGetRigSlotFromName(targetBone);
             slot.AssignedBone = sourceBone;
             Console.WriteLine($"Bound bone \"{sourceBone}\" to slot \"{slot.DisplayName}\"");
         }
@@ -225,7 +225,7 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
                 return;
             }
             string targetBone = args[0];
-            project.RigMapping.GetRigSlotFromName(targetBone).AssignedBone = null;
+            project.RigMapping.TryGetRigSlotFromName(targetBone).AssignedBone = null;
         }
 
         public static void List(string[] args, Project project)
