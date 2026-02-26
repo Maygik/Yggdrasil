@@ -230,6 +230,10 @@ namespace Yggdrassil.Domain.Scene
             }
         }
 
+        public static Quaternion FromEulerAngles(float rollRadians, float pitchRadians, float yawRadians)
+        {
+            return FromEulerAngles(new Vector3(rollRadians, pitchRadians, yawRadians));
+        }
         public static Quaternion FromEulerAngles(Vector3 eulerAnglesRadians)
         {
             // Implementation based on standard conversion from Euler angles (in radians) to quaternion
