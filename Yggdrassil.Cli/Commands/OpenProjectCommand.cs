@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Yggdrassil.Domain.Project;
+using Yggdrassil.Infrastructure.Serialization;
 
 namespace Yggdrassil.Cli.Commands
 {
@@ -18,10 +21,6 @@ namespace Yggdrassil.Cli.Commands
 
         public async Task<int> RunAsync(string[] args, CancellationToken cancellationToken)
         {
-            // Check if the project file actually exists
-            // Load it
-            // Start editing it
-
             // Check for help flag
             if (args.Contains("--help") || args.Contains("-h"))
             {
@@ -55,9 +54,7 @@ namespace Yggdrassil.Cli.Commands
             // Is a json file, so we can just read it in and parse it
             try
             {
-                var projectJson = await File.ReadAllTextAsync(projectFilePath, cancellationToken);
-
-                project = System.Text.Json.JsonSerializer.Deserialize<Project>(projectJson);
+                project = ProjectSerializer.DeserializeProject(projectFilePath);
 
                 if (project == null)
                 {
@@ -67,6 +64,8 @@ namespace Yggdrassil.Cli.Commands
                 // Set the project directory to the directory of the project file
                 // So that moving the project file doesn't break the project
                 project.Directory = Path.GetDirectoryName(projectFilePath);
+
+                Console.WriteLine($"Project '{project.Name}' loaded successfully from '{projectFilePath}'.");
             }
             catch (Exception ex)
             {
@@ -79,6 +78,8 @@ namespace Yggdrassil.Cli.Commands
                 Console.Error.WriteLine("Error: Failed to load project. The file may be corrupted or in an invalid format.");
                 return 5; // Failed to parse project
             }
+
+
 
             EditingProjectCommand.EditProject(project, Services);
             return 0; // Success

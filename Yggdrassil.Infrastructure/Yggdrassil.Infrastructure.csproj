@@ -7,6 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Resources\Armatures\proportions.smd" />
+    <None Remove="Resources\Armatures\reference_female.smd" />
+    <None Remove="Resources\Armatures\reference_male.smd" />
     <None Remove="Resources\QcSnippets\hitbox.qci" />
     <None Remove="Resources\QcSnippets\qc_animation_female.qc" />
     <None Remove="Resources\QcSnippets\qc_animation_female_npc.qc" />
@@ -19,6 +22,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Resources\Armatures\proportions.smd" />
+    <EmbeddedResource Include="Resources\Armatures\reference_female.smd" />
+    <EmbeddedResource Include="Resources\Armatures\reference_male.smd" />
     <EmbeddedResource Include="Resources\QcSnippets\hitbox.qci" />
     <EmbeddedResource Include="Resources\QcSnippets\qc_animation_female.qc" />
     <EmbeddedResource Include="Resources\QcSnippets\qc_animation_female_npc.qc" />

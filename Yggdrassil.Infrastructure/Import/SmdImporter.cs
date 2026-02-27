@@ -9,207 +9,155 @@ namespace Yggdrassil.Infrastructure.Import
 {
     public static class SmdImporter
     {
-        public static SceneModel ImportSmd(string filePath)
+        public static SceneModel ImportSmd(string fileText, string name)
         {
-            // Check that we're importing an SMD file
-            if (Path.GetExtension(filePath).ToLower() != ".smd")
+            // Make sure it's an SMD
+            // (Simple check, just see if it starts with "version 1")
+            if (!fileText.StartsWith("version 1"))
             {
-                throw new ArgumentException($"The file '{filePath}' is not an SMD file.");
+                throw new ArgumentException("File is not a valid SMD file.");
             }
 
-            // Check that the file exists
-            if (!File.Exists(filePath))
+            var lines = fileText.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+            // Build the nodes hierarchy
+            var nodes = new Dictionary<int, Bone>();
+            int lineIndex = 0;
+
+            while (lineIndex < lines.Length && !lines[lineIndex].StartsWith("nodes"))
             {
-                throw new FileNotFoundException($"The file '{filePath}' was not found.");
+                lineIndex++;
             }
-
-            // Step 1: Read the file contents
-            var fileContents = File.ReadAllLines(filePath);
-
-            SceneModel sceneModel = new SceneModel();
-            sceneModel.Name = Path.GetFileNameWithoutExtension(filePath);
-
-            // Step 2: Parse the file contents
-            
-            // First line should be "version x"
-            if (!fileContents[0].StartsWith("version "))
+            if (lineIndex >= lines.Length)
             {
-                throw new FormatException("The SMD file is missing the version header.");
+                throw new ArgumentException("SMD file is missing 'nodes' section.");
             }
-
-            // After that, we have the nodes section, which starts with "nodes" and ends with "end"
-            int nodesStartIndex = Array.IndexOf(fileContents, "nodes");
-            if (nodesStartIndex == -1)
+            Console.WriteLine("Parsing nodes...");
+            while (lineIndex < lines.Length && !lines[lineIndex].StartsWith("end"))
             {
-                throw new FormatException("The SMD file is missing the nodes section.");
-            }
-
-            // Parse the nodes, building the bone hierarchy
-            Dictionary<string, Bone> bonesById = new Dictionary<string, Bone>();
-            int endOfNodesIndex = -1;
-            int currentIndex = nodesStartIndex + 1;
-            foreach (var line in fileContents.Skip(nodesStartIndex + 1))
-            {
-                if (line == "end")
+                var line = lines[lineIndex].Trim();
+                if (line.StartsWith("nodes") || line.StartsWith("end"))
                 {
-                    endOfNodesIndex = currentIndex;
-                    break;
+                    lineIndex++;
+                    continue;
                 }
-                // Each line in the nodes section should be in the format: id "name" parentId
-                var parts = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                // first part is the id, last part is the parent id, and everything in between is the bone name
-                // They're ints, but we 'll store them as strings for now
-                string id = parts[0];
-                string parentId = parts.Last();
-
-                string boneName = string.Join(" ", parts.Skip(1).Take(parts.Length - 2)).Trim('"');
-                Bone bone = new Bone(boneName);
-                bonesById[id] = bone;
-                if (parentId != "-1")
+                var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length >= 3)
                 {
-                    if (!bonesById.ContainsKey(parentId))
+                    int id = int.Parse(parts[0]);
+                    string nodeName = parts[1].Trim('"');
+                    int parentId = int.Parse(parts[2]);
+                    var bone = new Bone
                     {
-                        throw new FormatException($"The SMD file references a parent bone with id '{parentId}' that does not exist.");
+                        Name = nodeName,
+                        IsDeform = true // Assume all bones are deform bones for now.
+                    };
+                    nodes[id] = bone;
+                }
+                lineIndex++;
+            }
+            Console.WriteLine($"Parsed {nodes.Count} nodes.");
+
+
+
+            // Build the hierarchy
+            Console.WriteLine("Building bone hierarchy...");
+            Bone? rootBone = null;
+            foreach (var kvp in nodes)
+            {
+                int id = kvp.Key;
+                Bone bone = kvp.Value;
+                int parentId = -1; // Default to -1 for root
+                foreach (var line in lines)
+                {
+                    if (line.Trim().StartsWith($"{id} "))
+                    {
+                        var parts = line.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (parts.Length >= 3)
+                        {
+                            parentId = int.Parse(parts[2]);
+                            break;
+                        }
                     }
-                    Bone parentBone = bonesById[parentId];
-                    parentBone.Children.Add(bone);
+                }
+                if (parentId == -1)
+                {
+                    rootBone = bone; // This is the root bone
+                }
+                else if (nodes.ContainsKey(parentId))
+                {
+                    nodes[parentId].AddChild(bone);
+                }
+            }
+            Console.WriteLine("Bone hierarchy built successfully.");
+
+            // Parse the skeleton pose
+            Dictionary<int, (Vector3<float> position, Vector3<float> rotation)> bonePoses = new Dictionary<int, (Vector3<float>, Vector3<float>)>();
+            while (lineIndex < lines.Length && !lines[lineIndex].StartsWith("skeleton"))
+            {
+                lineIndex++;
+            }
+            if (lineIndex >= lines.Length)
+            {
+                throw new ArgumentException("SMD file is missing 'skeleton' section.");
+            }
+
+            Console.WriteLine("Parsing skeleton pose...");
+            while (lineIndex < lines.Length && !lines[lineIndex].StartsWith("end"))
+            {
+                var line = lines[lineIndex].Trim();
+                if (line.StartsWith("skeleton") || line.StartsWith("end"))
+                {
+                    lineIndex++;
+                    continue;
+                }
+                var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 7)
+                {
+                    int boneId = int.Parse(parts[0]);
+                    float posX = float.Parse(parts[1]);
+                    float posY = float.Parse(parts[2]);
+                    float posZ = float.Parse(parts[3]);
+                    float rotX = float.Parse(parts[4]);
+                    float rotY = float.Parse(parts[5]);
+                    float rotZ = float.Parse(parts[6]);
+                    bonePoses[boneId] = (new Vector3<float> { X = posX, Y = posY, Z = posZ }, new Vector3<float> { X = rotX, Y = rotY, Z = rotZ });
+                }
+                lineIndex++;
+            }
+            Console.WriteLine($"Parsed poses for {bonePoses.Count} bones.");
+            Console.WriteLine("Assigning poses to bones...");
+            foreach (var kvp in bonePoses)
+            {
+                int boneId = kvp.Key;
+                if (nodes.ContainsKey(boneId))
+                {
+                    var bone = nodes[boneId];
+                    var pose = kvp.Value;
+                    bone.LocalPosition = pose.position;
+                    bone.LocalRotation = Quaternion.FromEulerAngles(pose.rotation);
                 }
                 else
                 {
-                    // This is the root bone
-                    sceneModel.RootBone = bone;
+                    Console.WriteLine($"Warning: Bone ID {boneId} in skeleton pose does not exist in nodes.");
                 }
-
-                currentIndex++;
             }
+            Console.WriteLine("Poses assigned to bones successfully.");
 
-            // Now we can parse the "skeleton" section, it technically contains keyframes BUT we don't care about that for now, we just want the bone transforms for frame 0
-            // section starts with "skeleton" and ends with "end"
-            // We want to read from "time 0" to the next time or the end of the section, whichever comes first
-            while (currentIndex < fileContents.Length && fileContents[currentIndex] != "skeleton")
+            // For now, we will ignore the "triangles" section and just create an empty model with the skeleton.
+
+            var model = new SceneModel
             {
-                currentIndex++;
-            }
-            if (currentIndex == fileContents.Length)
-            {
-                throw new FormatException("The SMD file is missing the skeleton section.");
-            }
+                Name = name,
+                RootBone = rootBone
+            };
 
-            // We are at the start of skeleton
-            // Move to the next line, which should be "time 0"
-            currentIndex++;
-            if (currentIndex == fileContents.Length || !fileContents[currentIndex].StartsWith("time "))
-            {
-                throw new FormatException("The SMD file is missing the time 0 keyframe in the skeleton section.");
-            }
-            // We are at the time 0 keyframe, now we want to read until the next time or the end of the section
-            while (currentIndex < fileContents.Length && !fileContents[currentIndex].StartsWith("time ") && fileContents[currentIndex] != "end")
-            {
-                // Skeleton line layout:
-                // boneId posX posY posZ rotX rotY rotZ
-                // All are in local space, and the rotations are in radians
-                var parts = fileContents[currentIndex].Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                string boneId = parts[0];
+            Console.WriteLine("SMD import completed successfully.");
 
-                if (!bonesById.ContainsKey(boneId))
-                {
-                    throw new FormatException($"The SMD file references a bone with id '{boneId}' in the skeleton section that does not exist in the nodes section.");
-                }
+            Console.WriteLine($"Model Name: {model.Name}");
 
-                float posX = float.Parse(parts[1]);
-                float posY = float.Parse(parts[2]);
-                float posZ = float.Parse(parts[3]);
-                float rotX = float.Parse(parts[4]);
-                float rotY = float.Parse(parts[5]);
-                float rotZ = float.Parse(parts[6]);
-
-                // Set the bone's local transform based on the position and rotation
-                Bone bone = bonesById[boneId];
-                bone.LocalPosition = new Vector3<float>(posX, posY, posZ);
-                bone.LocalRotation = Quaternion.FromEulerAngles(rotX, rotY, rotZ);
-
-                currentIndex++;
-            }
-
-
-            // Now we can parse the triangles section
-            while (currentIndex < fileContents.Length && fileContents[currentIndex] != "triangles")
-            {
-                currentIndex++;
-            }
-            // Do not need to ensure that the triangles section exists, as some SMD files may not have it, and we can still import the bones without it
-
-            if (currentIndex < fileContents.Length && fileContents[currentIndex] == "triangles")
-            {
-                // Parse the triangles section, which contains the mesh data
-                // Each triangle is defined by 4 lines: the first line is the material name, and the next three lines are the vertices of the triangle
-                var currentMesh = new MeshGroup();
-                // Loop until end
-                while (currentIndex < fileContents.Length && fileContents[currentIndex] != "end")
-                {
-                    // First line is the material name
-                    string materialName = fileContents[currentIndex].Trim();
-                    currentMesh.Name = materialName;
-                    currentIndex++;
-                    if (!currentMesh.Meshes.Any(m => m.Material == materialName))
-                    {
-                        // Create a new mesh for this material if it doesn't already exist
-                        MeshData meshData = new MeshData();
-                        meshData.Material = materialName;
-                        currentMesh.Meshes.Add(meshData);
-                    }
-                    // Next three lines are the vertices of the triangle
-                    for (int i = 0; i < 3; i++)
-                    {
-                        if (currentIndex >= fileContents.Length)
-                        {
-                            throw new FormatException("The SMD file ended unexpectedly while parsing the triangles section.");
-                        }
-                        var vertexParts = fileContents[currentIndex].Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                        // Vertex line layout:
-                        // posX posY posZ normalX normalY normalZ uvX uvY numWeights [boneId weight]...
-                        float posX = float.Parse(vertexParts[0]);
-                        float posY = float.Parse(vertexParts[1]);
-                        float posZ = float.Parse(vertexParts[2]);
-                        float normalX = float.Parse(vertexParts[3]);
-                        float normalY = float.Parse(vertexParts[4]);
-                        float normalZ = float.Parse(vertexParts[5]);
-                        float uvX = float.Parse(vertexParts[6]);
-                        float uvY = float.Parse(vertexParts[7]);
-                        int numWeights = int.Parse(vertexParts[8]);
-                        
-                        var meshData = currentMesh.Meshes.First(m => m.Material == materialName);
-                        meshData.Vertices.Add(new Vector3<float>(posX, posY, posZ));
-                        meshData.Normals.Add(new Vector3<float>(normalX, normalY, normalZ));
-                        meshData.UVs.Add(new Vector2<float>(uvX, uvY));
-
-                        List<Tuple<string, float>> boneWeights = new List<Tuple<string, float>>();
-
-                        for (int j = 0; j < numWeights; j++)
-                        {
-                            string boneId = vertexParts[9 + j * 2];
-                            float weight = float.Parse(vertexParts[10 + j * 2]);
-                            if (!bonesById.ContainsKey(boneId))
-                            {
-                                throw new FormatException($"The SMD file references a bone with id '{boneId}' in the triangles section that does not exist in the nodes section.");
-                            }
-                            Bone bone = bonesById[boneId];
-                            boneWeights.Add(new Tuple<string, float>(bone.Name, weight));
-                        }
-                        meshData.BoneWeights.Add(boneWeights);
-
-                        currentIndex++;
-                    }
-                }
-
-                // Add the mesh group to the scene model after we've built it
-                sceneModel.MeshGroups.Add(currentMesh);
-            }
-
-
-            // We have now parsed all the sections we care about, we can ignore the rest of the file if there are any other sections
-            return sceneModel;
-
+            return model;
         }
+
     }
 }

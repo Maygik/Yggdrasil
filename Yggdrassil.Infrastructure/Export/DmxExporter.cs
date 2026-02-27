@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Yggdrassil.Application.Abstractions;
+using Yggdrassil.Domain.Scene;
 
 namespace Yggdrassil.Infrastructure.Export
 {
@@ -22,6 +23,11 @@ namespace Yggdrassil.Infrastructure.Export
         public bool ExportScene(string folderPath, Domain.Scene.SceneModel scene)
         {
             throw new NotImplementedException("DmxExporter.ExportScene is not implemented yet.");
+        }
+
+        public Task ExportAnimationAsync(string folderPath, string animationName, SceneModel scene)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -92,7 +92,7 @@ namespace Yggdrassil.Domain.Rigging
             if (RightToesAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
                 return RightToesSlot;
 
-            throw new ArgumentException($"No RigSlot found for name: {name}", nameof(name));
+            return null;
         }
 
         // Allow accessing by index

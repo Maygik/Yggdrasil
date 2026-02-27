@@ -31,11 +31,13 @@ namespace Yggdrassil.Infrastructure.Import
         private SceneModel ImportModelSync(string filePath)
         {
             ValidateFilePath(filePath);
-            
+
             Console.WriteLine($"Importing model from file: {filePath}");
             Assimp.Scene assimpScene = ImportAssimp(filePath);
-            
-            Console.WriteLine($"Successfully imported model. Processing scene data...");
+
+            Console.WriteLine($"Model imported successfully. Scene has {assimpScene.MeshCount} meshes and {assimpScene.MaterialCount} materials");
+
+            Console.WriteLine($"Processing scene data...");
             Dictionary<string, List<int>> nodeMeshMapping = BuildNodeMeshMapping(assimpScene);
 
             Console.WriteLine($"Processing {assimpScene.MeshCount} meshes...");
@@ -263,7 +265,7 @@ namespace Yggdrassil.Infrastructure.Import
             {
                 var boneChildren = node.Children.Where(c => HasBoneDescendant(c)).ToList();
 
-                if (boneChildren.Count == 1)
+                if (boneChildren.Count == 1 && !skeletonNodes[node.Name].Item2)
                 {
                     badNodes.Add(node.Name);
                     FindSkeletonRoot(boneChildren[0]);  // fixed: boneChildren[0] not Children[0]
@@ -505,11 +507,84 @@ namespace Yggdrassil.Infrastructure.Import
                 ));
 
             // Actually import the model
+
             Assimp.Scene assimpScene = context.ImportFile(filePath,
                     PostProcessSteps.GenerateNormals |          // Generate normals if they are missing
                     PostProcessSteps.Triangulate |              // Triangulaate all faces.
-                    PostProcessSteps.CalculateTangentSpace      // Calculate tangent and bitangent vectors. Makes normal mapping and phong work properly."
+                    PostProcessSteps.CalculateTangentSpace |     // Calculate tangent and bitangent vectors. Makes normal mapping and phong work properly."
+                    PostProcessSteps.RemoveRedundantMaterials
                     );
+
+            // Apply scale to the scene
+            // All nodes should have local scale 1
+            // Resize vertices and bones by the original local scale, then reset local scale to 1
+
+            void ApplyScaleToNode(Assimp.Node node, Vector3D parentScale)
+            {
+                node.Transform.Decompose(out var localScaling, out var locRotation, out var locTranslation);
+                Vector3D combinedScale = new Vector3D(
+                    localScaling.X * parentScale.X,
+                    localScaling.Y * parentScale.Y,
+                    localScaling.Z * parentScale.Z
+                );
+                // Apply the combined scale to the vertices of the meshes attached to this node
+                if (node.MeshCount > 0)
+                {
+                    foreach (int meshIndex in node.MeshIndices)
+                    {
+                        var mesh = assimpScene.Meshes[meshIndex];
+                        for (int i = 0; i < mesh.VertexCount; i++)
+                        {
+                            var vertex = mesh.Vertices[i];
+                            vertex.X *= combinedScale.X;
+                            vertex.Y *= combinedScale.Y;
+                            vertex.Z *= combinedScale.Z;
+                            mesh.Vertices[i] = vertex;
+                        }
+
+                        foreach (var bone in mesh.Bones)
+                        {
+                            bone.OffsetMatrix.Decompose(out var boneScale, out var boneRot, out var boneTranslation);
+
+                            // Scale translation by combined scale
+                            boneTranslation.X /= combinedScale.X;
+                            boneTranslation.Y /= combinedScale.Y;
+                            boneTranslation.Z /= combinedScale.Z;
+
+                            // Make the rotation matrix
+                            var boneRotMatrix = boneRot.GetMatrix();
+
+                            // Rebuild the bone's matrix without scaling
+                            bone.OffsetMatrix = new Assimp.Matrix4x4(
+                                boneRotMatrix.A1, boneRotMatrix.A2, boneRotMatrix.A3, boneTranslation.X,
+                                boneRotMatrix.B1, boneRotMatrix.B2, boneRotMatrix.B3, boneTranslation.Y,
+                                boneRotMatrix.C1, boneRotMatrix.C2, boneRotMatrix.C3, boneTranslation.Z,
+                                0, 0, 0, 1
+                            );
+                        }
+                    }
+                }
+                // Recursively apply to child nodes
+                foreach (var child in node.Children)
+                {
+                    ApplyScaleToNode(child, combinedScale);
+                }
+
+                // Reset local scale to 1, but properly scale translation
+                var rotMatrix = locRotation.GetMatrix();
+                var scaledTranslation = new Vector3D(   locTranslation.X * combinedScale.X,
+                                                        locTranslation.Y * combinedScale.Y,
+                                                        locTranslation.Z * combinedScale.Z   );
+
+                node.Transform = new Assimp.Matrix4x4(
+                    rotMatrix.A1,   rotMatrix.A2,   rotMatrix.A3,   scaledTranslation.X,
+                    rotMatrix.B1,   rotMatrix.B2,   rotMatrix.B3,   scaledTranslation.Y,
+                    rotMatrix.C1,   rotMatrix.C2,   rotMatrix.C3,   scaledTranslation.Z,
+                    0,              0,              0,              1
+                );
+            }
+            ApplyScaleToNode(assimpScene.RootNode, new Vector3D(1,1,1));
+
 
             return assimpScene;
         }

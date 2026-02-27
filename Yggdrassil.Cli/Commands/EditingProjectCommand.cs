@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Yggdrassil.Cli.Composition;
 using Yggdrassil.Cli.Parsing;
 using Yggdrassil.Domain.Project;
+using Yggdrassil.Infrastructure.Serialization;
 
 namespace Yggdrassil.Cli.Commands
 {
@@ -163,7 +164,20 @@ namespace Yggdrassil.Cli.Commands
 
                                 if (saveInput != null && saveInput.ToLower() == "y")
                                 {
-                                    project.Save();
+                                    if (project.Directory == null)
+                                    {
+                                        Console.WriteLine("Project has no directory. Please enter a directory to save the project:");
+                                        var saveDir = Console.ReadLine();
+                                        while (string.IsNullOrEmpty(saveDir))
+                                        {
+                                            Console.WriteLine("Invalid input. Please enter a valid directory:");
+                                            saveDir = Console.ReadLine();
+                                        }
+                                        project.Directory = saveDir;
+                                    }
+
+                                    ProjectSerializer.SerializeProject(project, Path.Combine(project.Directory, project.Name + ".yggproj"));
+
                                     Console.WriteLine("Project saved. Exiting...");
                                     shouldExit = true;
                                     break;
@@ -203,6 +217,34 @@ namespace Yggdrassil.Cli.Commands
                         case "bodygroup":
                             Commands.ProjectEditing.ProjectCommands.Bodygroup(commandArgs, project);
                             break;
+                        case "bone":
+                            if (args.Length == 0)
+                            {
+                                Console.WriteLine("No arguments provided");
+                                break;
+                            }
+                            var boneToCheck = ArgReader.ParseFirstParameter(commandArgs);
+                            if (boneToCheck == null)
+                            {
+                                Console.WriteLine($"Bone not provided exist");
+                                break;
+                            }
+                            // Find the bone in the scene
+                            var bone = project.Scene.RootBone?.FindBoneInChildren(boneToCheck);
+                            // Output it's position etc
+                            if (bone != null)
+                            {
+                                Console.WriteLine($"Position:   {bone.LocalPosition} | {bone.WorldPosition}");
+                                Console.WriteLine($"Rotation:   {bone.LocalRotation.EulerAngles} | {bone.WorldRotation.EulerAngles}");
+                                Console.WriteLine($"Scale:      {bone.LocalScale} | {bone.WorldScale}");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"{boneToCheck} does not exist in the armature");
+                            }
+
+
+                                break;
                         default:
                             Console.WriteLine($"Unknown command: {command}. Type 'help' for a list of commands.");
                             break;

@@ -10,4 +10,8 @@
     <ProjectReference Include="..\Yggdrassil.Domain\Yggdrassil.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Serialization\" />
+  </ItemGroup>
+
 </Project>

@@ -258,7 +258,16 @@ namespace Yggdrassil.Domain.Scene
 
         public Quaternion Invert()
         {
-            return new Quaternion(-X, -Y, -Z, W);
+            float normSq = W * W + X * X + Y * Y + Z * Z;
+            if (normSq <= 1e-8f)
+                return Quaternion.Identity;
+
+            return new Quaternion(
+                w: W / normSq,
+                x: -X / normSq,
+                y: -Y / normSq,
+                z: -Z / normSq
+            );
         }
 
 
@@ -303,5 +312,47 @@ namespace Yggdrassil.Domain.Scene
                 );
             }
         }
-    }  
+
+
+        public Vector3<float> Rotate(Vector3<float> vector)
+        {
+            // Using the formula: v' = q * v * q^-1
+            // For efficiency, we expand this using quaternion components
+            float x = this.X;
+            float y = this.Y;
+            float z = this.Z;
+            float w = this.W;
+
+            float vx = vector.X;
+            float vy = vector.Y;
+            float vz = vector.Z;
+
+            // Calculate qv (quaternion * vector as pure quaternion)
+            float ix = w * vx + y * vz - z * vy;
+            float iy = w * vy + z * vx - x * vz;
+            float iz = w * vz + x * vy - y * vx;
+            float iw = -x * vx - y * vy - z * vz;
+
+            // Calculate (qv) * q^-1
+            float rx = ix * w + iw * -x + iy * -z - iz * -y;
+            float ry = iy * w + iw * -y + iz * -x - ix * -z;
+            float rz = iz * w + iw * -z + ix * -y - iy * -x;
+
+            return new Vector3<float>(rx, ry, rz);
+        }
+
+
+        // Creates a quaternion representing a rotation of "angle" degrees around the specified "axis". The "axis" vector is expected to be normalized.
+        public static Quaternion FromAngleAxis(float angle, Vector3<float> axis)
+        {
+            float halfAngle = angle * 0.5f;
+            float s = (float)Math.Sin(halfAngle);
+            return new Quaternion(
+                w: (float)Math.Cos(halfAngle),
+                x: axis.X * s,
+                y: axis.Y * s,
+                z: axis.Z * s
+            );
+        }
+    }
 }

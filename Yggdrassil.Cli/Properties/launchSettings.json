@@ -2,7 +2,7 @@
   "profiles": {
     "Yggdrassil.Cli": {
       "commandName": "Project",
-      "commandLineArgs": "new \"test_project\" \"C:\\Users\\xande\\Desktop\\Yggdrassil Testing\""
+      "commandLineArgs": "open \"C:\\Users\\xande\\Desktop\\Yggdrassil Testing\\apollo.yggproj\""
     }
   }
 }

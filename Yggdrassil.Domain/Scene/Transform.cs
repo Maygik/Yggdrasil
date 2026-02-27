@@ -2,12 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 using Vector3 = Yggdrassil.Domain.Scene.Vector3<float>;
 
 namespace Yggdrassil.Domain.Scene
 {
+    [JsonDerivedType(typeof(Transform), typeDiscriminator: "transform")]
+    [JsonDerivedType(typeof(Bone), typeDiscriminator: "bone")]
     public class Transform
     {
         public Transform? Parent { get; set; }
@@ -18,6 +21,11 @@ namespace Yggdrassil.Domain.Scene
             LocalPosition = position;
             LocalRotation = rotation;
             LocalScale = scale;
+        }
+
+        public Transform (Matrix4x4 localMatrix)
+        {
+            LocalMatrix = localMatrix;
         }
 
         public Transform()
@@ -33,6 +41,7 @@ namespace Yggdrassil.Domain.Scene
 
         public Matrix4x4 LocalMatrix { get; set; } = new Matrix4x4();
 
+        [JsonIgnore]
         public Matrix4x4 WorldMatrix
         {
             get
@@ -46,13 +55,26 @@ namespace Yggdrassil.Domain.Scene
                     return LocalMatrix;
                 }
             }
+            set
+            {
+                if (Parent != null)
+                {
+                    var parentWorldMatrixInverse = Parent.WorldMatrix.Invert();
+                    LocalMatrix = parentWorldMatrixInverse * value;
+                }
+                else
+                {
+                    LocalMatrix = value; // No parent, so local matrix is the same as world matrix
+                }
+            }
         }
 
-        public Vector3 LocalPosition
+        [JsonIgnore]
+        public Vector3<float> LocalPosition
         {
             get
             {
-                return new Vector3(LocalMatrix.M[0, 3], LocalMatrix.M[1, 3], LocalMatrix.M[2, 3]);
+                return new Vector3<float>(LocalMatrix.M[0, 3], LocalMatrix.M[1, 3], LocalMatrix.M[2, 3]);
             }
             set
             {
@@ -61,6 +83,7 @@ namespace Yggdrassil.Domain.Scene
                 LocalMatrix.M[2, 3] = value.Z;
             }
         }
+        [JsonIgnore]
         public Vector3 WorldPosition
         {
             get
@@ -89,6 +112,7 @@ namespace Yggdrassil.Domain.Scene
             }
         }
 
+        [JsonIgnore]
         public Quaternion LocalRotation
         {
             get
@@ -97,15 +121,33 @@ namespace Yggdrassil.Domain.Scene
             }
             set
             {
-                // Set the local rotation
                 // Preserve scale and position
                 var scale = LocalScale;
                 var position = LocalPosition;
 
+                // Start with rotation matrix (should have identity scale)
                 var rotationMatrix = value.ToMatrix();
+
+                // Scale the basis vectors BEFORE setting them
+                // (assuming ToMatrix returns pure rotation)
+                rotationMatrix.M[0, 0] *= scale.X;
+                rotationMatrix.M[1, 0] *= scale.X;
+                rotationMatrix.M[2, 0] *= scale.X;
+
+                rotationMatrix.M[0, 1] *= scale.Y;
+                rotationMatrix.M[1, 1] *= scale.Y;
+                rotationMatrix.M[2, 1] *= scale.Y;
+
+                rotationMatrix.M[0, 2] *= scale.Z;
+                rotationMatrix.M[1, 2] *= scale.Z;
+                rotationMatrix.M[2, 2] *= scale.Z;
+
+                // Set translation
+                rotationMatrix.M[0, 3] = position.X;
+                rotationMatrix.M[1, 3] = position.Y;
+                rotationMatrix.M[2, 3] = position.Z;
+
                 LocalMatrix = rotationMatrix;
-                LocalMatrix.SetScale(scale);
-                LocalPosition = position;
             }
         }
 
@@ -127,6 +169,7 @@ namespace Yggdrassil.Domain.Scene
             return r;
         }
 
+        [JsonIgnore]
         public Quaternion WorldRotation
         {
             get
@@ -152,6 +195,8 @@ namespace Yggdrassil.Domain.Scene
             }
         }
 
+
+        [JsonIgnore]
         public Vector3 LocalScale
         {
             get
@@ -165,6 +210,7 @@ namespace Yggdrassil.Domain.Scene
         }
 
 
+        [JsonIgnore]
         public Vector3 WorldScale
         {
             get

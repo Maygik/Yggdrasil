@@ -9,11 +9,19 @@ using System.Threading.Tasks;
 namespace Yggdrassil.Domain.Scene
 {
     // Matrix class for 4x4 transformation matrices, used for storing transforms of nodes in the scene graph. This is a simple wrapper around a 2D array of floats, with some helper methods for common operations like multiplication, inversion, etc.
+    [JsonConverter(typeof(Matrix4x4JsonConverter))]
     public class Matrix4x4
     {
         public float[,] M { get; } = new float[4, 4];
 
-        public Matrix4x4() { }
+        public Matrix4x4()
+        {
+            // Identity matrix by default
+            for (int i = 0; i < 4; i++)
+            {
+                M[i, i] = 1.0f;
+            }
+        }
 
         public Matrix4x4(float[,] values)
         {
@@ -57,21 +65,37 @@ namespace Yggdrassil.Domain.Scene
         }
 
         // Indexer properties for matrix elements
+        [JsonIgnore]
         public float M00 { get => M[0, 0]; set => M[0, 0] = value; }
+        [JsonIgnore]
         public float M01 { get => M[0, 1]; set => M[0, 1] = value; }
+        [JsonIgnore]
         public float M02 { get => M[0, 2]; set => M[0, 2] = value; }
+        [JsonIgnore]
         public float M03 { get => M[0, 3]; set => M[0, 3] = value; }
+        [JsonIgnore]
         public float M10 { get => M[1, 0]; set => M[1, 0] = value; }
+        [JsonIgnore]
         public float M11 { get => M[1, 1]; set => M[1, 1] = value; }
+        [JsonIgnore]
         public float M12 { get => M[1, 2]; set => M[1, 2] = value; }
+        [JsonIgnore]
         public float M13 { get => M[1, 3]; set => M[1, 3] = value; }
+        [JsonIgnore]
         public float M20 { get => M[2, 0]; set => M[2, 0] = value; }
+        [JsonIgnore]
         public float M21 { get => M[2, 1]; set => M[2, 1] = value; }
+        [JsonIgnore]
         public float M22 { get => M[2, 2]; set => M[2, 2] = value; }
+        [JsonIgnore]
         public float M23 { get => M[2, 3]; set => M[2, 3] = value; }
+        [JsonIgnore]
         public float M30 { get => M[3, 0]; set => M[3, 0] = value; }
+        [JsonIgnore]
         public float M31 { get => M[3, 1]; set => M[3, 1] = value; }
+        [JsonIgnore]
         public float M32 { get => M[3, 2]; set => M[3, 2] = value; }
+        [JsonIgnore]
         public float M33 { get => M[3, 3]; set => M[3, 3] = value; }
 
         public float[] GetRow(int row)
@@ -81,6 +105,27 @@ namespace Yggdrassil.Domain.Scene
         public float[] GetColumn(int col)
         {
             return new float[] { M[0, col], M[1, col], M[2, col], M[3, col] };
+        }
+        public Vector4<float> GetRowVector(int row)
+        {
+            return new Vector4<float>(M[row, 0], M[row, 1], M[row, 2], M[row, 3]);
+        }
+        public Vector4<float> GetColumnVector(int col)
+        {
+            return new Vector4<float>(M[0, col], M[1, col], M[2, col], M[3, col]);
+        }
+
+        public Vector3<float> GetXAxis()
+        {
+            return new Vector3<float>(M[0, 0], M[1, 0], M[2, 0]);
+        }
+        public Vector3<float> GetYAxis()
+        {
+            return new Vector3<float>(M[0, 1], M[1, 1], M[2, 1]);
+        }
+        public Vector3<float> GetZAxis()
+        {
+            return new Vector3<float>(M[0, 2], M[1, 2], M[2, 2]);
         }
 
 
@@ -301,7 +346,7 @@ namespace Yggdrassil.Domain.Scene
             }
             else
             {
-                throw new InvalidOperationException("Matrix is not invertible.");
+                throw new InvalidOperationException($"Matrix is not invertible. {ToString()}");
             }
         }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Yggdrassil.Infrastructure.Serialization;
 
 namespace Yggdrassil.Cli.Commands
 {
@@ -60,10 +61,7 @@ namespace Yggdrassil.Cli.Commands
                 project.Build.OutputDirectory = projectDirectory + "/output";
                 try
                 {
-                    if (!project.Save())
-                    {
-                        throw new Exception("Failed to save project file.");
-                    }
+                    ProjectSerializer.SerializeProject(project, projectFilePath);
                 }
                 catch (Exception ex)
                 {

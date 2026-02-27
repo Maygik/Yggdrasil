@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using System.Text.Json.Serialization;
 
 namespace Yggdrassil.Domain.Scene
 {
@@ -104,6 +105,14 @@ namespace Yggdrassil.Domain.Scene
             return hash.ToHashCode();
         }
 
+        public T Length()
+        {
+            T sumOfSquares = T.Zero;
+            for (int i = 0; i < Dimensions; i++)
+                sumOfSquares += _components[i] * _components[i];
+            return T.CreateChecked(MathF.Sqrt(float.CreateChecked(sumOfSquares)));
+        }
+
 
         public override string ToString() => $"({string.Join(", ", _components)})";
     }
@@ -114,9 +123,12 @@ namespace Yggdrassil.Domain.Scene
         public T X = x;
         public T Y = y;
 
+        [JsonIgnore]
+        public static Vector2<T> Zero => new(T.CreateChecked(0), T.CreateChecked(0));
+        [JsonIgnore]
+        public static Vector2<T> One => new(T.CreateChecked(1), T.CreateChecked(1));
+        
         public static implicit operator Vector<T>(Vector2<T> v) => new(v.X, v.Y);
-        public static readonly Vector2<T> Zero = new(T.CreateChecked(0), T.CreateChecked(0));
-        public static readonly Vector2<T> One = new(T.CreateChecked(1), T.CreateChecked(1));
         public override string ToString() => $"({X}, {Y})";
     }
 
@@ -128,10 +140,13 @@ namespace Yggdrassil.Domain.Scene
 
         public static implicit operator Vector<T>(Vector3<T> v) => new(v.X, v.Y, v.Z);
 
+        [JsonIgnore]
         public Vector2<T> xy => new(X, Y);
 
-        public static readonly Vector3<T> Zero = new(T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0));
-        public static readonly Vector3<T> One = new(T.CreateChecked(1), T.CreateChecked(1), T.CreateChecked(1));
+        [JsonIgnore]
+        public static Vector3<T> Zero => new(T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0));
+        [JsonIgnore]
+        public static Vector3<T> One => new(T.CreateChecked(1), T.CreateChecked(1), T.CreateChecked(1));
 
         public static Vector3<T> operator *(Vector3<T> v, T scalar)
             => new(v.X * scalar, v.Y * scalar, v.Z * scalar);
@@ -145,6 +160,9 @@ namespace Yggdrassil.Domain.Scene
         public static Vector3<T> operator /(Vector3<T> v, T scalar)
             => new(v.X / scalar, v.Y / scalar, v.Z / scalar);
 
+        public static Vector3<T> operator *(Vector3<T> a, Vector3<T> b)
+            => new(a.X * b.X, a.Y * b.Y, a.Z * b.Z);
+
         public override string ToString() => $"({X}, {Y}, {Z})";
 
 
@@ -157,6 +175,35 @@ namespace Yggdrassil.Domain.Scene
             return new Vector3<T>(X / length, Y / length, Z / length);
         }
 
+        public T Length()
+        {
+            var sum = X * X + Y * Y + Z * Z;
+            return T.CreateChecked(MathF.Sqrt(float.CreateChecked(sum)));
+        }
+
+        public Vector3<T> Cross(Vector3<T> other)
+        {
+            return new Vector3<T>(
+                Y * other.Z - Z * other.Y,
+                Z * other.X - X * other.Z,
+                X * other.Y - Y * other.X
+            );
+        }
+
+        public T Dot(Vector3<T> other)
+        {
+            return X * other.X + Y * other.Y + Z * other.Z;
+        }
+
+        // Returns the angle in degrees between two vectors
+        public static float Angle(Vector3<T> a, Vector3<T> b)
+        {
+            var dot = a.Dot(b);
+            var lengths = a.Length() * b.Length();
+            if (lengths == T.Zero)
+                return 0f;
+            return MathF.Acos(float.CreateChecked(dot / lengths)) * (180f / MathF.PI);
+        }
     }
 
     public struct Vector4<T> where T : struct, INumber<T>
@@ -184,11 +231,16 @@ namespace Yggdrassil.Domain.Scene
                 throw new ArgumentException("Array must have exactly 4 components", nameof(components));
         }
 
+        [JsonIgnore]
         public Vector3<T> xyz => new(X, Y, Z);
+        [JsonIgnore]
         public Vector2<T> xy => new(X, Y);
 
-        public static readonly Vector4<T> Zero = new(T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0));
-        public static readonly Vector4<T> Identity = new(T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(1));
+        [JsonIgnore]
+        public static Vector4<T> Zero => new(T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0));
+        [JsonIgnore]
+        public static Vector4<T> Identity => new(T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(0), T.CreateChecked(1));
+        
         public static implicit operator Vector<T>(Vector4<T> v) => new(v.X, v.Y, v.Z, v.W);
         public override string ToString() => $"({X}, {Y}, {Z}, {W})";
     }

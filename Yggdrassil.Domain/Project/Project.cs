@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Yggdrassil.Domain.QC;
 using Yggdrassil.Domain.Rigging;
@@ -23,35 +25,6 @@ namespace Yggdrassil.Domain.Project
         public SceneModel Scene { get; set; } = new(); // The imported model, containing meshes and skeleton.
         public SourceBoneMapping RigMapping { get; set; } = new(); // Maps bones in the scene to source engine bones
 
-        public bool Save()
-        {
-            if (Directory == null)
-            {
-                Console.WriteLine("Project directory is not set. Cannot save project.");
-                return false;
-            }
-            try
-            {
-                var directory = Directory + "/" + Name + ".yggproj";
-
-                Console.WriteLine($"Saving project to {directory}...");
-
-                // For simplicity, we serialize the Project object to JSON and save it to the specified file path.
-                string projectJson = System.Text.Json.JsonSerializer.Serialize(this, new System.Text.Json.JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
-                File.WriteAllText(directory, projectJson, new UTF8Encoding(false));
-
-                Console.WriteLine("Project saved successfully.");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to save project: {ex.Message}");
-                return false;
-            }
-        }
 
         public override string ToString()
         {

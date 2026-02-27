@@ -138,43 +138,47 @@ namespace Yggdrassil.Infrastructure.Export
             return sb.ToString();
         }
 
-        public string BuildSkeleton(Domain.Scene.SceneModel scene, int frame = 0)
+        public string BuildSkeleton(Domain.Scene.SceneModel scene, int frames = 1)
         {
             var sb = new StringBuilder();
             sb.AppendLine("skeleton");
 
-            sb.AppendLine($"time {frame}"); // Not supporting animation, so just write a single frame at time 0
-
-            // For each bone, write a line with the format: <bone_id> <pos_x> <pos_y> <pos_z> <rot_x> <rot_y> <rot_z>
-            // where pos is the position of the bone relative to its parent, and rot is the rotation of the bone in Euler angles (in radians) relative to its parent.
-            int currId = 0;
-            void WriteBone(Bone bone)
+            for (int i = 0; i < frames; ++i)
             {
-                // Get the position and rotation of the bone relative to its parent
-                // First bone should use world transform though
-                var pos = bone.LocalPosition;
-                var rot = bone.LocalRotation.EulerAngles;
+                sb.AppendLine($"time {i}"); // Not supporting animation, so just write a single frame at time 0
 
-                if (currId == 0)
+                // For each bone, write a line with the format: <bone_id> <pos_x> <pos_y> <pos_z> <rot_x> <rot_y> <rot_z>
+                // where pos is the position of the bone relative to its parent, and rot is the rotation of the bone in Euler angles (in radians) relative to its parent.
+                int currId = 0;
+                void WriteBone(Bone bone)
                 {
-                    pos = bone.WorldPosition;
-                    rot = bone.WorldRotation.EulerAngles;
-                }
+                    // Get the position and rotation of the bone relative to its parent
+                    // First bone should use world transform though
+                    var pos = bone.LocalPosition;
+                    var rot = bone.LocalRotation.EulerAngles;
+
+                    if (currId == 0)
+                    {
+                        pos = bone.WorldPosition;
+                        rot = bone.WorldRotation.EulerAngles;
+                    }
 
 
-                // Output positions to 6 decimal places to avoid issues with floating point precision in Source engine
-                sb.AppendLine($"{currId}  {pos.X:F6} {pos.Y:F6} {pos.Z:F6}  {rot.X:F6} {rot.Y:F6} {rot.Z:F6}");
-                foreach (var child in bone.Children)
-                {
-                    currId++;
-                    if (child is Bone childBone)
-                        WriteBone(childBone);
+                    // Output positions to 6 decimal places to avoid issues with floating point precision in Source engine
+                    sb.AppendLine($"{currId}  {pos.X:F6} {pos.Y:F6} {pos.Z:F6}  {rot.X:F6} {rot.Y:F6} {rot.Z:F6}");
+                    foreach (var child in bone.Children)
+                    {
+                        currId++;
+                        if (child is Bone childBone)
+                            WriteBone(childBone);
+                    }
                 }
+                if (scene.RootBone != null)
+                    WriteBone(scene.RootBone); // Root bone has ID 0
+                else
+                    sb.AppendLine("0 0 0 0 0 0 0"); // If no root bone, just write a single root bone with no transformation
+
             }
-            if (scene.RootBone != null)
-                WriteBone(scene.RootBone); // Root bone has ID 0
-            else
-                sb.AppendLine("0 0 0 0 0 0 0"); // If no root bone, just write a single root bone with no transformation
 
             sb.AppendLine("end");
 
@@ -257,9 +261,8 @@ namespace Yggdrassil.Infrastructure.Export
                 var sb = new StringBuilder();
 
                 sb.AppendLine($"version 1"); // Only supporting version 1, it's the most widely used one
-                sb.AppendLine(BuildNodes(scene, out var boneIds));
-                sb.AppendLine(BuildSkeleton(scene));
-                sb.AppendLine(BuildSkeleton(scene, frame: 1)); // For now just write a second frame identical to the first one, this is the default animation
+                sb.Append(BuildNodes(scene, out var boneIds));
+                sb.Append(BuildSkeleton(scene, frames: 2)); // Write 2 frames. They're identical.
 
                 var finalSmd = sb.ToString();
 

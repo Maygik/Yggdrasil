@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Vector3 = Yggdrassil.Domain.Scene.Vector3<float>;
 using Quaternion = Yggdrassil.Domain.Scene.Quaternion;
+using Bone = Yggdrassil.Domain.Scene.Bone;
 
 
 namespace Yggdrassil.Domain.Scene
@@ -19,6 +20,11 @@ namespace Yggdrassil.Domain.Scene
     {
         public string Name { get; set; } = string.Empty;
         public bool IsDeform { get; set; } = true; // Whether this bone has a direct influence on the mesh.
+
+        // Parameterless constructor for JSON deserialization
+        public Bone() : base()
+        {
+        }
 
         public Bone? FindBoneInChildren(string name)
         {
@@ -34,6 +40,16 @@ namespace Yggdrassil.Domain.Scene
                 }
             }
             return null;
+        }
+
+        public void PrintBoneHierarchy(string indent = "")
+        {
+            Console.WriteLine($"{indent}{Name}: {LocalPosition} {LocalRotation}");
+            foreach (var child in Children)
+            {
+                if (child is Bone childBone)
+                    childBone.PrintBoneHierarchy(indent + "  ");
+            }
         }
 
         public List<Bone> GetAllDescendantsAndSelf()
@@ -54,6 +70,29 @@ namespace Yggdrassil.Domain.Scene
             return result;
         }
 
+        /// <summary>
+        /// Creates a deep copy of this bone and all its descendants
+        /// </summary>
+        public Bone DeepClone()
+        {
+            var clone = new Bone(Name)
+            {
+                IsDeform = IsDeform,
+                LocalMatrix = new Matrix4x4(LocalMatrix.M) // Copy the matrix array
+            };
+
+            // Recursively clone all children
+            foreach (var child in Children)
+            {
+                if (child is Bone childBone)
+                {
+                    clone.AddChild(childBone.DeepClone());
+                }
+            }
+
+            return clone;
+        }
+
         public Bone(string name, Vector3 position, Quaternion rotation, Vector3 scale) : base(position, rotation, scale)
         {
             Name = name;
@@ -67,6 +106,11 @@ namespace Yggdrassil.Domain.Scene
         }
 
         public Bone(string name) : base()
+        {
+            Name = name;
+        }
+
+        public Bone(string name, Matrix4x4 matrix) : base(matrix)
         {
             Name = name;
         }

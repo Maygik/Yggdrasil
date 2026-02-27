@@ -14,17 +14,38 @@ namespace Yggdrassil.Domain.Scene
         public MeshData() { }
 
         public string Name { get; set; } = string.Empty; // Name of the mesh, for reference and possibly export.
+        public string Material { get; set; } = string.Empty; // Material name for this mesh. This is used during QC generation to assign the correct $cdmaterials path.
         public List<Vector3> Vertices { get; set; } = new List<Vector3>(); // Assuming vertices are stored as Vector3
         public List<Vector3> Normals { get; set; } = new List<Vector3>();  // Assuming normals are stored as Vector3
+        public List<Vector2> UVs { get; set; } = new List<Vector2>();      // Assuming UVs are stored as Vector2
         public List<Vector3> Tangents { get; set; } = new List<Vector3>(); // Assuming tangents are stored as Vector3. Just for rendering purposes, not actually used in QC generation.
         public List<Vector3> BiTangents { get; set; } = new List<Vector3>(); // Assuming binormals are stored as Vector3. Just for rendering purposes, not actually used in QC generation.
-        public List<Vector2> UVs { get; set; } = new List<Vector2>();      // Assuming UVs are stored as Vector2
         public List<List<Tuple<string, float>>> BoneWeights { get; set; } = new List<List<Tuple<string, float>>>(); // List of bone weights for each vertex. Each vertex can be influenced by multiple bones, so we store a list of (bone name, weight) tuples for each vertex.
         public List<Blendshape> Blendshapes { get; set; } = new List<Blendshape>(); // List of blendshapes for this mesh
         
         // .SMD defines each vertex of each face separately, so we can just store faces as tuples of vertex indices.
         public List<Face> Faces { get; set; } = new List<Face>(); 
-        public string Material { get; set; } = string.Empty; // Material name for this mesh. This is used during QC generation to assign the correct $cdmaterials path.
+
+        /// <summary>
+        /// Creates a deep copy of this mesh data
+        /// </summary>
+        public MeshData DeepClone()
+        {
+            var clone = new MeshData
+            {
+                Name = Name,
+                Material = Material,
+                Vertices = new List<Vector3>(Vertices),
+                Normals = new List<Vector3>(Normals),
+                UVs = new List<Vector2>(UVs),
+                Tangents = new List<Vector3>(Tangents),
+                BiTangents = new List<Vector3>(BiTangents),
+                BoneWeights = BoneWeights.Select(bw => new List<Tuple<string, float>>(bw)).ToList(),
+                Blendshapes = Blendshapes.Select(bs => new Blendshape(bs.Name, new List<int>(bs.VertexIndices), new List<Vector3>(bs.DeltaVertices))).ToList(),
+                Faces = Faces.Select(f => new Face(f.Vertex1, f.Vertex2, f.Vertex3)).ToList()
+            };
+            return clone;
+        }
 
         public override string ToString()
         {
@@ -112,6 +133,20 @@ namespace Yggdrassil.Domain.Scene
     {
         public string Name { get; set; } = string.Empty;
         public List<MeshData> Meshes { get; set; } = new List<MeshData>();
+
+        /// <summary>
+        /// Creates a deep copy of this mesh group
+        /// </summary>
+        public MeshGroup DeepClone()
+        {
+            var clone = new MeshGroup
+            {
+                Name = Name,
+                LocalMatrix = new Matrix4x4(LocalMatrix.M),
+                Meshes = Meshes.Select(m => m.DeepClone()).ToList()
+            };
+            return clone;
+        }
 
         public override string ToString()
         {

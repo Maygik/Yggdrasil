@@ -19,6 +19,60 @@ namespace Yggdrassil.Domain.Scene
         // Material settings for this model, keyed by material name. This is used during QC generation to determine $cdmaterials paths and other material-related settings.
         public Dictionary<string, SourceMaterialSettings> MaterialSettings { get; set; } = new Dictionary<string, SourceMaterialSettings>();
 
+        // Remove all scale from the model by applying it to vertices and bones
+        public void ApplyScale()
+        {
+            if (RootBone != null)
+            {
+                void ApplyScaleToBone(Bone bone, Vector3<float> parentScale)
+                {
+                    var currentScale = new Vector3<float>
+                    {
+                        X = parentScale.X * bone.LocalScale.X,
+                        Y = parentScale.Y * bone.LocalScale.Y,
+                        Z = parentScale.Z * bone.LocalScale.Z
+                    };
+
+                    var localPos = bone.LocalPosition;
+                    localPos.X *= parentScale.X;
+                    localPos.Y *= parentScale.Y;
+                    localPos.Z *= parentScale.Z;
+                    bone.LocalPosition = localPos;
+
+
+                    bone.LocalScale = Vector3<float>.One; // Reset local scale to 1 after applying it
+
+                    foreach (var child in bone.Children)
+                    {
+                        if (child is Bone childBone)
+                            ApplyScaleToBone(childBone, currentScale);
+                    }
+                }
+                ApplyScaleToBone(RootBone, Vector3<float>.One);
+            }
+
+            foreach (var mg in MeshGroups)
+            {
+                foreach (var mesh in mg.Meshes)
+                {
+                    for (int i = 0; i < mesh.Vertices.Count; i++)
+                    {
+                        var v = mesh.Vertices[i];
+                        var localScale = mg.LocalScale;
+                        v.X *= localScale.X;
+                        v.Y *= localScale.Y;
+                        v.Z *= localScale.Z;
+                        mesh.Vertices[i] = v;
+
+                        // Normals and UVs etc don't need to be scaled, only the vertex positions
+                    }
+                    mg.LocalScale = Vector3<float>.One; // Reset local scale to 1 after applying it
+                }
+            }
+
+
+        }
+
         public override string ToString()
         {
             var sb = new StringBuilder();
@@ -65,6 +119,26 @@ namespace Yggdrassil.Domain.Scene
             }
 
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Creates a deep copy of the entire scene model including meshes, bones, and material settings
+        /// </summary>
+        public SceneModel DeepClone()
+        {
+            var clone = new SceneModel
+            {
+                Name = Name,
+                MeshGroups = MeshGroups.Select(mg => mg.DeepClone()).ToList(),
+                RootBone = RootBone?.DeepClone(),
+                MaterialSettings = new Dictionary<string, SourceMaterialSettings>(MaterialSettings.Select(kvp => 
+                    new KeyValuePair<string, SourceMaterialSettings>(kvp.Key, new SourceMaterialSettings 
+                    { 
+                        Name = kvp.Value.Name,
+                        Adjusted = kvp.Value.Adjusted
+                    })))
+            };
+            return clone;
         }
     }
 }

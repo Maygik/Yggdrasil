@@ -64,9 +64,11 @@ namespace Yggdrassil.Cli.Parsing
         // Assuming it's the first argument after the command (e.g., "build").
         public static string? ParseFirstParameter(string[] args)
         {
+            // Parse the first parameter, accounting for "" and '' around the argument, and normalizing path separators.
             // Assuming the project file is the first argument after the command (e.g., "build")
             if (args.Length > 0)
             {
+                // Return that normalised
                 return NormalizePathArgument(args[0]);
             }
             return null;

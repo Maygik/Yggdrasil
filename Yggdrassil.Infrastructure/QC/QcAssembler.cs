@@ -45,6 +45,15 @@ namespace Yggdrassil.Infrastructure.QC
             sb.AppendLine();
             sb.AppendLine();
 
+
+            if (config.AnimationProfile != AnimationProfile.None && config.AnimationProfile != AnimationProfile.RagdollOnly)
+            {
+                sb.Append(QcPlaceholderReplacer.ReplacePlaceholders(_qcTemplateStore.Get("ik"), config));
+            }
+
+            sb.AppendLine();
+            sb.AppendLine();
+
             // Then we add the animation block based on the selected animation profile in the config
             switch (config.AnimationProfile)
             {
@@ -79,10 +88,13 @@ namespace Yggdrassil.Infrastructure.QC
             sb.AppendLine();
 
             // Next, we conditionally add blocks based on the features enabled in the config
+            /*
             if (config.Features.UseIk)
             {
                 sb.Append(QcPlaceholderReplacer.ReplacePlaceholders(_qcTemplateStore.Get("ik"), config));
             }
+            */
+
 
             sb.AppendLine();
 

@@ -52,7 +52,17 @@ namespace Yggdrassil.Cli.Commands
             try
             {
                 var sceneModel = await Services.Importer.ImportModelAsync(modelFile);
+                if (sceneModel == null)
+                {
+                    Console.Error.WriteLine("Error: Failed to import model. The importer returned null.");
+                    return 3; // Import failed
+                }
+
                 Console.WriteLine("Import completed successfully.");
+
+                Console.WriteLine("Applying scale...");
+                // Need to apply scale to the bones + meshes, makes later maths MUCH easier
+                sceneModel.ApplyScale();
 
                 // Write a debug output file that's just the scene as a string
 
