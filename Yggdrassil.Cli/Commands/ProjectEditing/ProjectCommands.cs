@@ -218,7 +218,8 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
 
 
                     // Copy over the proportions armature
-                    project.Scene.RootBone = proportions?.RootBone;
+                    if (proportions != null)
+                        project.Scene.RootBone = proportions.RootBone;
 
 
                     if (project.Scene.MeshGroups.Count == 0)
@@ -329,9 +330,30 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
             string sourceBone = args[0];
             string targetBone = args[1];
 
-            var slot = project.RigMapping.TryGetRigSlotFromName(targetBone);
-            slot.AssignedBone = sourceBone;
-            Console.WriteLine($"Bound bone \"{sourceBone}\" to slot \"{slot.DisplayName}\"");
+            // if targetbone is an int, index into the rig mapping, otherwise try to find a slot with a matching logical bone or display name
+            if (int.TryParse(targetBone, out int slotIndex))
+            {
+                if (slotIndex < 0 || slotIndex >= project.RigMapping.Count)
+                {
+                    Console.WriteLine($"Invalid slot index: {slotIndex}");
+                    return;
+                }
+                var slot = project.RigMapping[slotIndex];
+                slot.AssignedBone = sourceBone;
+                Console.WriteLine($"Bound bone \"{sourceBone}\" to slot \"{slot.DisplayName}\"");
+                return;
+            }
+            else
+            {
+                var slot = project.RigMapping.TryGetRigSlotFromName(targetBone);
+                if (slot == null)
+                {
+                    Console.WriteLine($"Could not find a bone slot matching: \"{targetBone}\". Please specify a valid slot index or name.");
+                    return;
+                }
+                slot.AssignedBone = sourceBone;
+                Console.WriteLine($"Bound bone \"{sourceBone}\" to slot \"{slot.DisplayName}\"");
+            }
         }
 
         public static void Unbind(string[] args, Project project)

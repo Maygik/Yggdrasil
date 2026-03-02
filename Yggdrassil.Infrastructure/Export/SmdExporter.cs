@@ -56,7 +56,15 @@ namespace Yggdrassil.Infrastructure.Export
             // Triangle data and export is done per mesh
             foreach (var meshGroup in scene.MeshGroups)
             {
-                ExportSingleMesh(folderPath, sharedStart, meshGroup, boneIds);
+                try
+                {
+                    ExportSingleMesh(folderPath, sharedStart, meshGroup, boneIds);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error exporting mesh group {meshGroup.Name}: {ex.Message}");
+                    continue;
+                }
             }
 
             return true;
