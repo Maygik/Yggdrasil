@@ -55,9 +55,6 @@ namespace Yggdrassil.Cli
                 return cmd switch
                 {
                     "help" => await new HelpCommand().RunAsync(rest, cts.Token),
-                    "build" => await new BuildCommand(services).RunAsync(rest, cts.Token),
-                    "import" => await new ImportCommand(services).RunAsync(rest, cts.Token),
-                    "convert" => await new ConvertCommand(services).RunAsync(rest, cts.Token),
                     "new" => await new NewProjectCommand(services).RunAsync(rest, cts.Token),
                     "open" => await new OpenProjectCommand(services).RunAsync(rest, cts.Token),
                     _ => 2 // Unknown command. Return code 2 for invalid arguments.
