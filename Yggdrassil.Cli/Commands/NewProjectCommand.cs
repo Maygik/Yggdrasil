@@ -61,7 +61,7 @@ namespace Yggdrassil.Cli.Commands
                 project.Build.OutputDirectory = projectDirectory + "/output";
                 try
                 {
-                    ProjectSerializer.SerializeProject(project, projectFilePath);
+                    Services.ProjectStore.Save(projectFilePath, project);
                 }
                 catch (Exception ex)
                 {

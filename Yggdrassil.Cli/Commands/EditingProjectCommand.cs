@@ -137,7 +137,7 @@ namespace Yggdrassil.Cli.Commands
                             Commands.ProjectEditing.ProjectCommands.Rename(commandArgs, project);
                             break;
                         case "save":
-                            Commands.ProjectEditing.ProjectCommands.Save(project);
+                            Commands.ProjectEditing.ProjectCommands.Save(project, Services);
                             break;
                         case "output":
                             Commands.ProjectEditing.ProjectCommands.Output(commandArgs, project);
@@ -176,7 +176,7 @@ namespace Yggdrassil.Cli.Commands
                                         project.Directory = saveDir;
                                     }
 
-                                    ProjectSerializer.SerializeProject(project, Path.Combine(project.Directory, project.Name + ".yggproj"));
+                                    Services.ProjectStore.Save(Path.Combine(project.Directory, project.Name + ".yggproj"), project);
 
                                     Console.WriteLine("Project saved. Exiting...");
                                     shouldExit = true;

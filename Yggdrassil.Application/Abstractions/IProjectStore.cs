@@ -10,5 +10,6 @@ namespace Yggdrassil.Application.Abstractions
     public interface IProjectStore
     {
         Project LoadProject(string projectFilePath);
+        void Save(string projectFilePath, Project project);
     }
 }

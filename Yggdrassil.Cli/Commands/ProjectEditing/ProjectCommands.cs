@@ -81,7 +81,7 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
             project.Name = string.Join(" ", args);
         }
 
-        public static void Save(Project project)
+        public static void Save(Project project, Services services)
         {
             if (project.Directory == null)
             {
@@ -94,7 +94,7 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
                 return;
             }
 
-            ProjectSerializer.SerializeProject(project, Path.Combine(project.Directory, $"{project.Name}.yggproj"));
+            services.ProjectStore.Save(Path.Combine(project.Directory, $"{project.Name}.yggproj"), project);
         }
 
         public static void Output(string[] args, Project project)

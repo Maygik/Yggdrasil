@@ -54,7 +54,7 @@ namespace Yggdrassil.Cli.Commands
             // Is a json file, so we can just read it in and parse it
             try
             {
-                project = ProjectSerializer.DeserializeProject(projectFilePath);
+                project = Services.ProjectStore.LoadProject(projectFilePath);
 
                 if (project == null)
                 {
