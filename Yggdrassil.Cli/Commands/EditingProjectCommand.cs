@@ -3,16 +3,34 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Yggdrassil.Cli.Composition;
+using Yggdrassil.Application;
 using Yggdrassil.Cli.Parsing;
 using Yggdrassil.Domain.Project;
-using Yggdrassil.Infrastructure.Serialization;
+using Yggdrassil.Application.UseCases;
 
 namespace Yggdrassil.Cli.Commands
 {
     public class EditingProjectCommand
     {
-        public static void EditProject(Project project, Services Services)
+        public static void PrintServiceResult(ServiceResult result)
+        {
+            foreach (var message in result.Messages)
+            {
+                Console.WriteLine(message);
+            }
+
+            foreach (var warning in result.Warnings)
+            {
+                Console.WriteLine($"Warning: {warning}");
+            }
+
+            if (!result.Success && !string.IsNullOrWhiteSpace(result.ErrorMessage))
+            {
+                Console.WriteLine($"Error: {result.ErrorMessage}");
+            }
+        }
+
+        public static void EditProject(Project project, AppServices Services)
         {
             // Write help lines for possible commands
             // import <model-file> // Imports a model file into the project
@@ -134,13 +152,13 @@ namespace Yggdrassil.Cli.Commands
                             Commands.ProjectEditing.ProjectCommands.Import(commandArgs, project, Services);
                             break;
                         case "rename":
-                            Commands.ProjectEditing.ProjectCommands.Rename(commandArgs, project);
+                            Commands.ProjectEditing.ProjectCommands.Rename(commandArgs, project, Services);
                             break;
                         case "save":
                             Commands.ProjectEditing.ProjectCommands.Save(project, Services);
                             break;
                         case "output":
-                            Commands.ProjectEditing.ProjectCommands.Output(commandArgs, project);
+                            Commands.ProjectEditing.ProjectCommands.Output(commandArgs, project, Services);
                             break;
                         case "export":
                             Commands.ProjectEditing.ProjectCommands.Export(commandArgs, project, Services);
@@ -176,9 +194,18 @@ namespace Yggdrassil.Cli.Commands
                                         project.Directory = saveDir;
                                     }
 
-                                    Services.ProjectStore.Save(Path.Combine(project.Directory, project.Name + ".yggproj"), project);
+                                    var saveResult = Services.SaveProject.Execute(new SaveProjectRequest
+                                    {
+                                        project = project
+                                    });
+                                    PrintServiceResult(saveResult);
 
-                                    Console.WriteLine("Project saved. Exiting...");
+                                    if (!saveResult.Success)
+                                    {
+                                        break;
+                                    }
+
+                                    Console.WriteLine("Exiting...");
                                     shouldExit = true;
                                     break;
                                 }
@@ -191,31 +218,31 @@ namespace Yggdrassil.Cli.Commands
 
                             }
                         case "scale":
-                            Commands.ProjectEditing.ProjectCommands.Scale(commandArgs, project);
+                            Commands.ProjectEditing.ProjectCommands.Scale(commandArgs, project, Services);
                             break;
                         case "modelpath":
-                            Commands.ProjectEditing.ProjectCommands.ModelPath(commandArgs, project);
+                            Commands.ProjectEditing.ProjectCommands.ModelPath(commandArgs, project, Services);
                             break;
                         case "bind":
-                            Commands.ProjectEditing.ProjectCommands.Bind(commandArgs, project);
+                            Commands.ProjectEditing.ProjectCommands.Bind(commandArgs, project, Services);
                             break;
                         case "unbind":
-                            Commands.ProjectEditing.ProjectCommands.Unbind(commandArgs, project);
+                            Commands.ProjectEditing.ProjectCommands.Unbind(commandArgs, project, Services);
                             break;
                         case "list":
                             Commands.ProjectEditing.ProjectCommands.List(commandArgs, project);
                             break;
                         case "animprofile":
-                            Commands.ProjectEditing.ProjectCommands.AnimationProfile(commandArgs, project);
+                            Commands.ProjectEditing.ProjectCommands.AnimationProfile(commandArgs, project, Services);
                             break;
                         case "materialpath":
-                            Commands.ProjectEditing.ProjectCommands.MaterialPath(commandArgs, project);
+                            Commands.ProjectEditing.ProjectCommands.MaterialPath(commandArgs, project, Services);
                             break;
                         case "surfaceprop":
-                            Commands.ProjectEditing.ProjectCommands.SurfaceProp(commandArgs, project);
+                            Commands.ProjectEditing.ProjectCommands.SurfaceProp(commandArgs, project, Services);
                             break;
                         case "bodygroup":
-                            Commands.ProjectEditing.ProjectCommands.Bodygroup(commandArgs, project);
+                            Commands.ProjectEditing.ProjectCommands.Bodygroup(commandArgs, project, Services);
                             break;
                         case "bone":
                             if (args.Length == 0)

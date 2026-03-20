@@ -3,18 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Yggdrassil.Infrastructure.Serialization;
+using Yggdrassil.Application;
+using Yggdrassil.Application.UseCases;
 
 namespace Yggdrassil.Cli.Commands
 {
     internal class NewProjectCommand
     {
-        public NewProjectCommand(Composition.Services services)
+        public NewProjectCommand(AppServices services)
         {
             Services = services;
         }
 
-        private Composition.Services Services { get; }
+        private AppServices Services { get; }
 
         public async Task<int> RunAsync(string[] args, CancellationToken cancellationToken)
         {
@@ -45,32 +46,25 @@ namespace Yggdrassil.Cli.Commands
             var projectDirectory = Parsing.ArgReader.ParseNParameter(args, 2);
             try
             {
-                if (!Directory.Exists(projectDirectory))
-                {
-                    Directory.CreateDirectory(projectDirectory);
-                }
-
-
-                var projectFilePath = Path.Combine(projectDirectory, $"{projectName}.yggproj");
-                
-                var project = new Domain.Project.Project
+                var request = new CreateProjectRequest
                 {
                     Name = projectName,
-                    Directory = projectDirectory,
+                    ProjectDirectory = projectDirectory
                 };
-                project.Build.OutputDirectory = projectDirectory + "/output";
-                try
+                var result = Services.CreateProject.Execute(request);
+                EditingProjectCommand.PrintServiceResult(result);
+
+                if (result.Success && result.CreatedProject != null)
                 {
-                    Services.ProjectStore.Save(projectFilePath, project);
+                    EditingProjectCommand.EditProject(result.CreatedProject, Services);
                 }
-                catch (Exception ex)
+                else
                 {
-                    Console.Error.WriteLine($"Error saving project file: {ex.Message}");
-                    return 1; // General error
+                    Console.Error.WriteLine($"Project could not be created at '{result.ProjectFilePath}'.");
+                    return 1;
                 }
 
-                Console.WriteLine($"Project '{projectName}' created successfully at '{projectDirectory}'.");
-                EditingProjectCommand.EditProject(project, Services);
+
                 return 0; // Success
             }
             catch (Exception ex)

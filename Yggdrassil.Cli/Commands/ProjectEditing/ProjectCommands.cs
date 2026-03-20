@@ -3,16 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Yggdrassil.Application;
 using Yggdrassil.Application.Abstractions;
-using Yggdrassil.Cli.Composition;
+using Yggdrassil.Application.UseCases;
 using Yggdrassil.Cli.Parsing;
 using Yggdrassil.Domain.Project;
 using Yggdrassil.Domain.QC;
 using Yggdrassil.Domain.Scene;
 using Yggdrassil.Infrastructure.Export;
-using Yggdrassil.Infrastructure.Serialization;
-
-using Bone = Yggdrassil.Domain.Scene.Bone;
 
 namespace Yggdrassil.Cli.Commands.ProjectEditing
 {
@@ -20,7 +18,7 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
     {
 
         // import <model-file>
-        public static void Import(string[] args, Project project, Services services)
+        public static void Import(string[] args, Project project, AppServices services)
         {
             if (args.Length < 1)
             {
@@ -35,53 +33,22 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
                 return;
             }
 
-            var scene = services.Importer.ImportModelAsync(modelFile).Result;
-            project.Scene = scene;
+            bool shouldAutoMap = ArgReader.HasFlag(args, "--automap");
 
-            // Auto-add every mesh group as a bodygroup with a single submodel
-            foreach (var meshGroup in scene.MeshGroups)
-            {
-                if (!project.Qc.Bodygroups.Any(bg => bg.Name == meshGroup.Name))
-                {
-                    project.Qc.Bodygroups.Add(new Domain.QC.Bodygroup(meshGroup.Name, new List<string?>() { meshGroup.Name }));
-                }
-            }
-
-            if (ArgReader.HasFlag(args, "--automap"))
-            {
-                if (scene.RootBone == null)
-                {
-                    Console.WriteLine($"Scene has no root bone. Skipping --automap.");
-                    return;
-                }
-
-                void CheckBoneMap(Bone bone)
-                {
-                    var slot = project.RigMapping.TryGetRigSlotFromName(bone.Name);
-
-                    if (slot != null)
-                    {
-                        slot.AssignedBone = bone.Name;
-                    }
-
-                    foreach (var child in bone.Children)
-                    {
-                        var childBone = child as Bone;
-                        if (childBone != null)
-                            CheckBoneMap(childBone);
-                    }
-                }
-                CheckBoneMap(scene.RootBone);
-            }
-
+            var request = new ImportModelRequest(modelFile, project, shouldAutoMap);
+            var result = services.ImportModel.Execute(request);
+            EditingProjectCommand.PrintServiceResult(result);
         }
 
-        public static void Rename(string[] args, Project project)
+        public static void Rename(string[] args, Project project, AppServices services)
         {
-            project.Name = string.Join(" ", args);
+            var newName = string.Join(" ", args);
+
+            var result = services.ProjectEditor.Rename(project, newName);
+            EditingProjectCommand.PrintServiceResult(result);
         }
 
-        public static void Save(Project project, Services services)
+        public static void Save(Project project, AppServices services)
         {
             if (project.Directory == null)
             {
@@ -94,10 +61,17 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
                 return;
             }
 
-            services.ProjectStore.Save(Path.Combine(project.Directory, $"{project.Name}.yggproj"), project);
+            var request = new SaveProjectRequest
+            {
+                project = project
+            };
+
+            var result = services.SaveProject.Execute(request);
+            EditingProjectCommand.PrintServiceResult(result);
+
         }
 
-        public static void Output(string[] args, Project project)
+        public static void Output(string[] args, Project project, AppServices services)
         {
             if (args.Length < 1)
             {
@@ -106,11 +80,13 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
             }
 
             string outputDirectory = string.Join(" ", args);
-            project.Build.OutputDirectory = outputDirectory;
+
+            var result = services.ProjectEditor.SetOutputDirectory(project, outputDirectory);
+            EditingProjectCommand.PrintServiceResult(result);
         }
 
         // export <all/qc/mesh> [--out <output-directory>] [--format <smd/dmx>] // Exports the project to the project directory, or to the specified output directory if provided. Optionally specify the export format (default is smd).
-        public static void Export(string[] args, Project project, Services services)
+        public static void Export(string[] args, Project project, AppServices services)
         {
             if (args.Length < 1)
             {
@@ -129,124 +105,55 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
                 return;
             }
 
-            string outputDirectory = project.Build.OutputDirectory;
-            if (ArgReader.ParseArgument(args, "--out", out string? outDir))
-            {
-                if (!string.IsNullOrEmpty(outDir))
-                    outputDirectory = outDir;
-            }
-            if (!string.IsNullOrEmpty(outputDirectory))
-            {
 
-                if (args[0] == "mesh" || args[0] == "all")
+
+            ArgReader.ParseArgument(args, "--out", out string? outputOverride);
+
+            // Figure out which exporter to use
+            IMeshExporter exporter = services.GeneralExporter;
+
+            if (ArgReader.ParseArgument(args, "--format", out string? format))
+            {
+                if (!string.IsNullOrEmpty(format))
                 {
-                    // Figure out which exporter to use
-                    IMeshExporter exporter = services.GeneralExporter;
-
-                    if (ArgReader.ParseArgument(args, "--format", out string? format))
+                    if (format == "smd" && services.SmdExporter != null)
                     {
-                        if (!string.IsNullOrEmpty(format))
-                        {
-                            if (format == "smd" && services.SmdExporter != null)
-                            {
-                                exporter = services.SmdExporter;
-                            }
-                            else if (format == "dmx" && services.DmxExporter != null)
-                            {
-                                exporter = services.DmxExporter;
-                            }
-                            else
-                            {
-                                Console.WriteLine($"Unsupported format: {format}. Supported formats are: smd, dmx. Falling back to general exporter.");
-                            }
-                        }
+                        exporter = services.SmdExporter;
                     }
-
-
-
-                    // Export the animations (Do here just to get proportions)
-
-                    SceneModel? proportions = null;
-
-                    if (project.Scene.RootBone != null)
+                    else if (format == "dmx" && services.DmxExporter != null)
                     {
-                        Console.WriteLine($"Exporting animations...");
-
-                        // Check if we need proportion trick
-                        List<AnimationProfile> profilesRequiringProportionTrick = new List<AnimationProfile>()
-                        {
-                            Domain.QC.AnimationProfile.MalePlayer,
-                            Domain.QC.AnimationProfile.FemalePlayer,
-                            Domain.QC.AnimationProfile.MaleNPC,
-                            Domain.QC.AnimationProfile.FemaleNPC,
-                            Domain.QC.AnimationProfile.CombineNPC,
-                            Domain.QC.AnimationProfile.MetrocopNPC
-                        };
-
-                        var animOutputDir = System.IO.Path.Combine(outputDirectory, "anims");
-                        if (profilesRequiringProportionTrick.Contains(project.Qc.AnimationProfile))
-                        {
-                            Console.WriteLine($"Applying proportion trick for animation export due to selected animation profile: {project.Qc.AnimationProfile}");
-
-                            // Create a temporary project copy with a cloned scene to avoid modifying the original
-                            var tempProject = new Project
-                            {
-                                Scene = project.Scene.DeepClone(),
-                                RigMapping = project.RigMapping,
-                                Qc = project.Qc
-                            };
-
-                            ProportionTrickFactory.BuildAnimations(tempProject, out SceneModel referenceMale, out SceneModel referenceFemale, out proportions);
-                            Console.WriteLine($"Exporting proportion trick animations...");
-
-                            // Export animations to /anims
-                            exporter.ExportAnimationAsync(animOutputDir, "proportions", proportions);
-                            exporter.ExportAnimationAsync(animOutputDir, "reference_male", referenceMale);
-                            exporter.ExportAnimationAsync(animOutputDir, "reference_female", referenceFemale);
-                        }
-                        else
-                        {
-                            // Just export a normal skeleton with the bind pose as the only frame
-                            exporter.ExportAnimationAsync(animOutputDir, "ragdoll", project.Scene);
-                        }
-
+                        exporter = services.DmxExporter;
                     }
                     else
                     {
-                        Console.WriteLine($"Exported meshes without skeleton to {outputDirectory}");
+                        Console.WriteLine($"Unsupported format: {format}. Supported formats are: smd, dmx. Falling back to general exporter.");
                     }
-
-
-                    // Copy over the proportions armature
-                    if (proportions != null)
-                        project.Scene.RootBone = proportions.RootBone;
-
-
-                    if (project.Scene.MeshGroups.Count == 0)
-                    {
-                        Console.WriteLine($"Scene has no meshes to export.");
-                    }
-                    else
-                    {
-                        exporter.ExportSceneAsync(outputDirectory, project.Scene);
-                    }
-
                 }
-
-                if (args[0] == "qc" || args[0] == "all")
-                {
-                    var qc = services.Assembler.AssembleQc(project.Qc);
-                    System.IO.File.WriteAllText(System.IO.Path.Combine(outputDirectory, $"{project.Name}.qc"), qc);
-                    Console.WriteLine($"QC exporter to {outputDirectory + project.Name}.qc");
-                }
-
-                
-
             }
 
+            var request = new ExportBuildRequest
+            {
+                Project = project,
+                ExporterOverride = exporter,
+                exportMeshes = args[0] == "mesh" || args[0] == "all",
+                exportQc = args[0] == "qc" || args[0] == "all",
+                outputDirectoryOverride = outputOverride
+            };
+
+            var result = services.ExportBuild.Execute(request);
+            EditingProjectCommand.PrintServiceResult(result);
+
+            if (result.Success)
+            {
+                Console.WriteLine($"Export successful! Files written to {outputOverride ?? project.Build.OutputDirectory}");
+            }
+            else
+            {
+                Console.WriteLine($"Export failed: {result.ErrorMessage}");
+            }
         }
 
-        public static void Scale(string[] args, Project project)
+        public static void Scale(string[] args, Project project, AppServices services)
         {
             if (args.Length < 1)
             {
@@ -256,59 +163,16 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
             string scaleArg = args[0];
             if (float.TryParse(scaleArg, out scaleFactor))
             {
-                if (project.Scene == null)
-                {
-                    Console.WriteLine("No scene to scale. Please import a model first.");
-                    return;
-                }
-
-                if (project.Scene.RootBone != null)
-                {
-                    // Scale all bone positions
-
-                    void ScaleBone(Bone bone)
-                    {
-                        bone.LocalPosition = new Vector3<float>(
-                            bone.LocalPosition.X * scaleFactor,
-                            bone.LocalPosition.Y * scaleFactor,
-                            bone.LocalPosition.Z * scaleFactor
-                        );
-                        foreach (var child in bone.Children)
-                        {
-                            var childBone = child as Bone;
-                            if (childBone != null)
-                                ScaleBone(childBone);
-                        }
-                    }
-                    ScaleBone(project.Scene.RootBone);
-                }
-
-                // No root bone, must scale all vertex positions manually
-                Console.WriteLine("Scaling all vertex positions");
-                foreach (var meshGroup in project.Scene.MeshGroups)
-                {
-                    foreach (var mesh in meshGroup.Meshes)
-                    {
-                        for (int i = 0; i < mesh.Vertices.Count; i++)
-                        {
-                            var vertex = mesh.Vertices[i];
-                            vertex.X *= scaleFactor;
-                            vertex.Y *= scaleFactor;
-                            vertex.Z *= scaleFactor;
-                            mesh.Vertices[i] = vertex;
-                        }
-                    }
-                }
-
-                Console.WriteLine($"Finished scaling model by a factor of {scaleFactor}");
+                var result = services.ProjectEditor.Scale(project, scaleFactor);
+                EditingProjectCommand.PrintServiceResult(result);
             }
             else
             {
-                Console.WriteLine($"Invalid scale factor: {scaleArg}");
+                Console.Error.WriteLine($"Could not convert {scaleArg} to a float");
             }
         }
 
-        public static void ModelPath(string[] args, Project project)
+        public static void ModelPath(string[] args, Project project, AppServices services)
         {
             if (args.Length < 1)
             {
@@ -316,11 +180,13 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
                 return;
             }
             string modelPath = string.Join(" ", args);
-            project.Qc.ModelPath = modelPath;
-            Console.WriteLine($"Model path set to: {modelPath}");
+
+            var result = services.ProjectEditor.SetModelPath(project, modelPath);
+            EditingProjectCommand.PrintServiceResult(result);
         }
 
-        public static void Bind(string[] args, Project project)
+        // Bind a bone to a slot
+        public static void Bind(string[] args, Project project, AppServices services)
         {
             if (args.Length < 2)
             {
@@ -333,30 +199,20 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
             // if targetbone is an int, index into the rig mapping, otherwise try to find a slot with a matching logical bone or display name
             if (int.TryParse(targetBone, out int slotIndex))
             {
-                if (slotIndex < 0 || slotIndex >= project.RigMapping.Count)
-                {
-                    Console.WriteLine($"Invalid slot index: {slotIndex}");
-                    return;
-                }
-                var slot = project.RigMapping[slotIndex];
-                slot.AssignedBone = sourceBone;
-                Console.WriteLine($"Bound bone \"{sourceBone}\" to slot \"{slot.DisplayName}\"");
+                var result = services.ProjectEditor.BindBone(project, sourceBone, slotIndex);
+                EditingProjectCommand.PrintServiceResult(result);
                 return;
             }
             else
             {
-                var slot = project.RigMapping.TryGetRigSlotFromName(targetBone);
-                if (slot == null)
-                {
-                    Console.WriteLine($"Could not find a bone slot matching: \"{targetBone}\". Please specify a valid slot index or name.");
-                    return;
-                }
-                slot.AssignedBone = sourceBone;
-                Console.WriteLine($"Bound bone \"{sourceBone}\" to slot \"{slot.DisplayName}\"");
+                var result = services.ProjectEditor.BindBone(project, sourceBone, targetBone);
+                EditingProjectCommand.PrintServiceResult(result);
+                return;
             }
         }
 
-        public static void Unbind(string[] args, Project project)
+        // Clear the bone from a slot
+        public static void Unbind(string[] args, Project project, AppServices services)
         {
             if (args.Length < 1)
             {
@@ -364,11 +220,18 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
                 return;
             }
             string targetBone = args[0];
-            var slot = project.RigMapping.TryGetRigSlotFromName(targetBone);
-            if (slot != null)
+            
+            if (int.TryParse(targetBone, out int slotIndex))
             {
-                slot.AssignedBone = null;
-                Console.WriteLine($"Unbound \"{targetBone}\" from the slot: \"{slot.DisplayName}\"");
+                var result = services.ProjectEditor.UnbindBone(project, slotIndex);
+                EditingProjectCommand.PrintServiceResult(result);
+                return;
+            }
+            else
+            {
+                var result = services.ProjectEditor.UnbindBone(project, targetBone);
+                EditingProjectCommand.PrintServiceResult(result);
+                return;
             }
         }
 
@@ -545,7 +408,7 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
         }
 
 
-        public static void AnimationProfile(string[] args, Project project)
+        public static void AnimationProfile(string[] args, Project project, AppServices services)
         {
             if (args.Length < 1)
             {
@@ -554,6 +417,8 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
             }
 
             string animProfile = args[0];
+
+            ServiceResult result = null!;
 
             //p_male
             //p_female
@@ -565,32 +430,25 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
             switch (animProfile)
             {
                 case "p_male":
-                    project.Qc.AnimationProfile = Domain.QC.AnimationProfile.MalePlayer;
-                    Console.WriteLine("QC animations will now be generated for a male player");
+                    result = services.ProjectEditor.SetAnimationProfile(project, Domain.QC.AnimationProfile.MalePlayer);
                     break;
                 case "p_female":
-                    project.Qc.AnimationProfile = Domain.QC.AnimationProfile.FemalePlayer;
-                    Console.WriteLine("QC animations will now be generated for a female player");
+                    result = services.ProjectEditor.SetAnimationProfile(project, Domain.QC.AnimationProfile.FemalePlayer);
                     break;
                 case "npc_combine":
-                    project.Qc.AnimationProfile = Domain.QC.AnimationProfile.CombineNPC;
-                    Console.WriteLine("QC animations will now be generated for a Combine NPC");
+                    result = services.ProjectEditor.SetAnimationProfile(project, Domain.QC.AnimationProfile.CombineNPC);
                     break;
                 case "npc_metrocop":
-                    project.Qc.AnimationProfile = Domain.QC.AnimationProfile.MetrocopNPC;
-                    Console.WriteLine("QC animations will now be generated for a Metrocop NPC");
+                    result = services.ProjectEditor.SetAnimationProfile(project, Domain.QC.AnimationProfile.MetrocopNPC);
                     break;
                 case "npc_male":
-                    project.Qc.AnimationProfile = Domain.QC.AnimationProfile.MaleNPC;
-                    Console.WriteLine("QC animations will now be generated for a male NPC");
+                    result = services.ProjectEditor.SetAnimationProfile(project, Domain.QC.AnimationProfile.MaleNPC);
                     break;
                 case "npc_female":
-                    project.Qc.AnimationProfile = Domain.QC.AnimationProfile.FemaleNPC;
-                    Console.WriteLine("QC animations will now be generated for a female NPC");
+                    result = services.ProjectEditor.SetAnimationProfile(project, Domain.QC.AnimationProfile.FemaleNPC);
                     break;
                 case "ragdoll":
-                    project.Qc.AnimationProfile = Domain.QC.AnimationProfile.RagdollOnly;
-                    Console.WriteLine("QC animations will now be generated for a Ragdoll");
+                    result = services.ProjectEditor.SetAnimationProfile(project, Domain.QC.AnimationProfile.RagdollOnly);
                     break;
                 default:
                     Console.WriteLine($"Unsupported animation profile: \"{animProfile}\". Supported profiles:");
@@ -603,10 +461,15 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
                     Console.WriteLine("\tragdoll");
                     break;
             }
+
+            if (result != null)
+            {
+                EditingProjectCommand.PrintServiceResult(result);
+            }
         }
 
 
-        public static void MaterialPath(string[] args, Project project)
+        public static void MaterialPath(string[] args, Project project, AppServices services)
         {
             if (args.Length < 2)
             {
@@ -617,31 +480,17 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
             string path = args[1];
             if (action == "add")
             {
-                if (!project.Qc.CdMaterialsPaths.Contains(path))
-                {
-                    project.Qc.CdMaterialsPaths.Add(path);
-                    Console.WriteLine($"Added material path: {path}");
-                }
-                else
-                {
-                    Console.WriteLine($"Material path already exists: {path}");
-                }
+                var result = services.ProjectEditor.AddMaterialPath(project, path);
+                EditingProjectCommand.PrintServiceResult(result);
             }
             else if (action == "remove")
             {
-                if (project.Qc.CdMaterialsPaths.Contains(path))
-                {
-                    project.Qc.CdMaterialsPaths.Remove(path);
-                    Console.WriteLine($"Removed material path: {path}");
-                }
-                else
-                {
-                    Console.WriteLine($"Material path not found: {path}");
-                }
+                var result = services.ProjectEditor.RemoveMaterialPath(project, path);
+                EditingProjectCommand.PrintServiceResult(result);
             }
         }
 
-        public static void SurfaceProp(string[] args, Project project)
+        public static void SurfaceProp(string[] args, Project project, AppServices services)
         {
             if (args.Length < 2)
             {
@@ -649,11 +498,11 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
                 return;
             }
             string surfaceProp = args[1];
-            project.Qc.SurfaceProp = surfaceProp;
-            Console.WriteLine($"Model will not use {surfaceProp} for $surfaceprop");
+            var result = services.ProjectEditor.SetSurfaceProp(project, surfaceProp);
+            EditingProjectCommand.PrintServiceResult(result);
         }
 
-        public static void Bodygroup(string[] args, Project project)
+        public static void Bodygroup(string[] args, Project project, AppServices services)
         {
             if (args.Length < 3)
             {
@@ -677,27 +526,13 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
 
             if (action == "add")
             {
-                var bodyGroup = project.Qc.Bodygroups.FirstOrDefault(bg => bg.Name == bodyGroupName);
-                if (bodyGroup != null)
-                {
-                    bodyGroup.Submeshes.AddRange(submodels);
-                }
-                else
-                {
-                    project.Qc.Bodygroups.Add(new Domain.QC.Bodygroup(bodyGroupName, submodels));
-                }
+                var result = services.ProjectEditor.AddBodygroup(project, bodyGroupName, submodels);
+                EditingProjectCommand.PrintServiceResult(result);
             }
             else if (action == "remove")
             {
-                var bodyGroup = project.Qc.Bodygroups.FirstOrDefault(bg => bg.Name == bodyGroupName);
-                if (bodyGroup != null)
-                {
-                    project.Qc.Bodygroups.Remove(bodyGroup);
-                }
-                else
-                {
-                    Console.WriteLine($"Bodygroup not found: {bodyGroupName}");
-                }
+                var result = services.ProjectEditor.RemoveBodygroup(project, bodyGroupName);
+                EditingProjectCommand.PrintServiceResult(result);
             }
         }
     }

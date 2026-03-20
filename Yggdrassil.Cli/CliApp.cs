@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Yggdrassil.Application;
 using Yggdrassil.Cli.Commands;
-using Yggdrassil.Cli.Composition;
+using Yggdrassil.Infrastructure;
 
 namespace Yggdrassil.Cli
 {
@@ -47,7 +48,7 @@ namespace Yggdrassil.Cli
 
             try
             {
-                var services = Services.Create();
+                var services = AppServicesFactory.Create();
 
                 var cmd = args[0].ToLowerInvariant(); // Get the command (e.g., "build")
                 var rest = args.Skip(1).ToArray(); // Get the rest of the arguments (e.g., project file and options)

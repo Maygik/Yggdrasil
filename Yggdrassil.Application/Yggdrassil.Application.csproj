@@ -7,11 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Yggdrassil.Domain\Yggdrassil.Domain.csproj" />
+    <Compile Remove="Serialization\**" />
+    <EmbeddedResource Remove="Serialization\**" />
+    <None Remove="Serialization\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Serialization\" />
+    <ProjectReference Include="..\Yggdrassil.Domain\Yggdrassil.Domain.csproj" />
   </ItemGroup>
 
 </Project>

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Yggdrassil.Application.Abstractions;
 using Yggdrassil.Domain.Project;
 using Yggdrassil.Domain.Scene;
 using Yggdrassil.Infrastructure.Import;
@@ -14,30 +15,24 @@ using Vector3 = Yggdrassil.Domain.Scene.Vector3<float>;
 
 namespace Yggdrassil.Infrastructure.Export
 {
-    public static class ProportionTrickFactory
+    public class ProportionTrickService : IProportionTrickService
     {
-        private static AnimationTemplateStore? _animationStore = null;
+        private AnimationTemplateStore? _animationStore;
 
-        // Singleton
-        public static AnimationTemplateStore AnimationStore
+        public ProportionTrickService()
         {
-            get
-            {
-                if (_animationStore == null)
-                {
-                    _animationStore = new AnimationTemplateStore();
-                    _animationStore.Init();
-                }
-
-                return _animationStore;
-            }
+            _animationStore = new AnimationTemplateStore();
+            _animationStore.Init();
         }
-
+        
         // Builds the reference animations for proportion trick
-        public static void BuildAnimations(Project project, out SceneModel reference_male, out SceneModel reference_female, out SceneModel proportions)
+        public ProportionTrickResult Build(Project project)
         {
+            var result = new ProportionTrickResult();
+
+
             // Import the base proportions model from packaged resources
-            proportions = SmdImporter.ImportSmd(AnimationStore.Get("proportions"), "proportions");
+            result.Proportions = SmdImporter.ImportSmd(_animationStore.Get("proportions"), "proportions");
             Console.WriteLine("Imported proportions model");
 
             // Debug:
@@ -57,37 +52,37 @@ namespace Yggdrassil.Infrastructure.Export
 
             // For each bone in the proportions model, find the corresponding bone in the rig mapping, and adjust the proportions bone position and rotation to match the rig mapping bone position and rotation
 
-            if (proportions.RootBone == null)
+            if (result.Proportions.RootBone == null)
                 throw new Exception("Proportions model must have a root bone");
             if (project.Scene.RootBone == null)
                 throw new Exception("Project model must have a root bone to run proportion trick");
 
             // Build a bone map for the original proportions model as well as the project model
-            Dictionary<string, Bone> proportionsBoneMap = proportions.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
+            Dictionary<string, Bone> proportionsBoneMap = result.Proportions.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
             Dictionary<string, Bone> rigBoneMap = project.Scene.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
 
             // Root bone just gets moved to the rig equivalent
 
-            var rigSlot = project.RigMapping.TryGetRigSlotFromName(proportions.RootBone.Name);
+            var rigSlot = project.RigMapping.TryGetRigSlotFromName(result.Proportions.RootBone.Name);
             if (rigSlot != null)
             {
                 var rigBone = rigSlot.AssignedBone;
                 if (rigBone == null)
                 {
-                    throw new Exception($"Root bone \"{proportions.RootBone.Name}\" of proportions model must be mapped to a rig slot in the project for proportion trick to work");
+                    throw new Exception($"Root bone \"{result.Proportions.RootBone.Name}\" of proportions model must be mapped to a rig slot in the project for proportion trick to work");
                 }
-                proportions.RootBone.WorldPosition = rigBoneMap[rigSlot.AssignedBone!].WorldPosition;
-                Console.WriteLine($"Set world position of proportions root bone \"{proportions.RootBone.Name}\" to rig bone \"{rigBone}\"");
-                Console.WriteLine($"Proportions root bone \"{proportions.RootBone.Name}\" world position: {proportions.RootBone.WorldPosition}, rig bone \"{rigBone}\" world position: {rigBoneMap[rigSlot.AssignedBone!].WorldPosition}");
+                result.Proportions.RootBone.WorldPosition = rigBoneMap[rigSlot.AssignedBone!].WorldPosition;
+                Console.WriteLine($"Set world position of proportions root bone \"{result.Proportions.RootBone.Name}\" to rig bone \"{rigBone}\"");
+                Console.WriteLine($"Proportions root bone \"{result.Proportions.RootBone.Name}\" world position: {result.Proportions.RootBone.WorldPosition}, rig bone \"{rigBone}\" world position: {rigBoneMap[rigSlot.AssignedBone!].WorldPosition}");
             }
             else
             {
-                throw new Exception($"Root bone \"{proportions.RootBone.Name}\" of proportions model must be mapped to a rig slot in the project for proportion trick to work");
+                throw new Exception($"Root bone \"{result.Proportions.RootBone.Name}\" of proportions model must be mapped to a rig slot in the project for proportion trick to work");
             }
 
             HashSet<Bone> collapsedBones = new HashSet<Bone>();
 
-            foreach (var proportionsBone in proportions.RootBone.GetAllDescendantsAndSelf().Skip(1))
+            foreach (var proportionsBone in result.Proportions.RootBone.GetAllDescendantsAndSelf().Skip(1))
             {
                 if (collapsedBones.Contains(proportionsBone))
                 {
@@ -606,7 +601,7 @@ namespace Yggdrassil.Infrastructure.Export
 
 
             Console.WriteLine("Adding additional bones to proportions armature");
-            var finalProportionsBones = proportions.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
+            var finalProportionsBones = result.Proportions.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
             int initialBoneCount = finalProportionsBones.Count;
             void AddBones(Bone bone)
             {
@@ -643,8 +638,8 @@ namespace Yggdrassil.Infrastructure.Export
 
 
             // Import the reference animations from packaged resources
-            reference_male = SmdImporter.ImportSmd(AnimationStore.Get("reference_male"), "reference_male");
-            reference_female = SmdImporter.ImportSmd(AnimationStore.Get("reference_female"), "reference_female");
+            result.ReferenceMale = SmdImporter.ImportSmd(_animationStore.Get("reference_male"), "reference_male");
+            result.ReferenceFemale = SmdImporter.ImportSmd(_animationStore.Get("reference_female"), "reference_female");
 
             // Then copy the rotations of the proportions bones to the reference bones
             // Debug console down the children chain until the end for both references
@@ -658,17 +653,17 @@ namespace Yggdrassil.Infrastructure.Export
             */
 
             // Make sure they all have root bones
-            if (proportions.RootBone == null)
+            if (result.Proportions.RootBone == null)
                 throw new Exception("Proportions model must have a root bone");
-            if (reference_male.RootBone == null)
+            if (result.ReferenceMale.RootBone == null)
                 throw new Exception("Reference male model must have a root bone");
-            if (reference_female.RootBone == null)
+            if (result.ReferenceFemale.RootBone == null)
                 throw new Exception("Reference female model must have a root bone");
 
             // Copy the rotations of the proportions bones to the reference bones
-            var proportionsBoneDict = proportions.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
-            var referenceMaleBoneDict = reference_male.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
-            var referenceFemaleBoneDict = reference_female.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
+            var proportionsBoneDict = result.Proportions.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
+            var referenceMaleBoneDict = result.ReferenceMale.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
+            var referenceFemaleBoneDict = result.ReferenceFemale.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
 
             Console.WriteLine("Copying rotations from proportions bones to reference bones");
 
@@ -688,6 +683,8 @@ namespace Yggdrassil.Infrastructure.Export
             
             Console.WriteLine($"Finished copying rotations to {proportionsBoneDict.Count} reference bones");
 
+
+            return result;
         }
 
 

@@ -11,11 +11,20 @@ namespace Yggdrassil.Infrastructure.IO
 {
     public class YggProjectStore : IProjectStore
     {
-        public Project LoadProject(string projectFilePath)
+        public Project? LoadProject(string projectFilePath)
         {
             // Open the file and Deserialize using ProjectSerializer.Deserialize
-            var project = ProjectSerializer.DeserializeProject(projectFilePath);
-            return project;
+            try
+            {
+                var project = ProjectSerializer.DeserializeProject(projectFilePath);
+                return project;
+            }
+            catch(Exception ex)
+            {
+                // Handle exceptions (e.g., file not found, deserialization errors)
+                Console.WriteLine($"Error loading project: {ex.Message}");
+                return null;
+            }
         }
 
         public void Save(string projectFilePath, Domain.Project.Project project)

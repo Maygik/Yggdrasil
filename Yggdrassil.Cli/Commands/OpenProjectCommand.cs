@@ -5,19 +5,20 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Yggdrassil.Application;
+using Yggdrassil.Application.UseCases;
 using Yggdrassil.Domain.Project;
-using Yggdrassil.Infrastructure.Serialization;
 
 namespace Yggdrassil.Cli.Commands
 {
     internal class OpenProjectCommand
     {
-        public OpenProjectCommand(Composition.Services services)
+        public OpenProjectCommand(AppServices services)
         {
             Services = services;
         }
 
-        private Composition.Services Services { get; }
+        private AppServices Services { get; }
 
         public async Task<int> RunAsync(string[] args, CancellationToken cancellationToken)
         {
@@ -51,21 +52,18 @@ namespace Yggdrassil.Cli.Commands
             Project? project;
 
             // Load project
-            // Is a json file, so we can just read it in and parse it
             try
             {
-                project = Services.ProjectStore.LoadProject(projectFilePath);
+                var request = new OpenProjectRequest { ProjectFilePath = projectFilePath };
+                var result = Services.OpenProject.Execute(request);
+                EditingProjectCommand.PrintServiceResult(result);
 
-                if (project == null)
+                if (!result.Success)
                 {
-                    Console.Error.WriteLine("Error: Failed to parse project file. The file may be corrupted or in an invalid format.");
                     return 5; // Failed to parse project
                 }
-                // Set the project directory to the directory of the project file
-                // So that moving the project file doesn't break the project
-                project.Directory = Path.GetDirectoryName(projectFilePath);
 
-                Console.WriteLine($"Project '{project.Name}' loaded successfully from '{projectFilePath}'.");
+                project = result.OpenedProject;
             }
             catch (Exception ex)
             {
