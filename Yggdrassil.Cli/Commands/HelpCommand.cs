@@ -10,23 +10,20 @@ namespace Yggdrassil.Cli.Commands
     {
         public async Task<int> RunAsync(string[] args, CancellationToken cancellationToken)
         {
+            // new <project-name> <project-directory>
+            // open <project-file>
+            // help
+
+
             Console.WriteLine("Yggdrassil CLI - Help");
             Console.WriteLine();
             Console.WriteLine("Usage:");
-            Console.WriteLine("  yggdrassil <command> [options]");
+            Console.WriteLine("  ygg [command] [options]");
             Console.WriteLine();
-            Console.WriteLine("Commands:");
-            Console.WriteLine("  build <project.json> --out <folder>   Build the project specified by the JSON file and output to the folder.");
-            Console.WriteLine("  import <model.obj> --out <folder>    Import the specified model file and output to the folder.");
-            Console.WriteLine("  convert <model-file> --out <folder> [--format <smd/dmx>]   Convert the specified model file to the given format and output to the folder.");
-            Console.WriteLine();
-            Console.WriteLine("Options:");
-            Console.WriteLine("  --out <folder>    Specify the output directory for the build artifacts.");
-            Console.WriteLine();
-            Console.WriteLine("Examples:");
-            Console.WriteLine("  yggdrassil build myproject.json --out ./output");
-            Console.WriteLine();
-            Console.WriteLine("  yggdrassil import mymodel.obj --out ./output");
+            Console.WriteLine("Available Commands:");
+            Console.WriteLine("  new <project-name> <project-directory>   Create a new project");
+            Console.WriteLine("  open <project-file>                       Open an existing project");
+            Console.WriteLine("  help                                      Show this help message");
             Console.WriteLine();
             return await Task.FromResult(0); // Success
         }

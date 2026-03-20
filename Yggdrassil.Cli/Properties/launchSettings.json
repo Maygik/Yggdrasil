@@ -1,8 +1,7 @@
 {
   "profiles": {
     "Yggdrassil.Cli": {
-      "commandName": "Project",
-      "commandLineArgs": "open \"C:\\Users\\xande\\Desktop\\Yggdrassil Testing\\apollo.yggproj\""
+      "commandName": "Project"
     }
   }
 }

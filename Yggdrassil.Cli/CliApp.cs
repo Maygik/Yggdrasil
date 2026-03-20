@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Yggdrassil.Application;
 using Yggdrassil.Cli.Commands;
+using Yggdrassil.Cli.Parsing;
 using Yggdrassil.Infrastructure;
 
 namespace Yggdrassil.Cli
@@ -30,60 +31,69 @@ namespace Yggdrassil.Cli
         {
             // Setup cancellation handling for Ctrl+C
             using var cts = new CancellationTokenSource();
-            Console.CancelKeyPress += (sender, eventArgs) =>
-            {
-                Console.WriteLine("Cancellation requested...");
-                cts.Cancel();
-                eventArgs.Cancel = true; // Prevent the process from terminating immediately
-            };
 
-            // If no arguments provided, return usage information
+            var services = AppServicesFactory.Create();
+
             if (args.Length == 0)
+                return await RunLauncherAsync(services, cts.Token);
+
+            if (IsProjectFileLaunch(args))
             {
-                // No arguments provided, show usage information
-                PrintUsage();
-                return 2;
+                // If the first argument looks like a project file, treat it as an "open" command
+                return await new OpenProjectCommand(services).RunAsync(args, cts.Token);
             }
 
 
-            try
+            return await DispatchCommandAsync(args, services, cts.Token);
+        }
+
+        private bool IsProjectFileLaunch(string[] args)
+        {
+            if (args.Length == 0)
+                return false;
+            var firstArg = args[0];
+            return firstArg.EndsWith(".yggproj", StringComparison.OrdinalIgnoreCase) ||
+                   firstArg.EndsWith(".yggproj.json", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private async Task<int> RunLauncherAsync(AppServices services, CancellationToken token)
+        {
+            while (true)
             {
-                var services = AppServicesFactory.Create();
+                Console.Write("ygg> ");
+                var input = Console.ReadLine();
 
-                var cmd = args[0].ToLowerInvariant(); // Get the command (e.g., "build")
-                var rest = args.Skip(1).ToArray(); // Get the rest of the arguments (e.g., project file and options)
+                if (string.IsNullOrWhiteSpace(input))
+                    continue;
 
-                return cmd switch
+                var inputArgs = ArgReader.ExtractArguments(input);
+                var command = inputArgs[0].ToLowerInvariant();
+
+                if (command == "exit" || command == "quit")
                 {
-                    "help" => await new HelpCommand().RunAsync(rest, cts.Token),
-                    "new" => await new NewProjectCommand(services).RunAsync(rest, cts.Token),
-                    "open" => await new OpenProjectCommand(services).RunAsync(rest, cts.Token),
-                    _ => 2 // Unknown command. Return code 2 for invalid arguments.
-                };
+                    Console.WriteLine("Exiting Yggdrassil CLI.");
+                    return 0;
+                }
 
-            }
-            catch (OperationCanceledException)
-            {
-                Console.WriteLine("Operation cancelled by user.");
-                return 130;
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"Error: {ex.Message}");
-                return 1;
+                var exitCode = await DispatchCommandAsync(inputArgs, services, token);
             }
         }
 
-
-
-        private void PrintUsage()
+        private async Task<int> DispatchCommandAsync(string[] args, AppServices services, CancellationToken token)
         {
-            Console.WriteLine("Yggdrassil CLI - Usage:");
-            Console.WriteLine("  yggdrassil <command> [options]");
-            Console.WriteLine();
-            // Tell the user the help command is available
-            Console.WriteLine("Use 'yggdrassil help' to see available commands.");
-            Console.WriteLine();
+            if (args.Length == 0)
+                return 2;
+
+            var cmd = args[0].ToLowerInvariant();
+            var rest = args.Skip(1).ToArray();
+
+            return cmd switch
+            {
+                "help" => await new HelpCommand().RunAsync(rest, token),
+                "new" => await new NewProjectCommand(services).RunAsync(rest, token),
+                "open" => await new OpenProjectCommand(services).RunAsync(rest, token),
+                _ => 2 // Unknown command. Return code 2 for invalid arguments.
+            };
         }
     }
 }

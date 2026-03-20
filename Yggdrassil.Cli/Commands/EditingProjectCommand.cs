@@ -30,49 +30,59 @@ namespace Yggdrassil.Cli.Commands
             }
         }
 
+        private static void PrintProjectHelp()
+        {
+            Console.WriteLine("Project Commands");
+            Console.WriteLine();
+
+            Console.WriteLine("Project");
+            Console.WriteLine("  import <model-file> [--automap]     Import a model into the project.");
+            Console.WriteLine("  save                                Save the current project.");
+            Console.WriteLine("  export <all|qc|mesh> [--out <dir>] [--format <smd|dmx>]");
+            Console.WriteLine("                                      Export QC, meshes, or both.");
+            Console.WriteLine("  exit [--force]                      Exit the project editor.");
+            Console.WriteLine();
+
+            Console.WriteLine("Settings");
+            Console.WriteLine("  rename <new-project-name>           Rename the project.");
+            Console.WriteLine("  output <output-directory>           Set the export output directory.");
+            Console.WriteLine("  scale <scale-factor>                Scale the imported model.");
+            Console.WriteLine("  modelpath <relative-path>           Set the compiled model path.");
+            Console.WriteLine("  animprofile <profile>               Set the target animation profile.");
+            Console.WriteLine("  surfaceprop <surface-prop>          Set the QC surface prop.");
+            Console.WriteLine();
+
+            Console.WriteLine("Rigging");
+            Console.WriteLine("  bind <bone-name> <bone-slot>        Bind a source bone to a rig slot.");
+            Console.WriteLine("  unbind <bone-slot>                  Clear a rig slot binding.");
+            Console.WriteLine("  bone <bone-name>                    Show transform details for one bone.");
+            Console.WriteLine();
+
+            Console.WriteLine("Materials And Bodygroups");
+            Console.WriteLine("  materialpath add <relative-path>    Add a QC material search path.");
+            Console.WriteLine("  materialpath remove <relative-path> Remove a QC material search path.");
+            Console.WriteLine("  bodygroup add <name> <mesh...>      Add a bodygroup and its meshes.");
+            Console.WriteLine("  bodygroup remove <name>             Remove a bodygroup.");
+            Console.WriteLine();
+
+            Console.WriteLine("List");
+            Console.WriteLine("  list summary");
+            Console.WriteLine("  list bones");
+            Console.WriteLine("  list materials");
+            Console.WriteLine("  list meshes");
+            Console.WriteLine("  list slots");
+            Console.WriteLine("  list bodygroups");
+            Console.WriteLine("  list materialpaths");
+            Console.WriteLine("  list bounds");
+            Console.WriteLine();
+
+            Console.WriteLine("Animation Profiles");
+            Console.WriteLine("  p_male, p_female, npc_combine, npc_metrocop, npc_male, npc_female, ragdoll");
+            Console.WriteLine();
+        }
+
         public static void EditProject(Project project, AppServices Services)
         {
-            // Write help lines for possible commands
-            // import <model-file> // Imports a model file into the project
-            // rename <new-project-name> // Renames the project
-            // save
-            // output <output-directory> // Sets the output directory for exports
-            // export [--out <output-directory>] [--format <smd/dmx>] // Exports the project to the project directory, or to the specified output directory if provided. Optionally specify the export format (default is smd).
-            // exit [--force] // Exits the project. If there are unsaved changes, prompts the user to save or discard them, unless --force is used, which exits immediately without saving.
-
-            // bind <bone-name> <bone-slot> // Binds a bone to a specific slot for in-game use. Accepts slot name, or ValveBiped equivalent.
-            // unbind <bone-slot> // Unbinds a bone from its slot. Accepts either the bone name or the slot name.
-
-            // list bones           // Outputs a list of all bones in the project, along with their bound slot if any
-            // list materials       // Outputs a list of all materials in the project
-            // list meshes          // Outputs a list of all meshes in the project, along with any bodygroups they belong to
-            // list slots           // Outputs a list of all bone slots, along with the bound bone if any
-            // list bodygroups      // Outputs a list of all bodygroups, along with the meshes they contain
-            // list materialpaths   // Outputs a list of all material paths the qc will use
-            // list summary         // Outputs a summary of the project, including number of bones, meshes, materials, bodygroups, and any other relevant information.
-
-            // list animation_sets // Outputs a list of all valid animation sets
-            // animations <animation-set-name> // Sets the animation set to use.
-            // Valid animation sets:
-            // p_male
-            // p_female
-            // npc_combine
-            // npc_metrocop
-            // npc_male
-            // npc_female
-            // ragdoll
-
-
-            // materialpath add <relative-path> // Adds a relative path to search for materials when generating the QC. Relative to the addon folder. "" means root materials folder.
-            // materialpath remove <relative-path> // Removes a relative path from the list of paths to search for materials.
-
-            // surfaceprop <surface-prop-name> // Sets the surfaceprop for the model, which determines footstep sounds and other material interactions in-game.
-
-
-            // bodygroup add <group-name> <mesh-name> [extra mesh] [extra mesh] ... // Adds a bodygroup with the specified name, and adds the specified meshes to it. Optionally can specify extra meshes to add to the bodygroup.
-            // bodygroup remove <group-name> // Removes the specified bodygroup
-
-            // Enter a loop to allow the user to import a model, or change project settings using extra commands
             bool shouldExit = false;
             do
             {
@@ -90,63 +100,7 @@ namespace Yggdrassil.Cli.Commands
                     switch (command)
                     {
                         case "help":
-                            Console.WriteLine("Available commands:");
-                            Console.WriteLine("Imports the specified model file into the projec");
-                            Console.WriteLine("\timport <model-file>");
-                            Console.WriteLine("Renames the project to the specified new name.");
-                            Console.WriteLine("\trename <new-project-name>");
-                            Console.WriteLine("Saves the project file with the current state of the project.");
-                            Console.WriteLine("\tsave");
-                            Console.WriteLine("Sets the output directory for exports.");
-                            Console.WriteLine("\toutput <output-directory>");
-                            Console.WriteLine("Exports the project to the project directory, or to the specified output directory if provided. Optionally specify the export format (default is smd).");
-                            Console.WriteLine("\texport <all/qc/mesh> [--out <output-directory>] [--format <smd/dmx>]");
-                            Console.WriteLine("Exits the project. If there are unsaved changes, prompts the user to save or discard them, unless --force is used, which exits immediately without saving.");
-                            Console.WriteLine("\texit [--force]");
-                            Console.WriteLine("Binds a bone to a specific slot for in-game use. Accepts slot name, or ValveBiped equivalent.");
-                            Console.WriteLine("\tbind <bone-name> <bone-slot>");
-                            Console.WriteLine("Unbinds a bone from its slot. Accepts either the bone name or the slot name.");
-                            Console.WriteLine("\tunbind <bone-slot>");
-                            Console.WriteLine();
-                            Console.WriteLine("Outputs details of the entire project");
-                            Console.WriteLine("\tlist summary");
-                            Console.WriteLine("Outputs a list of the specified feature");
-                            Console.WriteLine("\tlist bones");
-                            Console.WriteLine("\tlist materials");
-                            Console.WriteLine("\tlist meshes");
-                            Console.WriteLine("\tlist slots");
-                            Console.WriteLine("\tlist bodygroups");
-                            Console.WriteLine("\tlist materialpaths");
-                            Console.WriteLine("\tlist bounds");
-
-                            Console.WriteLine();
-                            Console.WriteLine("Scales the model by the specified factor.");
-                            Console.WriteLine("\tscale <scale-factor>");
-                            Console.WriteLine("Sets the compiled model path for the .mdl file. Relative to the addon folder.");
-                            Console.WriteLine("\tmodelpath <relative-path>");
-                            Console.WriteLine("Sets the target animation set to use");
-                            Console.WriteLine("\tanimprofile <animation-set-name>");
-                            Console.WriteLine("Valid animation sets:");
-                            Console.WriteLine("\tp_male");
-                            Console.WriteLine("\tp_female");
-                            Console.WriteLine("\tnpc_combine");
-                            Console.WriteLine("\tnpc_metrocop");
-                            Console.WriteLine("\tnpc_male");
-                            Console.WriteLine("\tnpc_female");
-                            Console.WriteLine("\tragdoll");
-                            Console.WriteLine();
-
-                            Console.WriteLine("Adds or removes material paths to search for materials when generating the QC. Relative to the addon folder. \"\" means root materials folder.");
-                            Console.WriteLine("\tmaterialpath add <relative-path>");
-                            Console.WriteLine("\tmaterialpath remove <relative-path>");
-                            Console.WriteLine("Sets the surfaceprop for the model, which determines footstep sounds and other material interactions in-game.");
-                            Console.WriteLine("\tsurfaceprop <surface-prop-name>");
-                            Console.WriteLine("Adds a bodygroup with the specified name, and adds the specified meshes to it. Optionally can specify extra meshes to add to the bodygroup.");
-                            Console.WriteLine("\tbodygroup add <group-name> <mesh-name> [extra mesh] [extra mesh] ...");
-                            Console.WriteLine("Removes the specified bodygroup");
-                            Console.WriteLine("\tbodygroup remove <group-name>");
-
-                            Console.WriteLine();
+                            PrintProjectHelp();
                             break;
                         case "import":
                             Commands.ProjectEditing.ProjectCommands.Import(commandArgs, project, Services);
