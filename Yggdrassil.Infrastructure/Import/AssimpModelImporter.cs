@@ -416,7 +416,9 @@ namespace Yggdrassil.Infrastructure.Import
         {
             Assimp.Node rootNode = skeletonNodes[rootBoneName].Item1;
 
-            Bone rootBone = new Bone(rootNode.Name);
+            Dictionary<string, int> usedBoneNames = new(StringComparer.OrdinalIgnoreCase);
+
+            Bone rootBone = new Bone(GetUniqueBoneName(rootNode.Name, usedBoneNames));
 
             // Get rootBone's world matrix from the root node
             rootBone.LocalMatrix = rootNode.Transform.ToMatrix4x4();
@@ -446,7 +448,7 @@ namespace Yggdrassil.Infrastructure.Import
                 {
                     if (skeletonNodes.ContainsKey(node.Name))
                     {
-                        Bone bone = new Bone(node.Name);
+                        Bone bone = new Bone(GetUniqueBoneName(node.Name, usedBoneNames));
                         bone.LocalMatrix = node.Transform.ToMatrix4x4();
                         parentBone.AddChild(bone);
                         ConvertChildBones(node, bone);
@@ -457,6 +459,28 @@ namespace Yggdrassil.Infrastructure.Import
             ConvertChildBones(rootNode, rootBone);
     
             return rootBone;
+        }
+
+        private static string GetUniqueBoneName(string baseName, Dictionary<string, int> usedBoneNames)
+        {
+            if (!usedBoneNames.TryGetValue(baseName, out int duplicateCount))
+            {
+                usedBoneNames[baseName] = 0;
+                return baseName;
+            }
+
+            duplicateCount++;
+            string uniqueName;
+            do
+            {
+                uniqueName = $"{baseName}_{duplicateCount}";
+                duplicateCount++;
+            }
+            while (usedBoneNames.ContainsKey(uniqueName));
+
+            usedBoneNames[baseName] = duplicateCount - 1;
+            usedBoneNames[uniqueName] = 0;
+            return uniqueName;
         }
 
         // Creates the final SceneModel by combining the node-mesh mapping, processed meshes, and skeleton hierarchy.

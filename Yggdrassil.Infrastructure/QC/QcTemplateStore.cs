@@ -39,7 +39,8 @@ namespace Yggdrassil.Infrastructure.QC
             _root = Path.Combine(appData, appName, "Templates", "QC");
 
             Directory.CreateDirectory(_root);
-            InstallMissingDefaults(); // copies embedded -> disk if file missing
+            SyncDefaults(); // copies embedded -> disk so shipped defaults stay current
+            Reload();
         }
 
         // Retrieves the template content for the given key, loading it from disk if not cached.
@@ -80,14 +81,12 @@ namespace Yggdrassil.Infrastructure.QC
         }
 
         // Installs missing default templates by copying embedded resources to disk if they don't already exist.
-        private void InstallMissingDefaults()
+        private void SyncDefaults()
         {
             foreach (var kvp in _keyToFile)
             {
                 var fileName = kvp.Value;
-                var path = Path.Combine(_root, fileName);
-                if (!File.Exists(path))
-                    WriteDefault(fileName, overwrite: false);
+                WriteDefault(fileName, overwrite: true);
             }
         }
 
@@ -101,9 +100,6 @@ namespace Yggdrassil.Infrastructure.QC
             var asm = typeof(QcTemplateStore).Assembly;
             var resName = $"Yggdrassil.Infrastructure.Resources.QcSnippets.{fileName}"; // adjust
             
-            var dumpPath = Path.Combine(Path.GetTempPath(), "ygg_resources.txt");
-            File.WriteAllLines(dumpPath, asm.GetManifestResourceNames());
-
             using var stream = asm.GetManifestResourceStream(resName)
                 ?? throw new InvalidOperationException($"Embedded template not found: {resName}");
 

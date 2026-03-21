@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Yggdrassil.Presentation (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Yggdrassil.Presentation (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

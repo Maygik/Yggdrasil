@@ -2,6 +2,7 @@
 using Yggdrassil.Domain.Project;
 using Yggdrassil.Domain.QC;
 using Yggdrassil.Domain.Scene;
+using Yggdrassil.Domain.Rigging;
 
 namespace Yggdrassil.Application.UseCases
 {
@@ -39,6 +40,8 @@ namespace Yggdrassil.Application.UseCases
 
             if (request.exportMeshes)
             {
+                var sceneToExport = request.Project.Scene;
+
                 // Export the animations (Do here just to get proportions)
 
                 ProportionTrickResult? proportions = null;
@@ -94,18 +97,21 @@ namespace Yggdrassil.Application.UseCases
                 }
 
 
-                // Copy over the proportions armature
                 if (proportions != null)
-                    request.Project.Scene.RootBone = proportions.Proportions.RootBone;
+                {
+                    sceneToExport = request.Project.Scene.DeepClone();
+                    sceneToExport.RootBone = proportions.Proportions.RootBone;
+                    RemapMeshBoneWeightsToRigSlots(sceneToExport, request.Project.RigMapping);
+                }
 
 
-                if (request.Project.Scene.MeshGroups.Count == 0)
+                if (sceneToExport.MeshGroups.Count == 0)
                 {
                     result.Warnings.Add("Scene has no meshes to export.");
                 }
                 else
                 {
-                    exporter.ExportSceneAsync(outputDirectory, request.Project.Scene);
+                    exporter.ExportSceneAsync(outputDirectory, sceneToExport);
                     result.Messages.Add($"Exported meshes to '{outputDirectory}'.");
                 }
 
@@ -125,6 +131,61 @@ namespace Yggdrassil.Application.UseCases
             }
 
             return result;
+        }
+
+        private static void RemapMeshBoneWeightsToRigSlots(SceneModel scene, SourceBoneMapping rigMapping)
+        {
+            if (scene.RootBone == null)
+            {
+                return;
+            }
+
+            var exportBoneNames = new HashSet<string>(
+                scene.RootBone.GetAllDescendantsAndSelf().Select(b => b.Name),
+                StringComparer.OrdinalIgnoreCase);
+
+            var rigSlots = Enumerable.Range(0, rigMapping.Count)
+                .Select(index => rigMapping[index]);
+
+            var assignedToLogical = rigSlots
+                .Where(slot =>
+                    !string.IsNullOrWhiteSpace(slot.AssignedBone) &&
+                    !string.IsNullOrWhiteSpace(slot.LogicalBone) &&
+                    exportBoneNames.Contains(slot.LogicalBone))
+                .GroupBy(slot => slot.AssignedBone!, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.First().LogicalBone,
+                    StringComparer.OrdinalIgnoreCase);
+
+            if (assignedToLogical.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var meshGroup in scene.MeshGroups)
+            {
+                foreach (var mesh in meshGroup.Meshes)
+                {
+                    for (int i = 0; i < mesh.BoneWeights.Count; i++)
+                    {
+                        var remappedWeights = new List<Tuple<string, float>>(mesh.BoneWeights[i].Count);
+                        foreach (var weight in mesh.BoneWeights[i])
+                        {
+                            if (assignedToLogical.TryGetValue(weight.Item1, out var logicalBone))
+                            {
+                                remappedWeights.Add(Tuple.Create(logicalBone, weight.Item2));
+                            }
+                            else
+                            {
+                                remappedWeights.Add(weight);
+                            }
+                        }
+
+                        mesh.BoneWeights[i] = remappedWeights;
+                    }
+                }
+            }
         }
     }
 

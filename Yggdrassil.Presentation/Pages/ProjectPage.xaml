@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Yggdrassil.Presentation.Pages.ProjectPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Padding="24">
+        <Border
+            Style="{StaticResource PanelBorderStyle}"
+            Padding="24"
+            >
+            <StackPanel Spacing="12">
+                <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Project" />
+                <TextBlock Text="Project settings and project-wide editing controls will live here." TextWrapping="WrapWholeWords" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Page>

@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yggdrassil.Infrastructure",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yggdrassil.Cli", "Yggdrassil.Cli\Yggdrassil.Cli.csproj", "{53457F63-ABD1-435B-8E98-9C543E4AF2EF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yggdrassil.Presentation", "Yggdrassil.Presentation\Yggdrassil.Presentation.csproj", "{E5B27C2E-A96B-4182-BF9A-C648B2613ACC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,12 @@ Global
 		{53457F63-ABD1-435B-8E98-9C543E4AF2EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{53457F63-ABD1-435B-8E98-9C543E4AF2EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{53457F63-ABD1-435B-8E98-9C543E4AF2EF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E5B27C2E-A96B-4182-BF9A-C648B2613ACC}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{E5B27C2E-A96B-4182-BF9A-C648B2613ACC}.Debug|Any CPU.Build.0 = Debug|x64
+		{E5B27C2E-A96B-4182-BF9A-C648B2613ACC}.Debug|Any CPU.Deploy.0 = Debug|x64
+		{E5B27C2E-A96B-4182-BF9A-C648B2613ACC}.Release|Any CPU.ActiveCfg = Release|x64
+		{E5B27C2E-A96B-4182-BF9A-C648B2613ACC}.Release|Any CPU.Build.0 = Release|x64
+		{E5B27C2E-A96B-4182-BF9A-C648B2613ACC}.Release|Any CPU.Deploy.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

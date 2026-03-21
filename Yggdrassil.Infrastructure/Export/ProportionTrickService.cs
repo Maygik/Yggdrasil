@@ -603,24 +603,71 @@ namespace Yggdrassil.Infrastructure.Export
             Console.WriteLine("Adding additional bones to proportions armature");
             var finalProportionsBones = result.Proportions.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
             int initialBoneCount = finalProportionsBones.Count;
+            HashSet<string> warnedFallbackAttachments = new();
+            Bone? EnsureBoneExists(Bone bone)
+            {
+                if (finalProportionsBones.TryGetValue(bone.Name, out var existingBone))
+                {
+                    return existingBone;
+                }
+
+                var missingChain = new Stack<Bone>();
+                Bone? current = bone;
+                Bone? attachmentParent = null;
+
+                while (current != null)
+                {
+                    if (finalProportionsBones.TryGetValue(current.Name, out var foundBone))
+                    {
+                        attachmentParent = foundBone;
+                        break;
+                    }
+
+                    missingChain.Push(current);
+                    current = current.Parent as Bone;
+                }
+
+                if (attachmentParent == null)
+                {
+                    attachmentParent = result.Proportions.RootBone;
+                    if (attachmentParent == null)
+                    {
+                        Console.WriteLine($"Could not add bone \"{bone.Name}\" to proportions model because there is no valid attachment root");
+                        return null;
+                    }
+
+                    if (warnedFallbackAttachments.Add(bone.Name))
+                    {
+                        Console.WriteLine($"Attaching missing bone chain for \"{bone.Name}\" at proportions root \"{attachmentParent.Name}\"");
+                    }
+                }
+
+                while (missingChain.Count > 0)
+                {
+                    var missingBone = missingChain.Pop();
+                    if (finalProportionsBones.TryGetValue(missingBone.Name, out var alreadyAddedBone))
+                    {
+                        attachmentParent = alreadyAddedBone;
+                        continue;
+                    }
+
+                    Bone newBone = new(missingBone.Name);
+                    attachmentParent.AddChild(newBone);
+                    newBone.WorldMatrix = missingBone.WorldMatrix;
+                    finalProportionsBones[missingBone.Name] = newBone;
+                    Console.WriteLine($"Added bone \"{missingBone.Name}\" to proportions model under parent \"{attachmentParent.Name}\"");
+                    attachmentParent = newBone;
+                }
+
+                return attachmentParent;
+            }
+
             void AddBones(Bone bone)
             {
                 // Add any bones that are in the original proportions model but not in the final proportions model after processing
                 if (!finalProportionsBones.ContainsKey(bone.Name))
                 {
-                    var parentBone = bone.Parent as Bone;
-                    if (parentBone != null && finalProportionsBones.ContainsKey(parentBone.Name))
-                    {
-                        Bone newBone = new(bone.Name);
-                        finalProportionsBones[parentBone.Name].AddChild(newBone);
-                        finalProportionsBones[bone.Name] = newBone;
-                        newBone.WorldMatrix = bone.WorldMatrix;
-                        Console.WriteLine($"Added bone \"{bone.Name}\" to proportions model under parent \"{parentBone.Name}\"");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Could not add bone \"{bone.Name}\" to proportions model because parent \"{parentBone?.Name}\" is not in the proportions model");
-                    }
+                    EnsureBoneExists(bone);
                 }
 
                 // Recursively add all children

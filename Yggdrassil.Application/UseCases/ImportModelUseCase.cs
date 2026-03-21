@@ -24,10 +24,18 @@ namespace Yggdrassil.Application.UseCases
             {
                 var scene = _modelImporter.ImportModelAsync(request.ModelPath).Result;
                 request.Project.Scene = scene;
+                if (scene.RootBone != null)
+                {
+                    request.Project.Qc.IllumBone = scene.RootBone.Name;
+                }
 
                 var result = new ImportModelResult(true, null);
                 result.Messages.Add($"Imported model '{request.ModelPath}'.");
                 result.Messages.Add($"Loaded {scene.MeshGroups.Count} mesh groups.");
+                if (scene.RootBone != null)
+                {
+                    result.Messages.Add($"Set QC illum bone to root bone '{scene.RootBone.Name}'.");
+                }
 
                 // Auto-add every mesh group as a bodygroup with a single submodel
                 int addedBodygroups = 0;
