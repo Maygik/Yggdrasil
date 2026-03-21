@@ -150,7 +150,7 @@ namespace Yggdrassil.Cli.Commands
 
                                     var saveResult = Services.SaveProject.Execute(new SaveProjectRequest
                                     {
-                                        project = project
+                                        Project = project
                                     });
                                     PrintServiceResult(saveResult);
 

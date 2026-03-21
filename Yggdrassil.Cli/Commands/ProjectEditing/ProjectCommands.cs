@@ -63,7 +63,7 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
 
             var request = new SaveProjectRequest
             {
-                project = project
+                Project = project
             };
 
             var result = services.SaveProject.Execute(request);

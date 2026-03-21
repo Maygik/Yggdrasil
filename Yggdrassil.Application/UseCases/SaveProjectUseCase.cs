@@ -14,18 +14,18 @@ namespace Yggdrassil.Application.UseCases
 
         public SaveProjectResult Execute(SaveProjectRequest request)
         {
-            if (request.project.Directory == null)
+            if (request.Project.Directory == null)
                 return new SaveProjectResult(false, "Project directory is not set. Cannot save.");
-            if (string.IsNullOrEmpty(request.project.Name))
+            if (string.IsNullOrEmpty(request.Project.Name))
                 return new SaveProjectResult(false, "Project name cannot be empty. Cannot save.");
 
             try
             {
-                var projectFilePath = Path.Combine(request.project.Directory, $"{request.project.Name}.yggproj");
-                _projectStore.Save(projectFilePath, request.project);
+                var projectFilePath = Path.Combine(request.Project.Directory, $"{request.Project.Name}.yggproj");
+                _projectStore.Save(projectFilePath, request.Project);
 
                 var result = new SaveProjectResult(true);
-                result.Messages.Add($"Saved project '{request.project.Name}'.");
+                result.Messages.Add($"Saved project '{request.Project.Name}'.");
                 result.Messages.Add($"Wrote project file to '{projectFilePath}'.");
                 return result;
             }
@@ -48,6 +48,6 @@ namespace Yggdrassil.Application.UseCases
 
     public class SaveProjectRequest
     {
-        public required Project project;
+        public required Project Project;
     }
 }

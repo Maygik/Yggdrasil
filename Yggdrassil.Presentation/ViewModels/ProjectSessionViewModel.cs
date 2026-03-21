@@ -9,10 +9,16 @@ namespace Yggdrassil.Presentation.ViewModels
 {
     public class ProjectSessionViewModel
     {
-        public Project? Project;
-        public string? ProjectFilePath;
+        public Project Project;
+        public string ProjectFilePath;
         public string DisplayName => ProjectFilePath != null ? System.IO.Path.GetFileNameWithoutExtension(ProjectFilePath) : "Untitled Project";
         public bool HasScene => Project?.Scene != null;
         public string? RootBoneName => Project?.Scene?.RootBone?.Name;
+
+        public ProjectSessionViewModel(Project project, string projectFilePath)
+        {
+            Project = project;
+            ProjectFilePath = projectFilePath;
+        }
     }
 }

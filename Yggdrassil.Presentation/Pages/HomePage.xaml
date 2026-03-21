@@ -6,17 +6,85 @@
     xmlns:local="using:Yggdrassil.Presentation.Pages"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:Yggdrassil.Presentation.Models"
     mc:Ignorable="d">
 
-    <Grid Padding="24">
-        <Border
-            Style="{StaticResource PanelBorderStyle}"
-            Padding="24"
-            >
-            <StackPanel Spacing="12">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Padding="24" Spacing="20">
+
+
+            <!--Header-->
+            <StackPanel Spacing="6">
                 <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Home" />
-                <TextBlock Text="Welcome to the Yggdrassil application. Use the navigation menu to access different sections." TextWrapping="WrapWholeWords" />
+                <TextBlock Style="{StaticResource CaptionTextStyle}" 
+                           Text="Create a new project, open an existing one, or load a recent project" />
             </StackPanel>
-        </Border>
-    </Grid>
+
+            <!--Main Buttons-->
+            <Border Style="{StaticResource PanelBorderStyle}" Padding="20">
+                <StackPanel Spacing="12">
+                    <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Project Actions"/>
+
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Button
+                            x:Name="NewProjectButton"
+                            Click="NewProjectButton_Click"
+                            Content="New Project" />
+                        <Button
+                            x:Name="OpenProjectButton"
+                            Click="OpenProjectButton_Click"
+                            Content="Open Project" />
+                        <Button
+                            x:Name="SaveProjectButton"
+                            Click="SaveProjectButton_Click"
+                            Content="Save Project"
+                            IsEnabled="{x:Bind Host.Shell.HasOpenProject, Mode=OneWay}" />
+                    </StackPanel>
+
+                    <TextBlock Text="{x:Bind Host.Shell.StatusMessage, Mode=OneWay}" TextWrapping="WrapWholeWords" />
+                </StackPanel>
+            </Border>
+
+            <!--Current Project-->
+            <Border Style="{StaticResource PanelBorderStyle}" Padding="20">
+                <StackPanel Spacing="12">
+                    <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Current Project" />
+
+                    <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="{x:Bind Host.Shell.CurrentProjectName, Mode=OneWay}" />
+
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{x:Bind Host.Shell.CurrentProjectPath, Mode=OneWay}" TextWrapping="WrapWholeWords" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource PanelBorderStyle}" Padding="20">
+                <StackPanel Spacing="12">
+                    <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Recent Projects" />
+
+                    <ListView
+                        x:Name="RecentProjectsList"
+                        ItemsSource="{x:Bind Host.Shell.RecentProjects, Mode=OneWay}"
+                        SelectionMode="Single"
+                        IsItemClickEnabled="True"
+                        ItemClick="RecentProjectsList_ItemClick">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:RecentProjectEntry">
+                                <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="12">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="{x:Bind Name}" />
+                                        <TextBlock Style="{StaticResource CaptionTextStyle}" Text="{x:Bind FilePath}" />
+                                        <TextBlock Style="{StaticResource CaptionTextStyle}" Text="{x:Bind LastOpened}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                    
+                </StackPanel>
+            </Border>
+
+
+        </StackPanel>
+    </ScrollViewer>
 </Page>

@@ -29,6 +29,8 @@ namespace Yggdrassil.Presentation
     {
         public static App Instance => (App)Microsoft.UI.Xaml.Application.Current;
 
+        public Window? MainWindow => _window;
+
         // Initialize the AppHost as a singleton to be used throughout the application
         public AppHost Host { get; } = new AppHost();
 

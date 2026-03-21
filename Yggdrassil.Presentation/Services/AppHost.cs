@@ -14,13 +14,14 @@ namespace Yggdrassil.Presentation.Services
         public AppServices Backend { get; }
         public FileDialogService FileDialogs { get; }
         public ShellViewModel Shell { get; }
-
+        public RecentProjectsService RecentProjects { get; }
 
         public AppHost()
         {
             Backend = AppServicesFactory.Create();
             FileDialogs = new FileDialogService();
-            Shell = new ShellViewModel(Backend, FileDialogs);
+            RecentProjects = new RecentProjectsService();
+            Shell = new ShellViewModel(Backend, FileDialogs, RecentProjects);
         }
     }
 }

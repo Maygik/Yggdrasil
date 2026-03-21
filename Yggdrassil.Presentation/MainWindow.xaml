@@ -16,7 +16,7 @@
     <NavigationView
         x:Name="MainNavigationView"
         IsBackButtonVisible="Auto"
-        IsSettingsVisible="True"
+        IsSettingsVisible="False"
         PaneDisplayMode="Left"
         SelectionChanged="MainNavigationView_SelectionChanged">
         <NavigationView.MenuItems>

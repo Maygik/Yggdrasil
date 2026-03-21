@@ -36,6 +36,13 @@ namespace Yggdrassil.Presentation
             Host.Shell.PropertyChanged += OnShellPropertyChanged;
             MainNavigationView.SelectedItem = HomeNavigationItem;
             ContentFrame.Navigate(typeof(HomePage));
+            Activated += MainWindow_Activated;
+        }
+
+        private async void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
+        {
+            Activated -= MainWindow_Activated;
+            await Host.Shell.InitializeAsync();
         }
 
         private void OnShellPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
