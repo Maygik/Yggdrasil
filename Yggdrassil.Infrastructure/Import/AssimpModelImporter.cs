@@ -610,6 +610,50 @@ namespace Yggdrassil.Infrastructure.Import
             ApplyScaleToNode(assimpScene.RootNode, new Vector3D(1,1,1));
 
 
+            // Normalize scene names so that windows doesn't cry
+            // I hate maya, why are there colons everywhere
+            // Also stop duplicate names, just add _x suffix
+
+            Dictionary<string, int> nameCounts = new(StringComparer.OrdinalIgnoreCase);
+
+            string SanitizeName(string name)
+            {
+                // Replace invalid characters with underscores
+                char[] invalidChars = Path.GetInvalidFileNameChars();
+                foreach (char c in invalidChars)
+                {
+                    name = name.Replace(c, '_');
+                }
+                return name;
+            }
+            void NormalizeNodeNames(Assimp.Node node)
+            {
+                node.Name = SanitizeName(node.Name);
+
+                // If already seen, add a suffix to make it unique
+                if (nameCounts.TryGetValue(node.Name, out int count))
+                {
+                    count++;
+                    node.Name = $"{node.Name}_{count}";
+                    nameCounts[node.Name] = count;
+                }
+                // If not seen before, add to the dictionary
+                else
+                {
+                    nameCounts[node.Name] = 1;
+                }
+
+                // Recursively normalize child node names
+                foreach (var child in node.Children)
+                {
+                    NormalizeNodeNames(child);
+                }
+            }
+
+            NormalizeNodeNames(assimpScene.RootNode);
+
+
+
             return assimpScene;
         }
 
