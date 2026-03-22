@@ -43,5 +43,15 @@ namespace Yggdrassil.Domain.QC
         }
     }
 
-    public record Bodygroup (string Name, List<string?> Submeshes);
+    public class Bodygroup
+    {
+        public string Name { get; set; }
+        public List<string?> Submeshes { get; set; }
+
+        public Bodygroup(string name, List<string?> submeshes)
+        {
+            Name = name;
+            Submeshes = submeshes;
+        }
+    }
 }

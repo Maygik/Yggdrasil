@@ -61,7 +61,7 @@ namespace Yggdrassil.Presentation.Pages
             else
             {
                 // A project is currently open, so we can save it directly
-                await Host.Shell.SaveProjectAsync();
+                Host.Shell.SaveProject();
             }
         }
 

@@ -5,17 +5,298 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:Yggdrassil.Presentation.Models"
     mc:Ignorable="d">
 
-    <Grid Padding="24">
-        <Border
-            Style="{StaticResource PanelBorderStyle}"
-            Padding="24"
-            >
-            <StackPanel Spacing="12">
-                <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Project" />
-                <TextBlock Text="Project settings and project-wide editing controls will live here." TextWrapping="WrapWholeWords" />
+    <Grid>
+        <Border x:Name="NoProjectPanel" Style="{StaticResource PanelBorderStyle}" Padding="20">
+            <StackPanel Padding="24" Spacing="20">
+                <StackPanel Spacing="6">
+                    <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Project" />
+                    <TextBlock
+                Style="{StaticResource CaptionTextStyle}"
+                Text="No project is currently active. Create or open one from the Home page." />
+                </StackPanel>
             </StackPanel>
         </Border>
+        
+        <!--The actual page-->
+        <ScrollViewer x:Name="ProjectSettingsPanel" VerticalScrollBarVisibility="Auto">
+            <StackPanel Padding="24" Spacing="20">
+
+                <StackPanel Spacing="6">
+                    <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Project" />
+                    <TextBlock
+                Style="{StaticResource CaptionTextStyle}"
+                Text="Project-wide settings, paths, materials, and bodygroup editing will live here." />
+                </StackPanel>
+
+                <!--Core Settings
+                Project name, Animation Profile, Surface Prop
+                -->
+                <Border Style="{StaticResource PanelBorderStyle}" Padding="20">
+                    <StackPanel Spacing="16">
+                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Core Settings" />
+                        <TextBlock
+                            Style="{StaticResource CaptionTextStyle}"
+                            Text="These settings will be written when the project is saved or exported." />
+
+                        <Grid ColumnSpacing="16" RowSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Project Name" />
+                            <TextBox x:Name="ProjectNameTextBox" Grid.Row="0" Grid.Column="1" TextChanged="ProjectNameTextBox_TextChanged" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Animation Profile" />
+                            <ComboBox x:Name="AnimationProfileComboBox" Grid.Row="1" Grid.Column="1" SelectionChanged="AnimationProfileComboBox_SelectionChanged" />
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="Surface Prop" />
+                            <ComboBox x:Name="SurfacePropComboBox" Grid.Row="2" Grid.Column="1" IsEditable="True" IsTextSearchEnabled="True" TextSubmitted="SurfacePropComboBox_TextSubmitted" SelectionChanged="SurfacePropComboBox_SelectionChanged" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!--Paths
+                Output directory, $modelname
+                -->
+                <Border Style="{StaticResource PanelBorderStyle}" Padding="20">
+                    <StackPanel Spacing="16">
+                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Paths" />
+                        <TextBlock
+                            Style="{StaticResource CaptionTextStyle}"
+                            Text="Output Directory is stored relative to the project root. $modelname controls the compiled .mdl path inside QC." />
+
+                        <Grid ColumnSpacing="16" RowSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Output Directory" />
+                            <Grid Grid.Row="0" Grid.Column="1" ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="OutputDirectoryTextBox" Grid.Column="0" TextChanged="OutputDirectoryTextBox_TextChanged" />
+                                <Button Grid.Column="1" Content="Browse" Click="BrowseOutputDirectoryButton_Click" />
+                            </Grid>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="$modelname" />
+                            <Grid Grid.Row="1" Grid.Column="1" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Style="{StaticResource BodyStrongTextStyle}" Text="models/" />
+                                <TextBox x:Name="ModelPathTextBox" Grid.Column="1" TextChanged="ModelPathTextBox_TextChanged" />
+                                <TextBlock Grid.Column="2" VerticalAlignment="Center" Style="{StaticResource BodyStrongTextStyle}" Text=".mdl" />
+                            </Grid>
+
+                            <TextBlock
+                                Grid.Row="2"
+                                Grid.Column="1"
+                                Style="{StaticResource CaptionTextStyle}"
+                                Text="Relative to the Source models folder."
+                                TextWrapping="WrapWholeWords" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                
+                <!--Materials
+                -->
+                <Border Style="{StaticResource PanelBorderStyle}" Padding="20">
+                    <StackPanel Spacing="16">
+                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Material Paths" />
+
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox
+                        x:Name="NewMaterialPathTextBox"
+                        Grid.Column="0"
+                        PlaceholderText="Add a material path" />
+                            <Button
+                        Grid.Column="1"
+                        Content="Add"
+                        Click="AddMaterialPathButton_Click" />
+                        </Grid>
+
+                        <ItemsControl x:Name="MaterialPathsListView" ItemsSource="{x:Bind MaterialPathItems, Mode=OneWay}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:MaterialPathEditorItem">
+                                    <Grid Margin="0,0,0,8" ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBox
+                                            Grid.Column="0"
+                                            IsReadOnly="True"
+                                            Text="{x:Bind Path, Mode=OneWay}" />
+
+                                        <Button
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            MinWidth="32"
+                                            MinHeight="32"
+                                            Padding="0"
+                                            Content="-"
+                                            Click="RemoveMaterialPathButton_Click"
+                                            Tag="{x:Bind}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                
+                <!--Bodygroups
+                -->
+                <Border Style="{StaticResource PanelBorderStyle}" Padding="20">
+                    <StackPanel Spacing="16">
+                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Bodygroups" />
+                        <TextBlock
+                            Style="{StaticResource CaptionTextStyle}"
+                            Text="Edit bodygroups as grouped option sets. Blank options are shown explicitly and each option can later be edited individually." />
+
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox
+                        x:Name="NewBodygroupNameTextBox"
+                        Grid.Column="0"
+                        PlaceholderText="New bodygroup name" />
+                            <Button
+                        Grid.Column="1"
+                        Content="Add"
+                        Click="AddBodygroupButton_Click" />
+                        </Grid>
+
+                        <ItemsControl x:Name="BodygroupsItemsControl" ItemsSource="{x:Bind BodygroupItems, Mode=OneWay}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:BodygroupEditorItem">
+                                    <Border
+                                        Style="{StaticResource SubtlePanelBorderStyle}"
+                                        Margin="0,0,0,12"
+                                        Padding="16">
+                                        <StackPanel Spacing="12">
+                                            <Grid ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <StackPanel Grid.Column="0" Spacing="6">
+                                                    <TextBlock
+                                                        Style="{StaticResource CaptionTextStyle}"
+                                                        Text="Bodygroup Name" />
+                                                    <TextBox
+                                                        Background="{ThemeResource AppPanelSubtleBackgroundBrush}"
+                                                        BorderBrush="{ThemeResource AppPanelBorderBrush}"
+                                                        FontWeight="SemiBold"
+                                                        Header=""
+                                                        PlaceholderText="Bodygroup name"
+                                                        Tag="{x:Bind}"
+                                                        Text="{x:Bind Name, Mode=OneWay}"
+                                                        LostFocus="BodygroupNameTextBox_LostFocus" />
+                                                </StackPanel>
+
+                                                <Button
+                                                    Grid.Column="1"
+                                                    MinWidth="36"
+                                                    MinHeight="36"
+                                                    Padding="0"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Top"
+                                                    Click="RemoveBodygroupButton_Click"
+                                                    Tag="{x:Bind}"
+                                                    ToolTipService.ToolTip="Remove bodygroup">
+                                                    <FontIcon FontSize="12" Glyph="&#xE711;" />
+                                                </Button>
+                                            </Grid>
+
+                                            <StackPanel Spacing="8">
+                                                <TextBlock
+                                                    Margin="16,0,0,0"
+                                                    Style="{StaticResource CaptionTextStyle}"
+                                                    Text="Options" />
+
+                                                <ItemsControl ItemsSource="{x:Bind Options}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="models:BodygroupOptionItem">
+                                                            <Grid Margin="16,0,0,8" ColumnSpacing="12">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                </Grid.ColumnDefinitions>
+
+                                                                <TextBox
+                                                                    Grid.Column="0"
+                                                                    Header=""
+                                                                    PlaceholderText="Bodygroup option"
+                                                                    Tag="{x:Bind}"
+                                                                    Text="{x:Bind MeshName, Mode=OneWay}"
+                                                                    LostFocus="BodygroupOptionTextBox_LostFocus" />
+
+                                                                <Button
+                                                                    Grid.Column="1"
+                                                                    VerticalAlignment="Center"
+                                                                    MinWidth="32"
+                                                                    MinHeight="32"
+                                                                    Padding="0"
+                                                                    Content="-"
+                                                                    Click="RemoveBodygroupOptionButton_Click"
+                                                                    Tag="{x:Bind}" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+
+                                            <StackPanel Margin="16,0,0,0" Orientation="Horizontal" Spacing="12">
+                                                <Button
+                                                    MinWidth="32"
+                                                    MinHeight="32"
+                                                    Padding="0"
+                                                    Content="+"
+                                                    Click="AddBodygroupOptionButton_Click"
+                                                    Tag="{x:Bind}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
+    
+    
 </Page>

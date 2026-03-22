@@ -175,7 +175,7 @@ namespace Yggdrassil.Presentation.ViewModels
             await OpenprojectFromPathAsync(entry.FilePath);
         }
 
-        public async Task SaveProjectAsync()
+        public void SaveProject()
         {
             if (CurrentSession?.Project is null || string.IsNullOrWhiteSpace(CurrentSession.ProjectFilePath))
             {
@@ -199,7 +199,7 @@ namespace Yggdrassil.Presentation.ViewModels
             }
         }
 
-        public async Task ImportModelAsync()
+        public void ImportModel()
         {
             throw new NotImplementedException();
         }

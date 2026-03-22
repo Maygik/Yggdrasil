@@ -38,10 +38,11 @@ namespace Yggdrassil.Application.Services
         /// <returns></returns>
         public ServiceResult SetOutputDirectory(Project project, string directory)
         {
-            project.Build.OutputDirectory = directory;
+            project.Build.OutputDirectory = NormalizeProjectRelativePath(project, directory);
 
             var result = new ServiceResult(true);
-            result.Messages.Add($"Project output directory set to '{project.Directory + project.Build.OutputDirectory}' successfully.");
+            result.Messages.Add($"Project output directory set to '{project.Build.OutputDirectory}' successfully.");
+            result.Messages.Add($"Output directory is now stored relative to the project root.");
             return result;
         }
 
@@ -121,6 +122,29 @@ namespace Yggdrassil.Application.Services
             result.Messages.Add($"Set model path to {modelName}");
             result.Messages.Add($"Model will now compile to \"ADDON_NAME/models/{modelName}.mdl\"");
             return result;
+        }
+
+        /// <summary>
+        /// Normalizes a path so it is always stored relative to the project root.
+        /// </summary>
+        /// <param name="project"></param>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        public string NormalizeProjectRelativePath(Project project, string path)
+        {
+            var trimmedPath = (path ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(trimmedPath))
+            {
+                return string.Empty;
+            }
+
+            if (Path.IsPathRooted(trimmedPath) && !string.IsNullOrWhiteSpace(project.Directory))
+            {
+                trimmedPath = Path.GetRelativePath(project.Directory, trimmedPath);
+            }
+
+            trimmedPath = trimmedPath.Replace('\\', '/').TrimStart('/');
+            return trimmedPath;
         }
 
 
@@ -232,6 +256,23 @@ namespace Yggdrassil.Application.Services
             return result;
         }
 
+        public ServiceResult RemoveMaterialPath(Project project, int materialPathIndex)
+        {
+            var result = new ServiceResult(false);
+
+            if (materialPathIndex < 0 || materialPathIndex >= project.Qc.CdMaterialsPaths.Count)
+            {
+                result.ErrorMessage = $"Material path index '{materialPathIndex}' is out of range";
+                return result;
+            }
+
+            var removedPath = project.Qc.CdMaterialsPaths[materialPathIndex];
+            project.Qc.CdMaterialsPaths.RemoveAt(materialPathIndex);
+            result.Success = true;
+            result.Messages.Add($"Removed material path at index {materialPathIndex}: {removedPath}");
+            return result;
+        }
+
 
         public ServiceResult SetSurfaceProp(Project project, string surfaceProp)
         {
@@ -244,24 +285,9 @@ namespace Yggdrassil.Application.Services
 
         public ServiceResult AddBodygroup(Project project, string bodygroupName, List<string?> submodelNames)
         {
-            var result = new ServiceResult(false);
-
-            // If the bodygroup already exists, append to it
-            // Otherwise, create a new one
-            var bodyGroup = project.Qc.Bodygroups.FirstOrDefault(bg => bg.Name == bodygroupName);
-            if (bodyGroup != null)
-            {
-                bodyGroup.Submeshes.AddRange(submodelNames);
-                result.Success = true;
-                result.Messages.Add($"Appended {submodelNames.Count} submodels to bodygroup '{bodygroupName}'.");
-            }
-            else
-            {
-                project.Qc.Bodygroups.Add(new Domain.QC.Bodygroup(bodygroupName, submodelNames));
-                result.Success = true;
-                result.Messages.Add($"Created new bodygroup '{bodygroupName}' with {submodelNames.Count} submodels.");
-            }
-
+            var result = new ServiceResult(true);
+            project.Qc.Bodygroups.Add(new Domain.QC.Bodygroup(bodygroupName, submodelNames));
+            result.Messages.Add($"Created new bodygroup '{bodygroupName}' with {submodelNames.Count} submodels.");
             return result;
         }
 
@@ -281,5 +307,82 @@ namespace Yggdrassil.Application.Services
             }
         }
 
+        public ServiceResult RemoveBodygroup(Project project, int bodygroupIndex)
+        {
+            if (bodygroupIndex < 0 || bodygroupIndex >= project.Qc.Bodygroups.Count)
+            {
+                return new ServiceResult(false, $"Bodygroup index '{bodygroupIndex}' is out of range");
+            }
+
+            var bodygroupName = project.Qc.Bodygroups[bodygroupIndex].Name;
+            project.Qc.Bodygroups.RemoveAt(bodygroupIndex);
+            var result = new ServiceResult(true);
+            result.Messages.Add($"Removed bodygroup '{bodygroupName}' at index {bodygroupIndex}.");
+            return result;
+        }
+
+        public ServiceResult AddBodygroupOption(Project project, string bodygroupName, string? submodelName)
+        {
+            var bodyGroup = project.Qc.Bodygroups.FirstOrDefault(bg => bg.Name == bodygroupName);
+            if (bodyGroup == null)
+            {
+                return new ServiceResult(false, $"Bodygroup \"{bodygroupName}\" does not exist");
+            }
+            bodyGroup.Submeshes.Add(submodelName);
+            var result = new ServiceResult(true);
+            result.Messages.Add($"Added submodel \"{submodelName}\" to bodygroup \"{bodygroupName}\"");
+            return result;
+        }
+
+        public ServiceResult AddBodygroupOption(Project project, int bodygroupIndex, string? submodelName)
+        {
+            if (bodygroupIndex < 0 || bodygroupIndex >= project.Qc.Bodygroups.Count)
+            {
+                return new ServiceResult(false, $"Bodygroup index '{bodygroupIndex}' is out of range");
+            }
+
+            var bodyGroup = project.Qc.Bodygroups[bodygroupIndex];
+            bodyGroup.Submeshes.Add(submodelName);
+            var result = new ServiceResult(true);
+            result.Messages.Add($"Added submodel \"{submodelName}\" to bodygroup '{bodyGroup.Name}' at index {bodygroupIndex}.");
+            return result;
+        }
+
+        public ServiceResult RemoveBodygroupOption(Project project, string bodygroupName, string? submodelName)
+        {
+            var bodyGroup = project.Qc.Bodygroups.FirstOrDefault(bg => bg.Name == bodygroupName);
+            if (bodyGroup == null)
+            {
+                return new ServiceResult(false, $"Bodygroup \"{bodygroupName}\" does not exist");
+            }
+            if (!bodyGroup.Submeshes.Contains(submodelName))
+            {
+                return new ServiceResult(false, $"Submodel \"{submodelName}\" does not exist in bodygroup \"{bodygroupName}\"");
+            }
+            bodyGroup.Submeshes.Remove(submodelName);
+            var result = new ServiceResult(true);
+            result.Messages.Add($"Removed submodel \"{submodelName}\" from bodygroup \"{bodygroupName}\"");
+            return result;
+        }
+
+        public ServiceResult RemoveBodygroupOption(Project project, int bodygroupIndex, int optionIndex)
+        {
+            if (bodygroupIndex < 0 || bodygroupIndex >= project.Qc.Bodygroups.Count)
+            {
+                return new ServiceResult(false, $"Bodygroup index '{bodygroupIndex}' is out of range");
+            }
+
+            var bodyGroup = project.Qc.Bodygroups[bodygroupIndex];
+            if (optionIndex < 0 || optionIndex >= bodyGroup.Submeshes.Count)
+            {
+                return new ServiceResult(false, $"Option index '{optionIndex}' is out of range for bodygroup '{bodyGroup.Name}'");
+            }
+
+            var removedValue = bodyGroup.Submeshes[optionIndex];
+            bodyGroup.Submeshes.RemoveAt(optionIndex);
+            var result = new ServiceResult(true);
+            result.Messages.Add($"Removed submodel \"{removedValue}\" from bodygroup '{bodyGroup.Name}' at option index {optionIndex}.");
+            return result;
+        }
     }
 }

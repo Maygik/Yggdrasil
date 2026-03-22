@@ -35,6 +35,11 @@ namespace Yggdrassil.Application.UseCases
                 return new ExportBuildResult(false, "Output directory is not set in the project settings or the request.");
             }
 
+            if (!Path.IsPathRooted(outputDirectory) && !string.IsNullOrWhiteSpace(request.Project.Directory))
+            {
+                outputDirectory = Path.GetFullPath(Path.Combine(request.Project.Directory, outputDirectory));
+            }
+
             var result = new ExportBuildResult(true);
             result.Messages.Add($"Export output directory: '{outputDirectory}'.");
 
