@@ -22,7 +22,9 @@
         <NavigationView.MenuItems>
             <NavigationViewItem x:Name="HomeNavigationItem" Content="Home" Tag="home" />
             <NavigationViewItem x:Name="ProjectNavigationItem" Content="Project" Tag="project" />
+            <NavigationViewItem x:Name="ModelNavigationItem" Content="Model" Tag="model" />
             <NavigationViewItem x:Name="ExportNavigationItem" Content="Export" Tag="export" />
+            
         </NavigationView.MenuItems>
         <Grid Padding="16" ColumnSpacing="16">
             <Grid.ColumnDefinitions>

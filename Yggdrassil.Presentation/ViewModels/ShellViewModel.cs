@@ -67,11 +67,11 @@ namespace Yggdrassil.Presentation.ViewModels
         public string WindowTitle => CurrentSession != null ? $"{AppTitle} - {CurrentSession.DisplayName}" : AppTitle;
         public bool HasOpenProject => CurrentSession != null;
         public bool CanImportModel => CurrentSession != null;
-        public bool CanExportModel => CurrentSession?.Project?.Scene != null;
+        public bool CanExportModel =>
+            CurrentSession?.Project?.Scene is { } scene
+            && (scene.RootBone is not null || scene.MeshGroups.Count > 0);
         public string CurrentProjectName => CurrentSession?.DisplayName ?? "No project open";
         public string CurrentProjectPath => CurrentSession?.ProjectFilePath ?? "Open or create a project to get started.";
-
-        NavigationViewItem CurrentPage;
 
         private string? _statusMessage;
         public string? StatusMessage
@@ -199,9 +199,35 @@ namespace Yggdrassil.Presentation.ViewModels
             }
         }
 
-        public void ImportModel()
+        public void ImportModel(string modelPath, bool autoMap)
         {
-            throw new NotImplementedException();
+            if (CurrentSession?.Project is null)
+            {
+                StatusMessage = "No project is currently open.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(modelPath))
+            {
+                StatusMessage = "Model path cannot be empty.";
+                return;
+            }
+
+            var request = new ImportModelRequest(modelPath, CurrentSession.Project, autoMap);
+            var result = _backend.ImportModel.Execute(request);
+
+            if (!result.Success)
+            {
+                StatusMessage = $"Failed to import model: {result.ErrorMessage ?? "Unknown error."}";
+                return;
+            }
+
+            StatusMessage = result.Messages.FirstOrDefault() ?? $"Imported model '{modelPath}'.";
+
+            // The project session object stays the same, but several UI surfaces depend on
+            // the scene/imported-model state changing underneath it.
+            OnPropertyChanged(nameof(CurrentSession));
+            OnPropertyChanged(nameof(CanExportModel));
         }
 
         public void SetCurrentSession(ProjectSessionViewModel? session)

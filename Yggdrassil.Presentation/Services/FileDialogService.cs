@@ -61,7 +61,29 @@ namespace Yggdrassil.Presentation.Services
 
         public async Task<string?> ShowImportModelDialogAsync()
         {
-            throw new NotImplementedException();
+            if (App.Instance.MainWindow is null)
+                return null;
+
+            var hWnd = WindowNative.GetWindowHandle(App.Instance.MainWindow);
+            var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
+
+            var picker = new Microsoft.Windows.Storage.Pickers.FileOpenPicker(windowId)
+            {
+                ViewMode = Microsoft.Windows.Storage.Pickers.PickerViewMode.List,
+                SuggestedStartLocation = Microsoft.Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary
+            };
+
+            picker.FileTypeFilter.Add(".fbx");
+            picker.FileTypeFilter.Add(".smd");
+            picker.FileTypeFilter.Add(".dmx");
+            picker.FileTypeFilter.Add(".obj");
+            picker.FileTypeFilter.Add(".dae");
+            picker.FileTypeFilter.Add(".blend");
+            picker.FileTypeFilter.Add(".gltf");
+            picker.FileTypeFilter.Add(".glb");
+
+            var file = await picker.PickSingleFileAsync();
+            return file?.Path;
         }
     }
 }

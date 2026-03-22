@@ -28,7 +28,7 @@
                     <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Project" />
                     <TextBlock
                 Style="{StaticResource CaptionTextStyle}"
-                Text="Project-wide settings, paths, materials, and bodygroup editing will live here." />
+                Text="Project-wide settings, paths, materials, and bodygroup editing." />
                 </StackPanel>
 
                 <!--Core Settings
