@@ -65,14 +65,14 @@
                 </Border>
 
                 <!--Paths
-                Output directory, $modelname
+                $modelname
                 -->
                 <Border Style="{StaticResource PanelBorderStyle}" Padding="20">
                     <StackPanel Spacing="16">
                         <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Paths" />
                         <TextBlock
                             Style="{StaticResource CaptionTextStyle}"
-                            Text="Output Directory is stored relative to the project root. $modelname controls the compiled .mdl path inside QC." />
+                            Text="$modelname controls the compiled .mdl path inside QC." />
 
                         <Grid ColumnSpacing="16" RowSpacing="12">
                             <Grid.ColumnDefinitions>
@@ -82,21 +82,10 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Output Directory" />
-                            <Grid Grid.Row="0" Grid.Column="1" ColumnSpacing="12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBox x:Name="OutputDirectoryTextBox" Grid.Column="0" TextChanged="OutputDirectoryTextBox_TextChanged" />
-                                <Button Grid.Column="1" Content="Browse" Click="BrowseOutputDirectoryButton_Click" />
-                            </Grid>
-
-                            <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="$modelname" />
-                            <Grid Grid.Row="1" Grid.Column="1" ColumnSpacing="8">
+                            <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="$modelname" />
+                            <Grid Grid.Row="0" Grid.Column="1" ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
@@ -108,7 +97,7 @@
                             </Grid>
 
                             <TextBlock
-                                Grid.Row="2"
+                                Grid.Row="1"
                                 Grid.Column="1"
                                 Style="{StaticResource CaptionTextStyle}"
                                 Text="Relative to the Source models folder."

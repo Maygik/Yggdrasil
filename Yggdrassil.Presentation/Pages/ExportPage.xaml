@@ -7,15 +7,135 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Grid Padding="24">
+    <Grid>
+        
+        <!--No project loaded, same as normal-->
         <Border
+            x:Name="NoProjectPanel"
             Style="{StaticResource PanelBorderStyle}"
-            Padding="24"
-            >
-            <StackPanel Spacing="12">
-                <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Export" />
-                <TextBlock Text="Validation summaries, warnings, and export actions will live here." TextWrapping="WrapWholeWords" />
+            Padding="20">
+            <StackPanel Padding="24" Spacing="20">
+                <StackPanel Spacing="6">
+                    <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Export" />
+                    <TextBlock
+                        Style="{StaticResource CaptionTextStyle}"
+                        Text="No project is currently active. Create or open one from the Home page." />
+                </StackPanel>
             </StackPanel>
         </Border>
+
+        
+        <!--Only shown if there is a project-->
+        <ScrollViewer
+            x:Name="ExportPanel"
+            Visibility="Collapsed"
+            VerticalScrollBarVisibility="Auto">
+            <StackPanel Padding="24" Spacing="20">
+                <StackPanel Spacing="6">
+                    <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Export" />
+                    <TextBlock
+                        Style="{StaticResource CaptionTextStyle}"
+                        Text="Choose what to export to the current project's output directory." />
+                </StackPanel>
+
+                <!--Output directory-->
+                <Border Style="{StaticResource PanelBorderStyle}" Padding="20">
+                    <StackPanel Spacing="12">
+                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Destination" />
+                        <TextBlock
+                            Style="{StaticResource CaptionTextStyle}"
+                            Text="Output Directory is stored relative to the project root and used as the export destination." />
+                        <Grid ColumnSpacing="16" RowSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Output Directory" />
+                            <Grid Grid.Column="1" ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox
+                                    x:Name="OutputDirectoryTextBox"
+                                    Grid.Column="0"
+                                    TextChanged="OutputDirectoryTextBox_TextChanged" />
+                                <Button
+                                    Grid.Column="1"
+                                    Content="Browse"
+                                    Click="BrowseOutputDirectoryButton_Click" />
+                            </Grid>
+                        </Grid>
+                        <TextBlock
+                            x:Name="ResolvedOutputDirectoryTextBlock"
+                            Style="{StaticResource CaptionTextStyle}"
+                            TextWrapping="WrapWholeWords" />
+                    </StackPanel>
+                </Border>
+
+                <!--Export options-->
+                <Border Style="{StaticResource PanelBorderStyle}" Padding="20">
+                    <StackPanel Spacing="12">
+                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Export Options" />
+                        <CheckBox
+                            x:Name="ExportQcCheckBox"
+                            Content="QC"
+                            Checked="ExportOptionCheckBox_Changed"
+                            Unchecked="ExportOptionCheckBox_Changed" />
+                        <CheckBox
+                            x:Name="ExportMeshesAndAnimationsCheckBox"
+                            Content="Meshes + animations"
+                            Checked="ExportOptionCheckBox_Changed"
+                            Unchecked="ExportOptionCheckBox_Changed" />
+                        <CheckBox
+                            x:Name="ExportMaterialsCheckBox"
+                            Content="Material export (coming soon)"
+                            IsEnabled="False" />
+                    </StackPanel>
+                </Border>
+
+                <!--Export button-->
+                <Border Style="{StaticResource PanelBorderStyle}" Padding="20">
+                    <StackPanel Spacing="12">
+                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Export" />
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <Button
+                                x:Name="ExportButton"
+                                Content="Export"
+                                Click="ExportButton_Click" />
+                            <ProgressRing
+                                x:Name="ExportProgressRing"
+                                Width="20"
+                                Height="20"
+                                IsActive="False"
+                                Visibility="Collapsed" />
+                        </StackPanel>
+                        <TextBlock
+                            x:Name="ExportActionHintTextBlock"
+                            Style="{StaticResource CaptionTextStyle}"
+                            TextWrapping="WrapWholeWords" />
+                    </StackPanel>
+                </Border>
+
+                <!--Export results-->
+                <Border
+                    x:Name="ResultsPanel"
+                    Style="{StaticResource PanelBorderStyle}"
+                    Padding="20"
+                    Visibility="Collapsed">
+                    <StackPanel Spacing="12">
+                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Last Export" />
+                        <InfoBar
+                            x:Name="ExportResultInfoBar"
+                            IsOpen="False"
+                            IsClosable="False" />
+                        <ItemsControl
+                            x:Name="ExportMessagesItemsControl"
+                            ItemsSource="{x:Bind ExportMessages, Mode=OneWay}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Page>

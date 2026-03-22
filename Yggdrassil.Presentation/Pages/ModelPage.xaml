@@ -94,6 +94,8 @@
                             Style="{StaticResource CaptionTextStyle}"
                             Text="Imported scene details, per-mesh breakdowns, and material usage." />
 
+
+                        <!--Top-level scene stats-->
                         <Grid ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -101,6 +103,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
 
+                            <!--Total Vertices-->
                             <Border Grid.Column="0" Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
                                 <StackPanel Spacing="6">
                                     <TextBlock Style="{StaticResource CaptionTextStyle}" Text="Total Vertices" />
@@ -108,6 +111,7 @@
                                 </StackPanel>
                             </Border>
 
+                            <!--Total Faces-->
                             <Border Grid.Column="1" Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
                                 <StackPanel Spacing="6">
                                     <TextBlock Style="{StaticResource CaptionTextStyle}" Text="Total Faces" />
@@ -115,6 +119,7 @@
                                 </StackPanel>
                             </Border>
 
+                            <!--Total Bones-->
                             <Border Grid.Column="2" Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
                                 <StackPanel Spacing="6">
                                     <TextBlock Style="{StaticResource CaptionTextStyle}" Text="Bone Count" />
@@ -123,6 +128,8 @@
                             </Border>
                         </Grid>
 
+                        
+                        <!--Meshes-->
                         <Grid ColumnSpacing="16">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="2*" />
@@ -179,6 +186,8 @@
                                 </StackPanel>
                             </Border>
 
+                            
+                            <!--Materials-->
                             <Border Grid.Column="1" Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
                                 <StackPanel Spacing="12">
                                     <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Used Materials" />

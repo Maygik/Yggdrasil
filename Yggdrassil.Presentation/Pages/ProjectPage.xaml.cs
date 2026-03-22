@@ -1,6 +1,5 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.Windows.Storage.Pickers;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -97,56 +96,6 @@ namespace Yggdrassil.Presentation.Pages
                 return;
 
             Host.Shell.CurrentSession.Project.Qc.SurfaceProp = e.Text;
-        }
-
-        private void OutputDirectoryTextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (_isRefreshing || Host.Shell.CurrentSession?.Project is null)
-                return;
-
-            var project = Host.Shell.CurrentSession.Project;
-            var normalizedPath = Host.Backend.ProjectEditor.NormalizeProjectRelativePath(project, OutputDirectoryTextBox.Text);
-            project.Build.OutputDirectory = normalizedPath;
-
-            if (!string.Equals(OutputDirectoryTextBox.Text, normalizedPath, StringComparison.Ordinal))
-            {
-                _isRefreshing = true;
-                OutputDirectoryTextBox.Text = normalizedPath;
-                OutputDirectoryTextBox.SelectionStart = normalizedPath.Length;
-                _isRefreshing = false;
-            }
-        }
-
-        private async void BrowseOutputDirectoryButton_Click(object sender, RoutedEventArgs e)
-        {
-            var project = Host.Shell.CurrentSession?.Project;
-
-            if (project is null)
-                return;
-            else if (string.IsNullOrWhiteSpace(project.Directory))
-                return;
-
-            if (App.Instance.MainWindow is null)
-                return;
-
-            var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(App.Instance.MainWindow);
-            var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
-
-            var picker = new FolderPicker(windowId);
-            picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
-
-            var folder = await picker.PickSingleFolderAsync();
-            if (folder is null)
-                return;
-
-            var relativePath = Host.Backend.ProjectEditor.NormalizeProjectRelativePath(project, folder.Path);
-
-            _isRefreshing = true;
-            OutputDirectoryTextBox.Text = relativePath;
-            OutputDirectoryTextBox.SelectionStart = relativePath.Length;
-            _isRefreshing = false;
-
-            project.Build.OutputDirectory = relativePath;
         }
 
         private void ModelPathTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -314,7 +263,6 @@ namespace Yggdrassil.Presentation.Pages
             // Clear all form fields and reset to default state
             ProjectNameTextBox.Text = string.Empty;
             SurfacePropComboBox.Text = string.Empty;
-            OutputDirectoryTextBox.Text = string.Empty;
             ModelPathTextBox.Text = string.Empty;
             AnimationProfileComboBox.SelectedItem = AnimationProfile.None;
 
@@ -329,7 +277,6 @@ namespace Yggdrassil.Presentation.Pages
             ProjectNameTextBox.Text = project.Name ?? string.Empty;
             SurfacePropComboBox.Text = project.Qc.SurfaceProp ?? string.Empty;
             SurfacePropComboBox.SelectedItem = project.Qc.SurfaceProp;
-            OutputDirectoryTextBox.Text = project.Build.OutputDirectory ?? string.Empty;
             ModelPathTextBox.Text = project.Qc.ModelPath ?? string.Empty;
             AnimationProfileComboBox.SelectedItem = project.Qc.AnimationProfile;
 
