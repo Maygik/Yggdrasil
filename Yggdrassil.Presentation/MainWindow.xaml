@@ -30,7 +30,7 @@
         <Grid Padding="16" ColumnSpacing="16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*" />
-                <ColumnDefinition Width="3*" />
+                <ColumnDefinition Width="2*" />
             </Grid.ColumnDefinitions>
 
             <Frame x:Name="ContentFrame" Grid.Column="0" />
@@ -48,9 +48,6 @@
 
                     <StackPanel Spacing="4">
                         <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Viewport" />
-                        <TextBlock
-                            Style="{StaticResource CaptionTextStyle}"
-                            Text="Persistent visual debugging panel for mesh, skeleton, and transform inspection." />
                     </StackPanel>
 
                     <Border
@@ -75,7 +72,7 @@
                         Padding="16">
                         <StackPanel Spacing="6">
                             <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Scene Details" />
-                            <TextBlock Text="Bone tree, root orientation, and selection details will live here." TextWrapping="WrapWholeWords" />
+                            <TextBlock Text="Selection details will live here." TextWrapping="WrapWholeWords" />
                         </StackPanel>
                     </Border>
                 </Grid>
