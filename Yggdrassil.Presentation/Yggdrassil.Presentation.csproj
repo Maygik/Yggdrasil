@@ -15,6 +15,7 @@
   <ItemGroup>
     <None Remove="Dialogs\CreateProjectDialog.xaml" />
     <None Remove="Pages\ModelPage.xaml" />
+    <None Remove="Pages\RiggingPage.xaml" />
   </ItemGroup>
 
   <ItemGroup>
@@ -53,6 +54,11 @@
   </ItemGroup>
   <ItemGroup>
     <Page Update="Pages\ModelPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Pages\RiggingPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>

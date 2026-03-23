@@ -76,8 +76,9 @@ namespace Yggdrassil.Presentation
         {
             "home" => typeof(HomePage),
             "project" => typeof(ProjectPage),
-            "export" => typeof(ExportPage),
             "model" => typeof(ModelPage),
+            "rigging" => typeof(RiggingPage),
+            "export" => typeof(ExportPage),
             _ => typeof(HomePage),
         };
     }

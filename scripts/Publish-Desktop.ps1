@@ -59,6 +59,10 @@ Write-Host ""
 
 & dotnet @publishArgs
 
+if ($LASTEXITCODE -ne 0) {
+    throw "dotnet publish failed with exit code $LASTEXITCODE."
+}
+
 $exePath = Join-Path $publishDir "Yggdrassil.Presentation.exe"
 if (-not (Test-Path $exePath)) {
     throw "Publish completed, but the expected executable was not found at '$exePath'."

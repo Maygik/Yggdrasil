@@ -13,7 +13,7 @@ namespace Yggdrassil.Domain.Rigging
     /// </summary>
     public class RigSlot
     {
-        public string DisplayName; // The display name of this slot (e.g. "Head")
+        public string DisplayName { get; set; } = string.Empty; // The display name of this slot (e.g. "Head")
         public string LogicalBone { get; set; } = string.Empty; // The logical bone (e.g. ValveBiped.Bip01_Head1) that this slot represents
         public string? AssignedBone { get; set; } = null; // The actual bone name assigned to this slot during rig mapping. Null if unassigned.
 
