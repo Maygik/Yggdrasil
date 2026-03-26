@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Yggdrassil.Domain.QC
+namespace Yggdrassil.Bridge.Abstractions
 {
-    internal class SequenceDef
+    public interface IRendererBridge
     {
+
     }
 }

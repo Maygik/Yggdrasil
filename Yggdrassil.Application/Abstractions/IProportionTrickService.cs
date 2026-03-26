@@ -15,8 +15,8 @@ namespace Yggdrassil.Application.Abstractions
 
     public sealed class ProportionTrickResult
     {
-        public SceneModel Proportions { get; set; }
-        public SceneModel ReferenceMale { get; set; }
-        public SceneModel ReferenceFemale { get; set; }
+        public SceneModel Proportions { get; set; } = null!;
+        public SceneModel ReferenceMale { get; set; } = null!;
+        public SceneModel ReferenceFemale { get; set; } = null!;
     }
 }

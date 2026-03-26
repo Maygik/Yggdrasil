@@ -9,6 +9,11 @@
             <SolidColorBrush x:Key="AppPanelSecondaryBackgroundBrush" Color="#FFEEEEF0" />
             <SolidColorBrush x:Key="AppPanelSubtleBackgroundBrush" Color="#FFF1F2F4" />
             <SolidColorBrush x:Key="AppPanelBorderBrush" Color="#FFD2D5DA" />
+            <SolidColorBrush x:Key="AppSelectionBackgroundBrush" Color="#FFE9F2FF" />
+            <SolidColorBrush x:Key="AppSelectionBorderBrush" Color="#FF4C8BF5" />
+            <SolidColorBrush x:Key="AppValidationErrorBackgroundBrush" Color="#FFFBEAEC" />
+            <SolidColorBrush x:Key="AppValidationErrorBorderBrush" Color="#FFD94B63" />
+            <SolidColorBrush x:Key="AppValidationErrorForegroundBrush" Color="#FF8E2133" />
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Dark">
@@ -16,6 +21,11 @@
             <SolidColorBrush x:Key="AppPanelSecondaryBackgroundBrush" Color="#FF2A2C31" />
             <SolidColorBrush x:Key="AppPanelSubtleBackgroundBrush" Color="#FF25272B" />
             <SolidColorBrush x:Key="AppPanelBorderBrush" Color="#FF3D4148" />
+            <SolidColorBrush x:Key="AppSelectionBackgroundBrush" Color="#FF213246" />
+            <SolidColorBrush x:Key="AppSelectionBorderBrush" Color="#FF8AB4FF" />
+            <SolidColorBrush x:Key="AppValidationErrorBackgroundBrush" Color="#FF3D2328" />
+            <SolidColorBrush x:Key="AppValidationErrorBorderBrush" Color="#FFFF7085" />
+            <SolidColorBrush x:Key="AppValidationErrorForegroundBrush" Color="#FFFFC0C9" />
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Default">
@@ -23,6 +33,11 @@
             <SolidColorBrush x:Key="AppPanelSecondaryBackgroundBrush" Color="#FFEEEEF0" />
             <SolidColorBrush x:Key="AppPanelSubtleBackgroundBrush" Color="#FFF1F2F4" />
             <SolidColorBrush x:Key="AppPanelBorderBrush" Color="#FFD2D5DA" />
+            <SolidColorBrush x:Key="AppSelectionBackgroundBrush" Color="#FFE9F2FF" />
+            <SolidColorBrush x:Key="AppSelectionBorderBrush" Color="#FF4C8BF5" />
+            <SolidColorBrush x:Key="AppValidationErrorBackgroundBrush" Color="#FFFBEAEC" />
+            <SolidColorBrush x:Key="AppValidationErrorBorderBrush" Color="#FFD94B63" />
+            <SolidColorBrush x:Key="AppValidationErrorForegroundBrush" Color="#FF8E2133" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 

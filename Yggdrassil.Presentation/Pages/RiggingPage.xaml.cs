@@ -4,7 +4,6 @@ using System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Linq;
-using Windows.ApplicationModel.DataTransfer;
 using Yggdrassil.Domain.Rigging;
 using Yggdrassil.Domain.Scene;
 using Yggdrassil.Presentation.Models;
@@ -16,7 +15,6 @@ namespace Yggdrassil.Presentation.Pages
     {
         public AppHost Host { get; }
         public ObservableCollection<RigSlotSectionItem> SlotSections { get; } = new();
-        public ObservableCollection<RigSlotEditorItem> AssignableSlots { get; } = new();
 
         private readonly RigSlotSectionItem _mainSlotSection = new() { Title = "Main" };
         private readonly RigSlotSectionItem _limbSlotSection = new() { Title = "Limbs" };
@@ -24,6 +22,7 @@ namespace Yggdrassil.Presentation.Pages
         private readonly RigSlotSectionItem _rightHandSlotSection = new() { Title = "Right Hand" };
         private readonly Dictionary<TreeViewNode, BoneHierarchyItem> _boneLookupByNode = new();
         private BoneHierarchyItem? _selectedBone;
+        private RigSlotEditorItem? _selectedSlot;
 
         public RiggingPage()
         {
@@ -113,21 +112,17 @@ namespace Yggdrassil.Presentation.Pages
 
         private void PopulateRigSlots()
         {
-            var selectedSlotIndex = AssignBoneComboBox.SelectedItem is RigSlotEditorItem selectedSlot
-                ? selectedSlot.SlotIndex
-                : (int?)null;
+            var selectedSlotIndex = _selectedSlot?.SlotIndex;
 
             _mainSlotSection.Slots.Clear();
             _limbSlotSection.Slots.Clear();
             _leftHandSlotSection.Slots.Clear();
             _rightHandSlotSection.Slots.Clear();
-            AssignableSlots.Clear();
 
             var rigMapping = Host.Shell.CurrentSession?.Project?.RigMapping;
             if (rigMapping is null)
             {
-                AssignBoneComboBox.SelectedItem = null;
-                UpdateAssignButtonState();
+                SetSelectedSlot(null);
                 return;
             }
 
@@ -135,12 +130,10 @@ namespace Yggdrassil.Presentation.Pages
             AddSlots(_limbSlotSection.Slots, rigMapping, _limbSlotSection.Title, 7, 22);
             AddSlots(_leftHandSlotSection.Slots, rigMapping, _leftHandSlotSection.Title, 23, 37);
             AddSlots(_rightHandSlotSection.Slots, rigMapping, _rightHandSlotSection.Title, 38, 52);
-
-            AssignBoneComboBox.SelectedItem = selectedSlotIndex.HasValue
-                ? AssignableSlots.FirstOrDefault(slot => slot.SlotIndex == selectedSlotIndex.Value)
-                : null;
-
-            UpdateAssignButtonState();
+            UpdateDuplicateAssignmentIndicators();
+            SetSelectedSlot(selectedSlotIndex.HasValue
+                ? SlotSections.SelectMany(section => section.Slots).FirstOrDefault(slot => slot.SlotIndex == selectedSlotIndex.Value)
+                : null);
         }
 
         private void InitializeSlotSections()
@@ -172,7 +165,6 @@ namespace Yggdrassil.Presentation.Pages
 
                 editorItem.UpdateAssignment(slot.AssignedBone);
                 target.Add(editorItem);
-                AssignableSlots.Add(editorItem);
             }
         }
 
@@ -185,70 +177,75 @@ namespace Yggdrassil.Presentation.Pages
             SetSelectedBone(selectedBone);
         }
 
-        private void BoneHierarchyTreeView_DragItemsStarting(TreeView sender, TreeViewDragItemsStartingEventArgs args)
+        private void RigSlotRow_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
         {
-            var selectedBone = args.Items
-                .OfType<TreeViewNode>()
-                .Select(node => _boneLookupByNode.TryGetValue(node, out var boneItem) ? boneItem : null)
-                .FirstOrDefault(boneItem => boneItem is not null)
-                ?? (sender.SelectedNode is not null
-                    && _boneLookupByNode.TryGetValue(sender.SelectedNode, out var selectedItem)
-                        ? selectedItem
-                        : null);
-            if (selectedBone is null)
+            if (sender is FrameworkElement element && element.Tag is RigSlotEditorItem slotItem)
             {
-                args.Cancel = true;
-                return;
+                SetSelectedSlot(slotItem);
             }
-
-            args.Data.SetText(selectedBone.Name);
         }
 
-        private void AssignBoneComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            UpdateAssignButtonState();
-        }
-
-        private void AssignSelectedBoneButton_Click(object sender, RoutedEventArgs e)
+        private void BindSelectedBoneToSlotButton_Click(object sender, RoutedEventArgs e)
         {
             if (_selectedBone is null)
             {
-                Host.Shell.StatusMessage = "Select a bone before assigning it.";
-                UpdateAssignButtonState();
+                Host.Shell.StatusMessage = "Select a bone before binding it to a rig slot.";
                 return;
             }
 
-            if (AssignBoneComboBox.SelectedItem is not RigSlotEditorItem selectedSlot)
-            {
-                Host.Shell.StatusMessage = "Select a rig slot before assigning the bone.";
-                UpdateAssignButtonState();
-                return;
-            }
-
-            AssignBoneToSlot(_selectedBone.Name, selectedSlot);
-        }
-
-        private void RigSlotAssignedField_DragOver(object sender, DragEventArgs e)
-        {
-            e.AcceptedOperation = e.DataView.Contains(StandardDataFormats.Text)
-                ? DataPackageOperation.Copy
-                : DataPackageOperation.None;
-        }
-
-        private async void RigSlotAssignedField_Drop(object sender, DragEventArgs e)
-        {
             if (sender is not FrameworkElement element || element.Tag is not RigSlotEditorItem slotItem)
+            {
+                Host.Shell.StatusMessage = "Unable to determine which rig slot to bind.";
                 return;
+            }
 
-            if (!e.DataView.Contains(StandardDataFormats.Text))
+            SetSelectedSlot(slotItem);
+            AssignBoneToSlot(_selectedBone.Name, slotItem);
+        }
+
+        private void UnbindSelectedButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedSlot is null)
+            {
+                Host.Shell.StatusMessage = "Select a rig slot before unbinding it.";
+                UpdateUnbindButtonState();
                 return;
+            }
 
-            var boneName = (await e.DataView.GetTextAsync()).Trim();
-            if (string.IsNullOrWhiteSpace(boneName))
+            UnbindSlot(_selectedSlot);
+        }
+
+        private void UnbindAllButton_Click(object sender, RoutedEventArgs e)
+        {
+            var project = Host.Shell.CurrentSession?.Project;
+            if (project is null)
+            {
+                Host.Shell.StatusMessage = "No project is currently open.";
+                UpdateUnbindButtonState();
                 return;
+            }
 
-            AssignBoneComboBox.SelectedItem = AssignableSlots.FirstOrDefault(slot => slot.SlotIndex == slotItem.SlotIndex);
-            AssignBoneToSlot(boneName, slotItem);
+            var assignedSlots = SlotSections
+                .SelectMany(section => section.Slots)
+                .Where(slot => slot.IsAssigned)
+                .ToList();
+
+            if (assignedSlots.Count == 0)
+            {
+                Host.Shell.StatusMessage = "There are no rig slot bindings to clear.";
+                UpdateUnbindButtonState();
+                return;
+            }
+
+            foreach (var slot in assignedSlots)
+            {
+                Host.Backend.ProjectEditor.UnbindBone(project, slot.SlotIndex);
+                slot.UpdateAssignment(project.RigMapping[slot.SlotIndex].AssignedBone);
+            }
+
+            UpdateDuplicateAssignmentIndicators();
+            UpdateUnbindButtonState();
+            Host.Shell.StatusMessage = $"Cleared bindings for {assignedSlots.Count} rig slots.";
         }
 
         private void AssignBoneToSlot(string boneName, RigSlotEditorItem slotItem)
@@ -268,13 +265,83 @@ namespace Yggdrassil.Presentation.Pages
             if (!result.Success)
                 return;
 
-            slotItem.UpdateAssignment(boneName);
+            slotItem.UpdateAssignment(project.RigMapping[slotItem.SlotIndex].AssignedBone);
+            UpdateDuplicateAssignmentIndicators();
+            UpdateUnbindButtonState();
+        }
+
+        private void UnbindSlot(RigSlotEditorItem slotItem)
+        {
+            var project = Host.Shell.CurrentSession?.Project;
+            if (project is null)
+            {
+                Host.Shell.StatusMessage = "No project is currently open.";
+                UpdateUnbindButtonState();
+                return;
+            }
+
+            var result = Host.Backend.ProjectEditor.UnbindBone(project, slotItem.SlotIndex);
+            Host.Shell.StatusMessage = result.Success
+                ? result.Messages.FirstOrDefault() ?? $"Cleared binding for slot '{slotItem.DisplayName}'."
+                : result.ErrorMessage ?? "Failed to clear the selected binding.";
+
+            if (!result.Success)
+                return;
+
+            slotItem.UpdateAssignment(project.RigMapping[slotItem.SlotIndex].AssignedBone);
+            UpdateDuplicateAssignmentIndicators();
+            UpdateUnbindButtonState();
+        }
+
+        private void UpdateDuplicateAssignmentIndicators()
+        {
+            var duplicateAssignments = SlotSections
+                .SelectMany(section => section.Slots)
+                .Where(slot => !string.IsNullOrWhiteSpace(slot.AssignedBoneName))
+                .GroupBy(slot => slot.AssignedBoneName!, StringComparer.Ordinal)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key)
+                .ToHashSet(StringComparer.Ordinal);
+
+            foreach (var slot in SlotSections.SelectMany(section => section.Slots))
+            {
+                slot.UpdateDuplicateAssignment(
+                    slot.AssignedBoneName is not null && duplicateAssignments.Contains(slot.AssignedBoneName));
+            }
+        }
+
+        private void SetSelectedSlot(RigSlotEditorItem? slotItem)
+        {
+            if (ReferenceEquals(_selectedSlot, slotItem))
+            {
+                UpdateUnbindButtonState();
+                return;
+            }
+
+            _selectedSlot?.UpdateSelection(false);
+            _selectedSlot = slotItem;
+            _selectedSlot?.UpdateSelection(true);
+            UpdateUnbindButtonState();
+        }
+
+        private void UpdateUnbindButtonState()
+        {
+            if (UnbindSelectedButton is not null)
+            {
+                UnbindSelectedButton.IsEnabled = _selectedSlot?.IsAssigned == true;
+            }
+
+            if (UnbindAllButton is not null)
+            {
+                UnbindAllButton.IsEnabled = SlotSections
+                    .SelectMany(section => section.Slots)
+                    .Any(slot => slot.IsAssigned);
+            }
         }
 
         private void ResetSelectionUi()
         {
             SelectedBoneTextBlock.Text = "Selected bone: None";
-            AssignSelectedBoneButton.IsEnabled = false;
         }
 
         private void SetSelectedBone(BoneHierarchyItem? boneItem)
@@ -283,14 +350,6 @@ namespace Yggdrassil.Presentation.Pages
             SelectedBoneTextBlock.Text = boneItem is null
                 ? "Selected bone: None"
                 : $"Selected bone: {boneItem.Name}";
-
-            UpdateAssignButtonState();
-        }
-
-        private void UpdateAssignButtonState()
-        {
-            AssignSelectedBoneButton.IsEnabled =
-                _selectedBone is not null && AssignBoneComboBox.SelectedItem is RigSlotEditorItem;
         }
 
         private void RiggingPage_Unloaded(object sender, RoutedEventArgs e)

@@ -11,6 +11,26 @@
 
     <Page.Resources>
         <converters:ThicknessScaleConverter x:Key="BoneHierarchyIndentationConverter" Scale="0.55" />
+        <converters:BooleanToBrushConverter
+            x:Key="DuplicateAssignmentBackgroundConverter"
+            FalseBrush="{ThemeResource AppPanelSubtleBackgroundBrush}"
+            TrueBrush="{ThemeResource AppValidationErrorBackgroundBrush}" />
+        <converters:BooleanToBrushConverter
+            x:Key="DuplicateAssignmentBorderConverter"
+            FalseBrush="{ThemeResource AppPanelBorderBrush}"
+            TrueBrush="{ThemeResource AppValidationErrorBorderBrush}" />
+        <converters:BooleanToBrushConverter
+            x:Key="DuplicateAssignmentForegroundConverter"
+            FalseBrush="{ThemeResource TextFillColorSecondaryBrush}"
+            TrueBrush="{ThemeResource AppValidationErrorForegroundBrush}" />
+        <converters:BooleanToBrushConverter
+            x:Key="SelectedSlotBackgroundConverter"
+            FalseBrush="Transparent"
+            TrueBrush="{ThemeResource AppSelectionBackgroundBrush}" />
+        <converters:BooleanToBrushConverter
+            x:Key="SelectedSlotBorderConverter"
+            FalseBrush="Transparent"
+            TrueBrush="{ThemeResource AppSelectionBorderBrush}" />
         <Thickness x:Key="TreeViewItemPresenterMargin">0</Thickness>
         <Thickness x:Key="TreeViewItemPresenterPadding">0</Thickness>
         <x:Double x:Key="TreeViewItemMinHeight">18</x:Double>
@@ -282,34 +302,52 @@
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         </Style>
         <DataTemplate x:Key="RigSlotRowTemplate" x:DataType="models:RigSlotEditorItem">
-            <Grid Margin="0,0,0,8" ColumnSpacing="12" ToolTipService.ToolTip="{x:Bind LogicalBone}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
+            <Border
+                Margin="0,0,0,8"
+                Padding="8"
+                Background="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource SelectedSlotBackgroundConverter}}"
+                BorderBrush="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource SelectedSlotBorderConverter}}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Tag="{x:Bind}"
+                Tapped="RigSlotRow_Tapped"
+                ToolTipService.ToolTip="{x:Bind LogicalBone}">
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                <TextBlock
-                    Grid.Column="0"
-                    VerticalAlignment="Center"
-                    Style="{StaticResource BodyStrongTextStyle}"
-                    Text="{x:Bind DisplayName}" />
-                <Border
-                    Grid.Column="1"
-                    AllowDrop="True"
-                    DragOver="RigSlotAssignedField_DragOver"
-                    Drop="RigSlotAssignedField_Drop"
-                    Style="{StaticResource RigSlotAssignedFieldStyle}"
-                    Tag="{x:Bind}"
-                    ToolTipService.ToolTip="{x:Bind AssignedBoneDisplay}">
                     <TextBlock
-                        Style="{StaticResource CaptionTextStyle}"
-                        Text="{x:Bind AssignedBoneDisplay}"
-                        HorizontalAlignment="Right"
-                        TextAlignment="Right"
-                        TextWrapping="NoWrap"
-                        TextTrimming="CharacterEllipsis" />
-                </Border>
-            </Grid>
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource BodyStrongTextStyle}"
+                        Text="{x:Bind DisplayName}" />
+                    <Border
+                        Grid.Column="1"
+                        Background="{x:Bind HasDuplicateAssignment, Mode=OneWay, Converter={StaticResource DuplicateAssignmentBackgroundConverter}}"
+                        BorderBrush="{x:Bind HasDuplicateAssignment, Mode=OneWay, Converter={StaticResource DuplicateAssignmentBorderConverter}}"
+                        Style="{StaticResource RigSlotAssignedFieldStyle}"
+                        ToolTipService.ToolTip="{x:Bind AssignmentToolTip, Mode=OneWay}">
+                        <TextBlock
+                            Style="{StaticResource CaptionTextStyle}"
+                            Foreground="{x:Bind HasDuplicateAssignment, Mode=OneWay, Converter={StaticResource DuplicateAssignmentForegroundConverter}}"
+                            Text="{x:Bind AssignedBoneDisplay, Mode=OneWay}"
+                            HorizontalAlignment="Right"
+                            TextAlignment="Right"
+                            TextWrapping="NoWrap"
+                            TextTrimming="CharacterEllipsis" />
+                    </Border>
+                    <Button
+                        Grid.Column="2"
+                        MinWidth="64"
+                        Click="BindSelectedBoneToSlotButton_Click"
+                        Content="Bind"
+                        Tag="{x:Bind}"
+                        ToolTipService.ToolTip="Bind the selected bone to this slot" />
+                </Grid>
+            </Border>
         </DataTemplate>
         <DataTemplate x:Key="RigSlotSectionTemplate" x:DataType="models:RigSlotSectionItem">
             <Expander IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}" Style="{StaticResource RigSectionExpanderStyle}">
@@ -388,40 +426,16 @@
                                 <StackPanel x:Name="BoneHierarchyPanel" Spacing="12">
 
                                     <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
-                                        <Grid ColumnSpacing="12" RowSpacing="12" Width="Auto">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="Auto" />
-                                            </Grid.RowDefinitions>
-
+                                        <StackPanel Spacing="8">
                                             <TextBlock
                                                 x:Name="SelectedBoneTextBlock"
-                                                Grid.Row="0"
-                                                Grid.ColumnSpan="2"
                                                 Style="{StaticResource CaptionTextStyle}"
                                                 Text="Selected bone: None" />
-                                            <ComboBox
-                                                x:Name="AssignBoneComboBox"
-                                                Grid.Row="1"
-                                                Grid.Column="0"
-                                                DisplayMemberPath="SelectionDisplayName"
-                                                Header="Assign Selected Bone To Slot"
-                                                ItemsSource="{x:Bind AssignableSlots, Mode=OneWay}"
-                                                PlaceholderText="Select a slot"
-                                                SelectionChanged="AssignBoneComboBox_SelectionChanged" />
-                                            <Button
-                                                x:Name="AssignSelectedBoneButton"
-                                                Grid.Row="1"
-                                                Grid.Column="1"
-                                                VerticalAlignment="Bottom"
-                                                Click="AssignSelectedBoneButton_Click"
-                                                Content="Assign"
-                                                IsEnabled="False" />
-                                        </Grid>
+                                            <TextBlock
+                                                Style="{StaticResource CaptionTextStyle}"
+                                                Text="Select a bone in the hierarchy, then use Bind on the rig slot you want to map it to."
+                                                TextWrapping="WrapWholeWords" />
+                                        </StackPanel>
                                     </Border>
 
                                     <ScrollViewer
@@ -433,11 +447,9 @@
                                         VerticalScrollMode="Auto">
                                         <TreeView
                                             x:Name="BoneHierarchyTreeView"
-                                            CanDragItems="True"
                                             CanReorderItems="False"
                                             ItemContainerStyle="{StaticResource BoneHierarchyTreeItemStyle}"
-                                            SelectionChanged="BoneHierarchyTreeView_SelectionChanged"
-                                            DragItemsStarting="BoneHierarchyTreeView_DragItemsStarting">
+                                            SelectionChanged="BoneHierarchyTreeView_SelectionChanged">
                                             <TreeView.ItemTemplate>
                                                 <DataTemplate>
                                                     <TextBlock
@@ -461,7 +473,27 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Style="{StaticResource SectionTitleTextStyle}" Text="Rig Slots" />
+                            <Grid Grid.Row="0" ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Style="{StaticResource SectionTitleTextStyle}" Text="Rig Slots" />
+                                <Button
+                                    x:Name="UnbindSelectedButton"
+                                    Grid.Column="1"
+                                    Click="UnbindSelectedButton_Click"
+                                    Content="Unbind Selected"
+                                    IsEnabled="False" />
+                                <Button
+                                    x:Name="UnbindAllButton"
+                                    Grid.Column="2"
+                                    Click="UnbindAllButton_Click"
+                                    Content="Unbind All"
+                                    IsEnabled="False" />
+                            </Grid>
 
                             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                                 <ItemsControl

@@ -7,13 +7,21 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x86;x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
-    <PublishProfile>win-$(Platform).pubxml</PublishProfile>
     <UseWinUI>true</UseWinUI>
     <EnableMsixTooling>true</EnableMsixTooling>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <ResolvedBuildPlatform Condition="'$(Platform)' == '' Or '$(Platform)' == 'AnyCPU'">x64</ResolvedBuildPlatform>
+    <ResolvedBuildPlatform Condition="'$(ResolvedBuildPlatform)' == ''">$(Platform)</ResolvedBuildPlatform>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$(ResolvedBuildPlatform)</RuntimeIdentifier>
+    <PlatformTarget Condition="'$(PlatformTarget)' == ''">$(ResolvedBuildPlatform)</PlatformTarget>
+    <PublishProfile>win-$(ResolvedBuildPlatform).pubxml</PublishProfile>
+  </PropertyGroup>
   <ItemGroup>
     <None Remove="Dialogs\CreateProjectDialog.xaml" />
+    <None Remove="Pages\MaterialsPage.xaml" />
     <None Remove="Pages\ModelPage.xaml" />
     <None Remove="Pages\RiggingPage.xaml" />
   </ItemGroup>
@@ -51,6 +59,11 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Styles\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Pages\MaterialsPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Page Update="Pages\ModelPage.xaml">

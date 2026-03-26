@@ -122,6 +122,7 @@ namespace Yggdrassil.Presentation
             "home" => typeof(HomePage),
             "project" => typeof(ProjectPage),
             "model" => typeof(ModelPage),
+            "materials" => typeof(MaterialsPage),
             "rigging" => typeof(RiggingPage),
             "export" => typeof(ExportPage),
             _ => typeof(HomePage),

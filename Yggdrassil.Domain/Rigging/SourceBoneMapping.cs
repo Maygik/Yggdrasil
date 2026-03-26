@@ -173,7 +173,7 @@ namespace Yggdrassil.Domain.Rigging
         public string[] Spine4Alias = { "valvebiped.bip01_spine4", "valvebiped.bip01_spine03", "spine4", "spine03", "upperchest", "upper chest", "chest" };
         public RigSlot Spine2Slot { get; set; } = new RigSlot(              "ValveBiped.Bip01_Spine2",          "Chest");
         public string[] Spine2Alias = { "valvebiped.bip01_spine2", "valvebiped.bip01_spine02", "spine2", "spine02", "chest" };
-        public RigSlot Spine1Slot { get; set; } = new RigSlot(              "ValveBiped.Bip01_Spine1",          "Central Spine");
+        public RigSlot Spine1Slot { get; set; } = new RigSlot(              "ValveBiped.Bip01_Spine1",          "Spine");
         public string[] Spine1Alias = { "valvebiped.bip01_spine1", "valvebiped.bip01_spine01", "spine1", "spine01", "central spine" };
         public RigSlot SpineSlot { get; set; } = new RigSlot(               "ValveBiped.Bip01_Spine",           "Lower Spine");
         public string[] SpineAlias = { "valvebiped.bip01_spine", "valvebiped.bip01_spine0", "spine", "spine0", "lowerspine", "lower spine" };

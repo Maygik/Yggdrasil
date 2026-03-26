@@ -23,19 +23,63 @@
             <NavigationViewItem x:Name="HomeNavigationItem" Content="Home" Tag="home" />
             <NavigationViewItem x:Name="ProjectNavigationItem" Content="Project" Tag="project" />
             <NavigationViewItem x:Name="ModelNavigationItem" Content="Model" Tag="model" />
+            <NavigationViewItem x:Name="MaterialsNavigationItem" Content="Materials" Tag="materials" />
             <NavigationViewItem x:Name="RiggingNavigationItem" Content="Rigging" Tag="rigging" />
             <NavigationViewItem x:Name="ExportNavigationItem" Content="Export" Tag="export" />
-            
         </NavigationView.MenuItems>
-        <Grid Padding="16" ColumnSpacing="16">
+
+        <Grid
+            x:Name="ShellLayoutRoot"
+            Padding="16"
+            ColumnSpacing="16"
+            RowSpacing="16">
+            <VisualStateManager.VisualStateGroups>
+                <VisualStateGroup>
+                    <VisualState x:Name="WideShellState">
+                        <VisualState.StateTriggers>
+                            <AdaptiveTrigger MinWindowWidth="1280" />
+                        </VisualState.StateTriggers>
+                        <VisualState.Setters>
+                            <Setter Target="ContentColumnDefinition.Width" Value="5*" />
+                            <Setter Target="ViewportColumnDefinition.Width" Value="4*" />
+                            <Setter Target="ContentFrame.(Grid.Row)" Value="0" />
+                            <Setter Target="ContentFrame.(Grid.Column)" Value="0" />
+                            <Setter Target="ContentFrame.(Grid.ColumnSpan)" Value="1" />
+                            <Setter Target="ViewportRail.(Grid.Row)" Value="0" />
+                            <Setter Target="ViewportRail.(Grid.Column)" Value="1" />
+                            <Setter Target="ViewportRail.(Grid.ColumnSpan)" Value="1" />
+                            <Setter Target="ViewportRail.(Grid.RowSpan)" Value="2" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="StackedShellState">
+                        <VisualState.Setters>
+                            <Setter Target="ContentColumnDefinition.Width" Value="*" />
+                            <Setter Target="ViewportColumnDefinition.Width" Value="0" />
+                            <Setter Target="ContentFrame.(Grid.Row)" Value="0" />
+                            <Setter Target="ContentFrame.(Grid.Column)" Value="0" />
+                            <Setter Target="ContentFrame.(Grid.ColumnSpan)" Value="2" />
+                            <Setter Target="ViewportRail.(Grid.Row)" Value="1" />
+                            <Setter Target="ViewportRail.(Grid.Column)" Value="0" />
+                            <Setter Target="ViewportRail.(Grid.ColumnSpan)" Value="2" />
+                            <Setter Target="ViewportRail.(Grid.RowSpan)" Value="1" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*" />
-                <ColumnDefinition Width="2*" />
+                <ColumnDefinition x:Name="ContentColumnDefinition" Width="5*" />
+                <ColumnDefinition x:Name="ViewportColumnDefinition" Width="4*" />
             </Grid.ColumnDefinitions>
 
             <Frame x:Name="ContentFrame" Grid.Column="0" />
 
             <Border
+                x:Name="ViewportRail"
                 Style="{StaticResource PanelBorderStyle}"
                 Grid.Column="1"
                 Padding="20">
@@ -48,31 +92,42 @@
 
                     <StackPanel Spacing="4">
                         <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Viewport" />
+                        <TextBlock
+                            Style="{StaticResource CaptionTextStyle}"
+                            Text="Shared preview surface for model, materials, and rigging workflows."
+                            TextWrapping="WrapWholeWords" />
                     </StackPanel>
 
                     <Border
+                        x:Name="ViewportHostSurface"
                         Style="{StaticResource SubtlePanelBorderStyle}"
                         Grid.Row="1"
                         MinHeight="420"
                         Margin="0,8,0,0"
                         Background="{ThemeResource AppPanelSubtleBackgroundBrush}">
-                        <Grid>
-                            <TextBlock
+                        <Grid Padding="20">
+                            <StackPanel
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                Style="{StaticResource BodyStrongTextStyle}"
-                                Text="Vortice viewport host goes here" />
+                                MaxWidth="360"
+                                Spacing="8">
+                                <SwapChainPanel x:Name="ViewportSwapChainPanel"
+                                    />
+                            </StackPanel>
                         </Grid>
                     </Border>
 
                     <Border
+                        x:Name="ViewportDetailsSurface"
                         Style="{StaticResource SubtlePanelBorderStyle}"
                         Grid.Row="2"
                         Margin="0,8,0,0"
                         Padding="16">
                         <StackPanel Spacing="6">
-                            <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Scene Details" />
-                            <TextBlock Text="Selection details will live here." TextWrapping="WrapWholeWords" />
+                            <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Selection Details" />
+                            <TextBlock
+                                Text="Hovered and selected scene details will live here without competing with the page-local editing UI."
+                                TextWrapping="WrapWholeWords" />
                         </StackPanel>
                     </Border>
                 </Grid>
