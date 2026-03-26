@@ -9,10 +9,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$projectPath = Join-Path $repoRoot "Yggdrassil.Presentation\Yggdrassil.Presentation.csproj"
+$projectPath = Join-Path $repoRoot "Yggdrasil.Presentation\Yggdrasil.Presentation.csproj"
 $runtime = "win-x64"
 $platform = "x64"
-$packageFolderName = "Yggdrassil-win-x64"
+$packageFolderName = "Yggdrasil-win-x64"
 
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir = Join-Path $repoRoot "artifacts\release\desktop"
@@ -50,7 +50,7 @@ $publishArgs = @(
     "-o", $publishDir
 )
 
-Write-Host "Publishing Yggdrassil desktop app..."
+Write-Host "Publishing Yggdrasil desktop app..."
 Write-Host "  Project: $projectPath"
 Write-Host "  Config:  $Configuration"
 Write-Host "  Runtime: $runtime"
@@ -63,7 +63,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE."
 }
 
-$exePath = Join-Path $publishDir "Yggdrassil.Presentation.exe"
+$exePath = Join-Path $publishDir "Yggdrasil.Presentation.exe"
 if (-not (Test-Path $exePath)) {
     throw "Publish completed, but the expected executable was not found at '$exePath'."
 }
@@ -77,7 +77,7 @@ if ($SmokeTest) {
     Expand-Archive -Path $zipPath -DestinationPath $smokeTestDir -Force
 
     $smokeTestExe = Join-Path $smokeTestDir $packageFolderName
-    $smokeTestExe = Join-Path $smokeTestExe "Yggdrassil.Presentation.exe"
+    $smokeTestExe = Join-Path $smokeTestExe "Yggdrasil.Presentation.exe"
 
     if (-not (Test-Path $smokeTestExe)) {
         throw "Smoke test failed because '$smokeTestExe' was not found after extracting the zip."

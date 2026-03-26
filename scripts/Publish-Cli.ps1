@@ -8,7 +8,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$projectPath = Join-Path $repoRoot "Yggdrassil.Cli\Yggdrassil.Cli.csproj"
+$projectPath = Join-Path $repoRoot "Yggdrasil.Cli\Yggdrasil.Cli.csproj"
 
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir = Join-Path $repoRoot "artifacts\publish\cli-single"
@@ -34,7 +34,7 @@ $publishArgs = @(
     "-o", $OutputDir
 )
 
-Write-Host "Publishing Yggdrassil CLI..."
+Write-Host "Publishing Yggdrasil CLI..."
 Write-Host "  Project: $projectPath"
 Write-Host "  Config:  $Configuration"
 Write-Host "  Runtime: $Runtime"
@@ -43,7 +43,7 @@ Write-Host ""
 
 & dotnet @publishArgs
 
-$exePath = Join-Path $OutputDir "Yggdrassil.Cli.exe"
+$exePath = Join-Path $OutputDir "Yggdrasil.Cli.exe"
 if (-not (Test-Path $exePath)) {
     throw "Publish completed, but the expected executable was not found at '$exePath'."
 }
