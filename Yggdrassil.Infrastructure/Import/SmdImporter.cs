@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Yggdrassil.Domain.Scene;
+using Vector2 = Yggdrassil.Types.Vector2;
+using Vector3 = Yggdrassil.Types.Vector3;
 
 namespace Yggdrassil.Infrastructure.Import
 {
@@ -92,7 +94,7 @@ namespace Yggdrassil.Infrastructure.Import
             Console.WriteLine("Bone hierarchy built successfully.");
 
             // Parse the skeleton pose
-            Dictionary<int, (Vector3<float> position, Vector3<float> rotation)> bonePoses = new Dictionary<int, (Vector3<float>, Vector3<float>)>();
+            Dictionary<int, (Vector3 position, Vector3 rotation)> bonePoses = new Dictionary<int, (Vector3, Vector3)>();
             while (lineIndex < lines.Length && !lines[lineIndex].StartsWith("skeleton"))
             {
                 lineIndex++;
@@ -121,7 +123,7 @@ namespace Yggdrassil.Infrastructure.Import
                     float rotX = float.Parse(parts[4]);
                     float rotY = float.Parse(parts[5]);
                     float rotZ = float.Parse(parts[6]);
-                    bonePoses[boneId] = (new Vector3<float> { X = posX, Y = posY, Z = posZ }, new Vector3<float> { X = rotX, Y = rotY, Z = rotZ });
+                    bonePoses[boneId] = (new Vector3 { X = posX, Y = posY, Z = posZ }, new Vector3 { X = rotX, Y = rotY, Z = rotZ });
                 }
                 lineIndex++;
             }

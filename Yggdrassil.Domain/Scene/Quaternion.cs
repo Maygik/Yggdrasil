@@ -4,7 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using Vector3 = Yggdrassil.Domain.Scene.Vector3<float>;
+using Matrix4x4 = Yggdrassil.Types.Matrix4x4;
+using Vector3 = Yggdrassil.Types.Vector3;
 
 namespace Yggdrassil.Domain.Scene
 {
@@ -14,9 +15,6 @@ namespace Yggdrassil.Domain.Scene
         private float _y;
         private float _z;
         private float _w;
-
-        private bool dirty = true;
-        private Vector3 _cached_eulerAngles = new();
 
         public float X
         {
@@ -29,7 +27,6 @@ namespace Yggdrassil.Domain.Scene
                 if (_x != value)
                 {
                     _x = value;
-                    dirty = true;
                 }
             }
         }
@@ -44,7 +41,6 @@ namespace Yggdrassil.Domain.Scene
                 if (_y != value)
                 {
                     _y = value;
-                    dirty = true;
                 }
             }
         }
@@ -59,7 +55,6 @@ namespace Yggdrassil.Domain.Scene
                 if (_z != value)
                 {
                     _z = value;
-                    dirty = true;
                 }
             }
         }
@@ -74,7 +69,6 @@ namespace Yggdrassil.Domain.Scene
                 if (_w != value)
                 {
                     _w = value;
-                    dirty = true;
                 }
             }
         }
@@ -85,7 +79,6 @@ namespace Yggdrassil.Domain.Scene
             _y = y;
             _z = z;
             _w = w;
-            dirty = true; // Mark as dirty since we have new values.
         }
 
         public Quaternion(Vector3 vector, float w = 0)
@@ -94,7 +87,6 @@ namespace Yggdrassil.Domain.Scene
             _y = vector.Y;
             _z = vector.Z;
             _w = w;
-            dirty = true; // Mark as dirty since we have new values.
         }
 
         public static Quaternion Identity => new(1, 0, 0, 0);
@@ -272,7 +264,7 @@ namespace Yggdrassil.Domain.Scene
 
 
         // Returns the shortest rotation from "from" to "to". Both "from" and "to" are expected to be normalized vectors.
-        public static Quaternion FromToRotation(Vector3<float> from, Vector3<float> to)
+        public static Quaternion FromToRotation(Vector3 from, Vector3 to)
         {
             float dot = from.X * to.X + from.Y * to.Y + from.Z * to.Z;
             if (dot > 0.999999f)
@@ -283,8 +275,8 @@ namespace Yggdrassil.Domain.Scene
             else if (dot < -0.999999f)
             {
                 // Vectors are opposite, find an orthogonal vector for rotation axis
-                Vector3<float> orthogonal = Math.Abs(from.X) < 0.1f ? new Vector3<float>(1, 0, 0) : new Vector3<float>(0, 1, 0);
-                Vector3<float> axis = new Vector3<float>(
+                Vector3 orthogonal = Math.Abs(from.X) < 0.1f ? new Vector3(1, 0, 0) : new Vector3(0, 1, 0);
+                Vector3 axis = new Vector3(
                     from.Y * orthogonal.Z - from.Z * orthogonal.Y,
                     from.Z * orthogonal.X - from.X * orthogonal.Z,
                     from.X * orthogonal.Y - from.Y * orthogonal.X
@@ -297,7 +289,7 @@ namespace Yggdrassil.Domain.Scene
             else
             {
                 // General case
-                Vector3<float> cross = new Vector3<float>(
+                Vector3 cross = new Vector3(
                     from.Y * to.Z - from.Z * to.Y,
                     from.Z * to.X - from.X * to.Z,
                     from.X * to.Y - from.Y * to.X
@@ -314,7 +306,7 @@ namespace Yggdrassil.Domain.Scene
         }
 
 
-        public Vector3<float> Rotate(Vector3<float> vector)
+        public Vector3 Rotate(Vector3 vector)
         {
             // Using the formula: v' = q * v * q^-1
             // For efficiency, we expand this using quaternion components
@@ -338,12 +330,12 @@ namespace Yggdrassil.Domain.Scene
             float ry = iy * w + iw * -y + iz * -x - ix * -z;
             float rz = iz * w + iw * -z + ix * -y - iy * -x;
 
-            return new Vector3<float>(rx, ry, rz);
+            return new Vector3(rx, ry, rz);
         }
 
 
         // Creates a quaternion representing a rotation of "angle" degrees around the specified "axis". The "axis" vector is expected to be normalized.
-        public static Quaternion FromAngleAxis(float angle, Vector3<float> axis)
+        public static Quaternion FromAngleAxis(float angle, Vector3 axis)
         {
             float halfAngle = angle * 0.5f;
             float s = (float)Math.Sin(halfAngle);

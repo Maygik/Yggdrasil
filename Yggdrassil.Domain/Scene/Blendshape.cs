@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using Vector3 = Yggdrassil.Domain.Scene.Vector3<float>;
+using Vector3 = Yggdrassil.Types.Vector3;
 
 namespace Yggdrassil.Domain.Scene
 {

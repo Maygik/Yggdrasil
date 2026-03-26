@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using Vector3 = Yggdrassil.Domain.Scene.Vector3<float>;
+using Matrix4x4 = Yggdrassil.Types.Matrix4x4;
 using Quaternion = Yggdrassil.Domain.Scene.Quaternion;
 using Bone = Yggdrassil.Domain.Scene.Bone;
+using Vector3 = Yggdrassil.Types.Vector3;
 
 
 namespace Yggdrassil.Domain.Scene

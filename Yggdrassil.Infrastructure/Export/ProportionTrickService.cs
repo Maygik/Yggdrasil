@@ -11,7 +11,7 @@ using Yggdrassil.Domain.Project;
 using Yggdrassil.Domain.Scene;
 using Yggdrassil.Infrastructure.Import;
 
-using Vector3 = Yggdrassil.Domain.Scene.Vector3<float>;
+using Vector3 = Yggdrassil.Types.Vector3;
 
 namespace Yggdrassil.Infrastructure.Export
 {
@@ -125,7 +125,7 @@ namespace Yggdrassil.Infrastructure.Export
                     Vector3 averageFingerPosition = (leftFinger2.WorldPosition + leftFinger3.WorldPosition) * 0.5f;
                     Vector3 directionToTarget = (averageFingerPosition - leftHand.WorldPosition).Normalised();
                     Vector3 forwardDirection = leftHand.WorldRotation.Rotate(new Vector3(1, 0, 0));
-                    float angleToTarget = Vector3<float>.Angle(forwardDirection, directionToTarget);
+            float angleToTarget = Vector3.Angle(forwardDirection, directionToTarget);
 
                     if (angleToTarget > 0.1f)
                     {
@@ -168,7 +168,7 @@ namespace Yggdrassil.Infrastructure.Export
                     Vector3 averageFingerPosition = (rightFinger2.WorldPosition + rightFinger3.WorldPosition) * 0.5f;
                     Vector3 directionToTarget = (averageFingerPosition - rightHand.WorldPosition).Normalised();
                     Vector3 forwardDirection = rightHand.WorldRotation.Rotate(new Vector3(1, 0, 0));
-                    float angleToTarget = Vector3<float>.Angle(forwardDirection, directionToTarget);
+            float angleToTarget = Vector3.Angle(forwardDirection, directionToTarget);
 
                     if (angleToTarget > 0.1f)
                     {
@@ -482,7 +482,7 @@ namespace Yggdrassil.Infrastructure.Export
                     }
                     Vector3 directionToTarget = (targetBone.WorldPosition - bone.WorldPosition).Normalised();
                     Vector3 forwardDirection = bone.WorldRotation.Rotate(new Vector3(1, 0, 0));
-                    float angleToTarget = Vector3<float>.Angle(forwardDirection, directionToTarget);
+            float angleToTarget = Vector3.Angle(forwardDirection, directionToTarget);
                     if (angleToTarget > 10f)
                     {
                         Quaternion rotationDelta = Quaternion.FromToRotation(forwardDirection, directionToTarget);
@@ -528,7 +528,7 @@ namespace Yggdrassil.Infrastructure.Export
                     var leftUpperArm = proportionsBoneMap[leftUpperArmName];
                     Vector3 leftDirectionToTarget = (leftUpperArm.WorldPosition - leftClavicle.WorldPosition).Normalised();
                     Vector3 leftForwardDirection = leftClavicle.WorldRotation.Rotate(new Vector3(1, 0, 0));
-                    float leftAngleToTarget = Vector3<float>.Angle(leftForwardDirection, leftDirectionToTarget);
+            float leftAngleToTarget = Vector3.Angle(leftForwardDirection, leftDirectionToTarget);
                     if (leftAngleToTarget > 10f)
                     {
                         Quaternion leftRotationDelta = Quaternion.FromToRotation(leftForwardDirection, leftDirectionToTarget);
@@ -566,7 +566,7 @@ namespace Yggdrassil.Infrastructure.Export
                     var rightUpperArm = proportionsBoneMap[rightUpperArmName];
                     Vector3 rightDirectionToTarget = (rightUpperArm.WorldPosition - rightClavicle.WorldPosition).Normalised();
                     Vector3 rightForwardDirection = rightClavicle.WorldRotation.Rotate(new Vector3(1, 0, 0));
-                    float rightAngleToTarget = Vector3<float>.Angle(rightForwardDirection, rightDirectionToTarget);
+            float rightAngleToTarget = Vector3.Angle(rightForwardDirection, rightDirectionToTarget);
                     if (rightAngleToTarget > 10f)
                     {
                         Quaternion rightRotationDelta = Quaternion.FromToRotation(rightForwardDirection, rightDirectionToTarget);
@@ -756,9 +756,9 @@ namespace Yggdrassil.Infrastructure.Export
                 {
                     ProcessBone(firstMappedDescendant, project, rigBoneMap, collapsedBones);
                     proportionsBone.WorldMatrix = firstMappedDescendant.WorldMatrix;
-                    firstMappedDescendant.LocalPosition = Vector3<float>.Zero;
+            firstMappedDescendant.LocalPosition = Vector3.Zero;
                     firstMappedDescendant.LocalRotation = Quaternion.Identity;
-                    firstMappedDescendant.LocalScale = Vector3<float>.One;
+            firstMappedDescendant.LocalScale = Vector3.One;
                     collapsedBones.Add(firstMappedDescendant);
                     Console.WriteLine($"Collapsed \"{proportionsBone.Name}\" into first child \"{firstMappedDescendant.Name}\"");
                 }

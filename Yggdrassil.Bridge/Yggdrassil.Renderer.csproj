@@ -10,4 +10,8 @@
     <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Yggdrassil.Types\Yggdrassil.Types.csproj" />
+  </ItemGroup>
+
 </Project>

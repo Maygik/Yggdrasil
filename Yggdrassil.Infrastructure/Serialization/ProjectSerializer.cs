@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Yggdrassil.Domain.Project;
 using Yggdrassil.Domain.Scene;
+using Yggdrassil.Types;
 
 namespace Yggdrassil.Infrastructure.Serialization
 {

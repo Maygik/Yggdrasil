@@ -11,9 +11,9 @@ using Yggdrassil.Application.Abstractions;
 using Yggdrassil.Domain.Scene;
 using Bone = Yggdrassil.Domain.Scene.Bone;
 using Face = Yggdrassil.Domain.Scene.Face;
-using Matrix4x4 = Yggdrassil.Domain.Scene.Matrix4x4;
-using Vector2 = Yggdrassil.Domain.Scene.Vector2<float>;
-using Vector3 = Yggdrassil.Domain.Scene.Vector3<float>;
+using Matrix4x4 = Yggdrassil.Types.Matrix4x4;
+using Vector2 = Yggdrassil.Types.Vector2;
+using Vector3 = Yggdrassil.Types.Vector3;
 
 namespace Yggdrassil.Infrastructure.Import
 {
@@ -688,19 +688,19 @@ namespace Yggdrassil.Infrastructure.Import
 
     public static class AssimpExtensions
     {
-        public static Vector3<float> ToVector3(this Assimp.Vector3D v)
+        public static Vector3 ToVector3(this Assimp.Vector3D v)
         {
-            return new Vector3<float>(v.X, v.Y, v.Z);
+            return new Vector3(v.X, v.Y, v.Z);
         }
 
-        public static Vector2<float> ToVector2(this Assimp.Vector3D v)
+        public static Vector2 ToVector2(this Assimp.Vector3D v)
         {
-            return new Vector2<float>(v.X, v.Y);
+            return new Vector2(v.X, v.Y);
         }
 
-        public static Vector2<float> ToVector2(this Assimp.Vector2D v)
+        public static Vector2 ToVector2(this Assimp.Vector2D v)
         {
-            return new Vector2<float>(v.X, v.Y);
+            return new Vector2(v.X, v.Y);
         }
 
         public static Matrix4x4 ToMatrix4x4(this Assimp.Matrix4x4 m)

@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Yggdrassil.Types\Yggdrassil.Types.csproj" />
+  </ItemGroup>
+
 </Project>

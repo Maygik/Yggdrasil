@@ -11,6 +11,7 @@ using Yggdrassil.Domain.Project;
 using Yggdrassil.Domain.QC;
 using Yggdrassil.Domain.Scene;
 using Yggdrassil.Infrastructure.Export;
+using Vector3 = Yggdrassil.Types.Vector3;
 
 namespace Yggdrassil.Cli.Commands.ProjectEditing
 {
@@ -341,8 +342,8 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
             {
                 if (project.Scene.MeshGroups.Count > 0)
                 {
-                    Yggdrassil.Domain.Scene.Vector3<float> highestVertex = new Yggdrassil.Domain.Scene.Vector3<float>(float.MinValue, float.MinValue, float.MinValue);
-                    Yggdrassil.Domain.Scene.Vector3<float> lowestVertex = new Yggdrassil.Domain.Scene.Vector3<float>(float.MaxValue, float.MaxValue, float.MaxValue);
+                    Vector3 highestVertex = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+                    Vector3 lowestVertex = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
                     foreach (var meshGroup in project.Scene.MeshGroups)
                     {
                         foreach (var mesh in meshGroup.Meshes)
@@ -352,14 +353,14 @@ namespace Yggdrassil.Cli.Commands.ProjectEditing
                                 for (int i = 0; i < mesh.Vertices.Count; i++)
                                 {
                                     var vertex = mesh.Vertices[i];
-                                    var transformedVertex = new Vector3<float>(0, 0, 0);
+                                    var transformedVertex = new Vector3(0, 0, 0);
                                     foreach (var weight in mesh.BoneWeights[i])
                                     {
                                         var bone = project.Scene.RootBone.FindBoneInChildren(weight.Item1);
                                         if (bone != null)
                                         {
                                             var matrix = bone.WorldMatrix;
-                                            var weightedVertex = new Vector3<float>(
+                                            var weightedVertex = new Vector3(
                                                 vertex.X * weight.Item2,
                                                 vertex.Y * weight.Item2,
                                                 vertex.Z * weight.Item2

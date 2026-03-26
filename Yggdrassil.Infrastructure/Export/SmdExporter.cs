@@ -9,8 +9,8 @@ using Yggdrassil.Domain.Scene;
 
 using Bone = Yggdrassil.Domain.Scene.Bone;
 using Quaternion = Yggdrassil.Domain.Scene.Quaternion;
-using Matrix4x4 = Yggdrassil.Domain.Scene.Matrix4x4;
-using Vector3 = Yggdrassil.Domain.Scene.Vector3<float>;
+using Matrix4x4 = Yggdrassil.Types.Matrix4x4;
+using Vector3 = Yggdrassil.Types.Vector3;
 
 namespace Yggdrassil.Infrastructure.Export
 {

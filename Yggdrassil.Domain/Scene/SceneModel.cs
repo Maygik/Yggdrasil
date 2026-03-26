@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Vector3 = Yggdrassil.Types.Vector3;
 
 namespace Yggdrassil.Domain.Scene
 {
@@ -24,9 +25,9 @@ namespace Yggdrassil.Domain.Scene
         {
             if (RootBone != null)
             {
-                void ApplyScaleToBone(Bone bone, Vector3<float> parentScale)
+                void ApplyScaleToBone(Bone bone, Vector3 parentScale)
                 {
-                    var currentScale = new Vector3<float>
+                    var currentScale = new Vector3
                     {
                         X = parentScale.X * bone.LocalScale.X,
                         Y = parentScale.Y * bone.LocalScale.Y,
@@ -40,7 +41,7 @@ namespace Yggdrassil.Domain.Scene
                     bone.LocalPosition = localPos;
 
 
-                    bone.LocalScale = Vector3<float>.One; // Reset local scale to 1 after applying it
+                    bone.LocalScale = Vector3.One; // Reset local scale to 1 after applying it
 
                     foreach (var child in bone.Children)
                     {
@@ -48,7 +49,7 @@ namespace Yggdrassil.Domain.Scene
                             ApplyScaleToBone(childBone, currentScale);
                     }
                 }
-                ApplyScaleToBone(RootBone, Vector3<float>.One);
+                ApplyScaleToBone(RootBone, Vector3.One);
             }
 
             foreach (var mg in MeshGroups)
@@ -66,7 +67,7 @@ namespace Yggdrassil.Domain.Scene
 
                         // Normals and UVs etc don't need to be scaled, only the vertex positions
                     }
-                    mg.LocalScale = Vector3<float>.One; // Reset local scale to 1 after applying it
+                    mg.LocalScale = Vector3.One; // Reset local scale to 1 after applying it
                 }
             }
 

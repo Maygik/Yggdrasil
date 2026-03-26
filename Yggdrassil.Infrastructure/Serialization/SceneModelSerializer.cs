@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Yggdrassil.Domain.Project;
 using Yggdrassil.Domain.Scene;
+using Yggdrassil.Types;
 
 namespace Yggdrassil.Infrastructure.Serialization
 {
@@ -209,7 +210,7 @@ namespace Yggdrassil.Infrastructure.Serialization
                             for (int i = 0; i < vertexCount; i++)
                             {
                                 // Read vertex position
-                                var vertex = new Vector3<float>(
+                                var vertex = new Vector3(
                                     binaryReader.ReadSingle(),
                                     binaryReader.ReadSingle(),
                                     binaryReader.ReadSingle()
@@ -217,7 +218,7 @@ namespace Yggdrassil.Infrastructure.Serialization
                                 mesh.Vertices.Add(vertex);
 
                                 // Read normal
-                                var normal = new Vector3<float>(
+                                var normal = new Vector3(
                                     binaryReader.ReadSingle(),
                                     binaryReader.ReadSingle(),
                                     binaryReader.ReadSingle()
@@ -225,7 +226,7 @@ namespace Yggdrassil.Infrastructure.Serialization
                                 mesh.Normals.Add(normal);
 
                                 // Read UV
-                                var uv = new Vector2<float>(
+                                var uv = new Vector2(
                                     binaryReader.ReadSingle(),
                                     binaryReader.ReadSingle()
                                 );
@@ -263,7 +264,7 @@ namespace Yggdrassil.Infrastructure.Serialization
                                     for (int bsv = 0; bsv < blendshapeVertexCount; bsv++)
                                     {
                                         int vertexIndex = binaryReader.ReadInt32();
-                                        var deltaVertex = new Vector3<float>(
+                                        var deltaVertex = new Vector3(
                                             binaryReader.ReadSingle(),
                                             binaryReader.ReadSingle(),
                                             binaryReader.ReadSingle()

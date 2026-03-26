@@ -8,6 +8,7 @@ using Yggdrassil.Application.UseCases;
 using Yggdrassil.Domain.Project;
 using Yggdrassil.Domain.QC;
 using Yggdrassil.Domain.Scene;
+using Vector3 = Yggdrassil.Types.Vector3;
 
 namespace Yggdrassil.Application.Services
 {
@@ -67,7 +68,7 @@ namespace Yggdrassil.Application.Services
                 // Scale all bone positions
                 void ScaleBone(Bone bone)
                 {
-                    bone.LocalPosition = new Vector3<float>(
+                    bone.LocalPosition = new Vector3(
                         bone.LocalPosition.X * scaleFactor,
                         bone.LocalPosition.Y * scaleFactor,
                         bone.LocalPosition.Z * scaleFactor

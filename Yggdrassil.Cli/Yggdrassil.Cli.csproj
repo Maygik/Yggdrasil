@@ -17,6 +17,7 @@
     <ProjectReference Include="..\Yggdrassil.Application\Yggdrassil.Application.csproj" />
     <ProjectReference Include="..\Yggdrassil.Domain\Yggdrassil.Domain.csproj" />
     <ProjectReference Include="..\Yggdrassil.Infrastructure\Yggdrassil.Infrastructure.csproj" />
+    <ProjectReference Include="..\Yggdrassil.Types\Yggdrassil.Types.csproj" />
   </ItemGroup>
 
 </Project>

@@ -5,7 +5,9 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-using Vector3 = Yggdrassil.Domain.Scene.Vector3<float>;
+using Matrix4x4 = Yggdrassil.Types.Matrix4x4;
+using Vector3 = Yggdrassil.Types.Vector3;
+using Vector4 = Yggdrassil.Types.Vector4;
 
 namespace Yggdrassil.Domain.Scene
 {
@@ -70,11 +72,11 @@ namespace Yggdrassil.Domain.Scene
         }
 
         [JsonIgnore]
-        public Vector3<float> LocalPosition
+        public Vector3 LocalPosition
         {
             get
             {
-                return new Vector3<float>(LocalMatrix.M[0, 3], LocalMatrix.M[1, 3], LocalMatrix.M[2, 3]);
+                return new Vector3(LocalMatrix.M[0, 3], LocalMatrix.M[1, 3], LocalMatrix.M[2, 3]);
             }
             set
             {
@@ -101,9 +103,9 @@ namespace Yggdrassil.Domain.Scene
                     var parentWorldMatrixInverse = parentWorldMatrix.Invert();
 
                     // This multiplication might need to be the other way around. Just test it and see if it works. If not, swap the order of multiplication.
-                    var localPositionHomogeneous = parentWorldMatrixInverse * new Vector4<float>(value.X, value.Y, value.Z, 1);
+                    var localPositionHomogeneous = parentWorldMatrixInverse * new Vector4(value.X, value.Y, value.Z, 1);
 
-                    LocalPosition = new Vector3<float>(localPositionHomogeneous.X, localPositionHomogeneous.Y, localPositionHomogeneous.Z);
+                    LocalPosition = new Vector3(localPositionHomogeneous.X, localPositionHomogeneous.Y, localPositionHomogeneous.Z);
                 }
                 else
                 {
@@ -159,7 +161,7 @@ namespace Yggdrassil.Domain.Scene
                 return matrix; // Avoid division by zero
             }
 
-            var r = matrix;
+            var r = new Matrix4x4(matrix.M);
             for (var i = 0; i < 3; i++)
             {
                 r.M[i, 0] /= scale.X;

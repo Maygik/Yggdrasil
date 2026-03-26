@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using Color3 = Yggdrassil.Domain.Scene.Color3<float>;
-using Vector3 = Yggdrassil.Domain.Scene.Vector3<float>;
+using Color3 = Yggdrassil.Types.Color3;
+using Vector3 = Yggdrassil.Types.Vector3;
 
 namespace Yggdrassil.Domain.Scene
 {
