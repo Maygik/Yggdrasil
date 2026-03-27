@@ -7,7 +7,7 @@ internal struct PerObjectConstants
 {
     public PackedMatrix4x4 World;
     public float HighlightMix;
-    public float IsSelected;
     public float IsHovered;
-    public float Padding;
+    public float Padding1;
+    public float Padding2;
 }

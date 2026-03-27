@@ -85,5 +85,35 @@ namespace Yggdrasil.Presentation.Services
             var file = await picker.PickSingleFileAsync();
             return file?.Path;
         }
+
+        public async Task<string?> ShowOpenTextureDialogAsync()
+        {
+            if (App.Instance.MainWindow is null)
+                return null;
+
+            var hWnd = WindowNative.GetWindowHandle(App.Instance.MainWindow);
+            var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
+
+            var picker = new Microsoft.Windows.Storage.Pickers.FileOpenPicker(windowId)
+            {
+                ViewMode = Microsoft.Windows.Storage.Pickers.PickerViewMode.List,
+                SuggestedStartLocation = Microsoft.Windows.Storage.Pickers.PickerLocationId.PicturesLibrary
+            };
+
+            picker.FileTypeFilter.Add(".png");
+            picker.FileTypeFilter.Add(".tga");
+            picker.FileTypeFilter.Add(".jpg");
+            picker.FileTypeFilter.Add(".jpeg");
+            picker.FileTypeFilter.Add(".bmp");
+            picker.FileTypeFilter.Add(".tif");
+            picker.FileTypeFilter.Add(".tiff");
+            picker.FileTypeFilter.Add(".webp");
+            picker.FileTypeFilter.Add(".dds");
+            picker.FileTypeFilter.Add(".gif");
+            picker.FileTypeFilter.Add(".psd");
+
+            var file = await picker.PickSingleFileAsync();
+            return file?.Path;
+        }
     }
 }

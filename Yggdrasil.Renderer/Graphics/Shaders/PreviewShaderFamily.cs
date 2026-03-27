@@ -19,9 +19,16 @@ namespace Yggdrasil.Renderer.Graphics.Shaders;
 internal sealed class PreviewShaderFamily : IDisposable
 {
     private readonly SamplerLibrary _samplerLibrary = new();
+    private static readonly ID3D11ShaderResourceView[] EmptyMaterialTextures = new ID3D11ShaderResourceView[8];
     private ID3D11VertexShader? _vertexShader;
     private ID3D11PixelShader? _pixelShader;
+    private ID3D11VertexShader? _floorVertexShader;
+    private ID3D11PixelShader? _floorPixelShader;
+    private ID3D11PixelShader? _heightPlanePixelShader;
+    private ID3D11VertexShader? _debugLineVertexShader;
+    private ID3D11PixelShader? _debugLinePixelShader;
     private ID3D11InputLayout? _inputLayout;
+    private ID3D11InputLayout? _debugLineInputLayout;
     private ID3D11Buffer? _perFrameBuffer;
     private ID3D11Buffer? _perObjectBuffer;
     private ID3D11SamplerState? _defaultSampler;
@@ -30,7 +37,13 @@ internal sealed class PreviewShaderFamily : IDisposable
     {
         if (_vertexShader != null
             && _pixelShader != null
+            && _floorVertexShader != null
+            && _floorPixelShader != null
+            && _heightPlanePixelShader != null
+            && _debugLineVertexShader != null
+            && _debugLinePixelShader != null
             && _inputLayout != null
+            && _debugLineInputLayout != null
             && _perFrameBuffer != null
             && _perObjectBuffer != null
             && _defaultSampler != null)
@@ -45,12 +58,28 @@ internal sealed class PreviewShaderFamily : IDisposable
 
             using var vertexShaderBlob = CompileShader("PreviewLit.hlsl", "VSMain", "vs_5_0");
             using var pixelShaderBlob = CompileShader("PreviewLit.hlsl", "PSMain", "ps_5_0");
+            using var floorVertexShaderBlob = CompileShader("FloorGrid.hlsl", "VSMain", "vs_5_0");
+            using var floorPixelShaderBlob = CompileShader("FloorGrid.hlsl", "PSMain", "ps_5_0");
+            using var heightPlanePixelShaderBlob = CompileShader("HeightPlane.hlsl", "PSMain", "ps_5_0");
+            using var debugLineVertexShaderBlob = CompileShader("DebugLines.hlsl", "VSMain", "vs_5_0");
+            using var debugLinePixelShaderBlob = CompileShader("DebugLines.hlsl", "PSMain", "ps_5_0");
             var vertexShaderBytes = GetBlobBytes(vertexShaderBlob);
             var pixelShaderBytes = GetBlobBytes(pixelShaderBlob);
+            var floorVertexShaderBytes = GetBlobBytes(floorVertexShaderBlob);
+            var floorPixelShaderBytes = GetBlobBytes(floorPixelShaderBlob);
+            var heightPlanePixelShaderBytes = GetBlobBytes(heightPlanePixelShaderBlob);
+            var debugLineVertexShaderBytes = GetBlobBytes(debugLineVertexShaderBlob);
+            var debugLinePixelShaderBytes = GetBlobBytes(debugLinePixelShaderBlob);
 
             _vertexShader = device.CreateVertexShader(vertexShaderBytes);
             _pixelShader = device.CreatePixelShader(pixelShaderBytes);
+            _floorVertexShader = device.CreateVertexShader(floorVertexShaderBytes);
+            _floorPixelShader = device.CreatePixelShader(floorPixelShaderBytes);
+            _heightPlanePixelShader = device.CreatePixelShader(heightPlanePixelShaderBytes);
+            _debugLineVertexShader = device.CreateVertexShader(debugLineVertexShaderBytes);
+            _debugLinePixelShader = device.CreatePixelShader(debugLinePixelShaderBytes);
             _inputLayout = device.CreateInputLayout(CreateInputElements(), vertexShaderBytes);
+            _debugLineInputLayout = device.CreateInputLayout(CreateDebugLineInputElements(), debugLineVertexShaderBytes);
 
             _perFrameBuffer = device.CreateBuffer(
                 (uint)Marshal.SizeOf<PerFrameConstants>(),
@@ -83,7 +112,9 @@ internal sealed class PreviewShaderFamily : IDisposable
         CommonStates commonStates,
         IReadOnlyList<RenderDrawItem> drawItems,
         RenderSelectionState selection,
-        OrbitCameraState cameraState)
+        OrbitCameraState cameraState,
+        OrbitLightState lightState,
+        Matrix4x4 modelTransform)
     {
         if (drawItems.Count == 0)
         {
@@ -106,24 +137,8 @@ internal sealed class PreviewShaderFamily : IDisposable
                 return;
             }
 
-            stage = "BuildCamera";
-            var viewMatrix = OrbitCameraMath.CreateViewMatrix(cameraState);
-            var projectionMatrix = OrbitCameraMath.CreateProjectionMatrix(cameraState, (float)pixelSize.X / pixelSize.Y);
-            var cameraPosition = OrbitCameraMath.CalculateCameraPosition(cameraState);
-
             stage = "UploadPerFrame";
-            var perFrame = new PerFrameConstants
-            {
-                ViewProjection = PackedMatrix4x4.FromMatrix(viewMatrix * projectionMatrix),
-                CameraPositionX = cameraPosition.X,
-                CameraPositionY = cameraPosition.Y,
-                CameraPositionZ = cameraPosition.Z,
-                Padding0 = 0.0f,
-                LightDirectionX = -0.35f,
-                LightDirectionY = -0.20f,
-                LightDirectionZ = -0.85f,
-                AmbientStrength = 0.28f
-            };
+            var perFrame = CreatePerFrameConstants(cameraState, pixelSize, lightState);
 
             deviceContext.UpdateSubresource(in perFrame, _perFrameBuffer!);
             deviceContext.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
@@ -156,17 +171,20 @@ internal sealed class PreviewShaderFamily : IDisposable
 
                 var perObject = new PerObjectConstants
                 {
-                    World = PackedMatrix4x4.FromMatrix(drawItem.Mesh.ModelMatrix),
+                    World = PackedMatrix4x4.FromMatrix(modelTransform),
                     HighlightMix = CalculateHighlightMix(drawItem.Mesh.MaterialName, selection),
-                    IsSelected = IsSelected(drawItem.Mesh.MaterialName, selection) ? 1.0f : 0.0f,
-                    IsHovered = IsHovered(drawItem.Mesh.MaterialName, selection) ? 1.0f : 0.0f,
-                    Padding = 0.0f
+                    IsHovered = IsHovered(drawItem.Mesh.MaterialName, selection) ? 1.0f : 0.0f
                 };
 
                 deviceContext.UpdateSubresource(in perObject, _perObjectBuffer!);
                 deviceContext.VSSetConstantBuffers(1, new[] { _perObjectBuffer! });
                 deviceContext.PSSetConstantBuffers(1, new[] { _perObjectBuffer! });
                 deviceContext.PSSetConstantBuffers(2, new[] { materialResources.MaterialConstantsBuffer });
+                deviceContext.PSSetShaderResources(
+                    0,
+                    materialResources.TextureViews.Length == EmptyMaterialTextures.Length
+                        ? materialResources.TextureViews
+                        : EmptyMaterialTextures);
 
                 ApplyMaterialState(deviceContext, commonStates, materialResources.ShaderKey);
 
@@ -176,6 +194,8 @@ internal sealed class PreviewShaderFamily : IDisposable
                 deviceContext.IASetIndexBuffer(meshResources.IndexBuffer, Format.R32_UInt, 0);
                 deviceContext.DrawIndexed(meshResources.IndexCount, 0, 0);
             }
+
+            deviceContext.PSSetShaderResources(0, EmptyMaterialTextures);
         }
         catch (Exception ex)
         {
@@ -184,8 +204,191 @@ internal sealed class PreviewShaderFamily : IDisposable
         }
     }
 
-    public void DrawFloor(DeviceResources deviceResources, SwapChainResources swapChainResources, FloorGridResources floorResources)
+    public void DrawFloor(
+        DeviceResources deviceResources,
+        SwapChainResources swapChainResources,
+        CommonStates commonStates,
+        FloorGridResources floorResources,
+        OrbitCameraState cameraState,
+        OrbitLightState lightState)
     {
+        var meshResources = floorResources.MeshResources;
+        if (meshResources?.VertexBuffer == null
+            || meshResources.IndexBuffer == null
+            || meshResources.IndexCount == 0)
+        {
+            return;
+        }
+
+        var stage = "Initialize";
+
+        try
+        {
+            EnsureCreated(deviceResources);
+
+            stage = "AcquireContext";
+            var deviceContext = deviceResources.DeviceContext
+                ?? throw new InvalidOperationException("D3D11 device context has not been initialized.");
+            var pixelSize = swapChainResources.PixelSize;
+
+            if (pixelSize.X <= 0 || pixelSize.Y <= 0)
+            {
+                return;
+            }
+
+            stage = "UploadPerFrame";
+            var perFrame = CreatePerFrameConstants(cameraState, pixelSize, lightState);
+            var perObject = CreatePerObjectConstants(Matrix4x4.Identity);
+            deviceContext.UpdateSubresource(in perFrame, _perFrameBuffer!);
+            deviceContext.UpdateSubresource(in perObject, _perObjectBuffer!);
+
+            deviceContext.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
+            deviceContext.IASetInputLayout(_inputLayout);
+            deviceContext.VSSetShader(_floorVertexShader);
+            deviceContext.PSSetShader(_floorPixelShader);
+            deviceContext.VSSetConstantBuffers(0, new[] { _perFrameBuffer! });
+            deviceContext.PSSetConstantBuffers(0, new[] { _perFrameBuffer! });
+            deviceContext.VSSetConstantBuffers(1, new[] { _perObjectBuffer! });
+            deviceContext.PSSetConstantBuffers(1, new[] { _perObjectBuffer! });
+            deviceContext.OMSetBlendState(commonStates.OpaqueBlendState);
+            deviceContext.OMSetDepthStencilState(commonStates.DepthEnabledState);
+            deviceContext.RSSetState(commonStates.NoCullRasterizerState);
+
+            var stride = (uint)Marshal.SizeOf<ModelVertex>();
+            const uint offset = 0;
+            deviceContext.IASetVertexBuffers(0, new[] { meshResources.VertexBuffer }, new[] { stride }, new uint[] { offset });
+            deviceContext.IASetIndexBuffer(meshResources.IndexBuffer, Format.R32_UInt, 0);
+            deviceContext.DrawIndexed(meshResources.IndexCount, 0, 0);
+        }
+        catch (Exception ex)
+        {
+            RendererDiagnostics.WriteException($"PreviewShaderFamily.DrawFloor stage={stage}", ex);
+            throw;
+        }
+    }
+
+    public void DrawHeightPlane(
+        DeviceResources deviceResources,
+        SwapChainResources swapChainResources,
+        CommonStates commonStates,
+        FloorGridResources planeResources,
+        OrbitCameraState cameraState,
+        OrbitLightState lightState,
+        Matrix4x4 worldMatrix)
+    {
+        var meshResources = planeResources.MeshResources;
+        if (meshResources?.VertexBuffer == null
+            || meshResources.IndexBuffer == null
+            || meshResources.IndexCount == 0)
+        {
+            return;
+        }
+
+        var stage = "Initialize";
+
+        try
+        {
+            EnsureCreated(deviceResources);
+
+            stage = "AcquireContext";
+            var deviceContext = deviceResources.DeviceContext
+                ?? throw new InvalidOperationException("D3D11 device context has not been initialized.");
+            var pixelSize = swapChainResources.PixelSize;
+
+            if (pixelSize.X <= 0 || pixelSize.Y <= 0)
+            {
+                return;
+            }
+
+            stage = "UploadPerFrame";
+            var perFrame = CreatePerFrameConstants(cameraState, pixelSize, lightState);
+            var perObject = CreatePerObjectConstants(worldMatrix);
+            deviceContext.UpdateSubresource(in perFrame, _perFrameBuffer!);
+            deviceContext.UpdateSubresource(in perObject, _perObjectBuffer!);
+
+            deviceContext.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
+            deviceContext.IASetInputLayout(_inputLayout);
+            deviceContext.VSSetShader(_floorVertexShader);
+            deviceContext.PSSetShader(_heightPlanePixelShader);
+            deviceContext.VSSetConstantBuffers(0, new[] { _perFrameBuffer! });
+            deviceContext.PSSetConstantBuffers(0, new[] { _perFrameBuffer! });
+            deviceContext.VSSetConstantBuffers(1, new[] { _perObjectBuffer! });
+            deviceContext.PSSetConstantBuffers(1, new[] { _perObjectBuffer! });
+            deviceContext.OMSetBlendState(commonStates.AlphaBlendState);
+            deviceContext.OMSetDepthStencilState(commonStates.DepthEnabledState);
+            deviceContext.RSSetState(commonStates.NoCullRasterizerState);
+
+            var stride = (uint)Marshal.SizeOf<ModelVertex>();
+            const uint offset = 0;
+            deviceContext.IASetVertexBuffers(0, new[] { meshResources.VertexBuffer }, new[] { stride }, new uint[] { offset });
+            deviceContext.IASetIndexBuffer(meshResources.IndexBuffer, Format.R32_UInt, 0);
+            deviceContext.DrawIndexed(meshResources.IndexCount, 0, 0);
+        }
+        catch (Exception ex)
+        {
+            RendererDiagnostics.WriteException($"PreviewShaderFamily.DrawHeightPlane stage={stage}", ex);
+            throw;
+        }
+    }
+
+    public void DrawLines(
+        DeviceResources deviceResources,
+        SwapChainResources swapChainResources,
+        CommonStates commonStates,
+        LineListResources lineResources,
+        OrbitCameraState cameraState,
+        OrbitLightState lightState,
+        Matrix4x4 worldMatrix)
+    {
+        if (lineResources.VertexBuffer == null || lineResources.VertexCount == 0)
+        {
+            return;
+        }
+
+        var stage = "Initialize";
+
+        try
+        {
+            EnsureCreated(deviceResources);
+
+            stage = "AcquireContext";
+            var deviceContext = deviceResources.DeviceContext
+                ?? throw new InvalidOperationException("D3D11 device context has not been initialized.");
+            var pixelSize = swapChainResources.PixelSize;
+
+            if (pixelSize.X <= 0 || pixelSize.Y <= 0)
+            {
+                return;
+            }
+
+            stage = "UploadPerFrame";
+            var perFrame = CreatePerFrameConstants(cameraState, pixelSize, lightState);
+            var perObject = CreatePerObjectConstants(worldMatrix);
+            deviceContext.UpdateSubresource(in perFrame, _perFrameBuffer!);
+            deviceContext.UpdateSubresource(in perObject, _perObjectBuffer!);
+
+            deviceContext.IASetPrimitiveTopology(PrimitiveTopology.LineList);
+            deviceContext.IASetInputLayout(_debugLineInputLayout);
+            deviceContext.VSSetShader(_debugLineVertexShader);
+            deviceContext.PSSetShader(_debugLinePixelShader);
+            deviceContext.VSSetConstantBuffers(0, new[] { _perFrameBuffer! });
+            deviceContext.PSSetConstantBuffers(0, new[] { _perFrameBuffer! });
+            deviceContext.VSSetConstantBuffers(1, new[] { _perObjectBuffer! });
+            deviceContext.PSSetConstantBuffers(1, new[] { _perObjectBuffer! });
+            deviceContext.OMSetBlendState(commonStates.OpaqueBlendState);
+            deviceContext.OMSetDepthStencilState(commonStates.DepthDisabledState);
+            deviceContext.RSSetState(commonStates.NoCullRasterizerState);
+
+            var stride = (uint)Marshal.SizeOf<LineVertex>();
+            const uint offset = 0;
+            deviceContext.IASetVertexBuffers(0, new[] { lineResources.VertexBuffer }, new[] { stride }, new uint[] { offset });
+            deviceContext.Draw(lineResources.VertexCount, 0);
+        }
+        catch (Exception ex)
+        {
+            RendererDiagnostics.WriteException($"PreviewShaderFamily.DrawLines stage={stage}", ex);
+            throw;
+        }
     }
 
     public void Dispose()
@@ -202,8 +405,26 @@ internal sealed class PreviewShaderFamily : IDisposable
         _inputLayout?.Dispose();
         _inputLayout = null;
 
+        _debugLineInputLayout?.Dispose();
+        _debugLineInputLayout = null;
+
+        _debugLinePixelShader?.Dispose();
+        _debugLinePixelShader = null;
+
+        _debugLineVertexShader?.Dispose();
+        _debugLineVertexShader = null;
+
         _pixelShader?.Dispose();
         _pixelShader = null;
+
+        _heightPlanePixelShader?.Dispose();
+        _heightPlanePixelShader = null;
+
+        _floorPixelShader?.Dispose();
+        _floorPixelShader = null;
+
+        _floorVertexShader?.Dispose();
+        _floorVertexShader = null;
 
         _vertexShader?.Dispose();
         _vertexShader = null;
@@ -220,6 +441,15 @@ internal sealed class PreviewShaderFamily : IDisposable
             new InputElementDescription("TEXCOORD", 0, Format.R32G32_Float, 48, 0),
             new InputElementDescription("BLENDINDICES", 0, Format.R32G32B32A32_SInt, 56, 0),
             new InputElementDescription("BLENDWEIGHT", 0, Format.R32G32B32A32_Float, 72, 0)
+        ];
+    }
+
+    private static InputElementDescription[] CreateDebugLineInputElements()
+    {
+        return
+        [
+            new InputElementDescription("POSITION", 0, Format.R32G32B32_Float, 0, 0),
+            new InputElementDescription("COLOR", 0, Format.R32G32B32A32_Float, 12, 0)
         ];
     }
 
@@ -271,14 +501,49 @@ internal sealed class PreviewShaderFamily : IDisposable
             return flatOutputPath;
         }
 
-        throw new FileNotFoundException($"Could not locate shader source '{shaderFileName}' in the application output.", shaderFileName);
+            throw new FileNotFoundException($"Could not locate shader source '{shaderFileName}' in the application output.", shaderFileName);
     }
+
     private static byte[] GetBlobBytes(Vortice.Direct3D.Blob blob)
     {
         var byteCount = Convert.ToInt32(blob.BufferSize);
         var bytes = new byte[byteCount];
         Marshal.Copy(blob.BufferPointer, bytes, 0, byteCount);
         return bytes;
+    }
+
+    private static PerFrameConstants CreatePerFrameConstants(
+        OrbitCameraState cameraState,
+        Vector2i pixelSize,
+        OrbitLightState lightState)
+    {
+        var viewMatrix = OrbitCameraMath.CreateViewMatrix(cameraState);
+        var projectionMatrix = OrbitCameraMath.CreateProjectionMatrix(cameraState, (float)pixelSize.X / pixelSize.Y);
+        var cameraPosition = OrbitCameraMath.CalculateCameraPosition(cameraState);
+        var lightDirection = OrbitRotationMath.CalculateDirection(lightState.YawRadians, lightState.PitchRadians);
+
+        return new PerFrameConstants
+        {
+            ViewProjection = PackedMatrix4x4.FromMatrix(viewMatrix * projectionMatrix),
+            CameraPositionX = cameraPosition.X,
+            CameraPositionY = cameraPosition.Y,
+            CameraPositionZ = cameraPosition.Z,
+            Padding0 = 0.0f,
+            LightDirectionX = lightDirection.X,
+            LightDirectionY = lightDirection.Y,
+            LightDirectionZ = lightDirection.Z,
+            AmbientStrength = Math.Clamp(lightState.AmbientStrength, 0.0f, 1.0f)
+        };
+    }
+
+    private static PerObjectConstants CreatePerObjectConstants(Matrix4x4 worldMatrix)
+    {
+        return new PerObjectConstants
+        {
+            World = PackedMatrix4x4.FromMatrix(worldMatrix),
+            HighlightMix = 0.0f,
+            IsHovered = 0.0f
+        };
     }
 
     private static void ApplyMaterialState(
@@ -303,23 +568,12 @@ internal sealed class PreviewShaderFamily : IDisposable
 
     private static float CalculateHighlightMix(string materialName, RenderSelectionState selection)
     {
-        if (IsSelected(materialName, selection))
-        {
-            return 0.8f;
-        }
-
         if (IsHovered(materialName, selection))
         {
             return 0.45f;
         }
 
         return 0.0f;
-    }
-
-    private static bool IsSelected(string materialName, RenderSelectionState selection)
-    {
-        return !string.IsNullOrWhiteSpace(selection.SelectedMaterialName)
-            && string.Equals(materialName, selection.SelectedMaterialName, StringComparison.Ordinal);
     }
 
     private static bool IsHovered(string materialName, RenderSelectionState selection)

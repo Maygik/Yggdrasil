@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -27,6 +28,8 @@ internal static class RendererDiagnostics
                 LogPath,
                 $"Renderer diagnostics session started {DateTimeOffset.Now:O}{Environment.NewLine}",
                 Encoding.UTF8);
+
+            Debug.WriteLine($"Renderer diagnostics reset: {LogPath}");
         }
     }
 
@@ -40,10 +43,12 @@ internal static class RendererDiagnostics
                 Directory.CreateDirectory(directory);
             }
 
+            var line = $"[{DateTimeOffset.Now:O}] {message}";
             File.AppendAllText(
                 LogPath,
-                $"[{DateTimeOffset.Now:O}] {message}{Environment.NewLine}",
+                $"{line}{Environment.NewLine}",
                 Encoding.UTF8);
+            Debug.WriteLine(line);
         }
     }
 

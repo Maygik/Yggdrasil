@@ -4,11 +4,13 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using Yggdrasil.Application.UseCases;
 using Yggdrasil.Presentation.Models;
 using Yggdrasil.Presentation.Services;
 using Windows.UI;
 using System.Linq;
 using System.Collections.Generic;
+using Yggdrasil.Types;
 
 namespace Yggdrasil.Presentation.Pages
 {
@@ -27,6 +29,7 @@ namespace Yggdrasil.Presentation.Pages
             Unloaded += ModelPage_Unloaded;
 
             ResetSceneSummaryPlaceholders();
+            ResetTransformToolInputs();
             RefreshFromShell();
         }
 
@@ -106,6 +109,10 @@ namespace Yggdrasil.Presentation.Pages
                     });
                 }
             }
+            else
+            {
+                ResetTransformToolInputs();
+            }
         }
 
         private void ResetSceneSummaryPlaceholders()
@@ -116,6 +123,21 @@ namespace Yggdrasil.Presentation.Pages
 
             MeshSummaryItems.Clear();
             MaterialUsageItems.Clear();
+        }
+
+        private void ResetTransformToolInputs()
+        {
+            if (ScaleFactorNumberBox != null)
+            {
+                ScaleFactorNumberBox.Value = 1.0;
+            }
+
+            if (RotateXNumberBox != null) RotateXNumberBox.Value = 0.0;
+            if (RotateYNumberBox != null) RotateYNumberBox.Value = 0.0;
+            if (RotateZNumberBox != null) RotateZNumberBox.Value = 0.0;
+            if (MoveXNumberBox != null) MoveXNumberBox.Value = 0.0;
+            if (MoveYNumberBox != null) MoveYNumberBox.Value = 0.0;
+            if (MoveZNumberBox != null) MoveZNumberBox.Value = 0.0;
         }
 
         private async void BrowseImportModelButton_Click(object sender, RoutedEventArgs e)
@@ -167,6 +189,94 @@ namespace Yggdrasil.Presentation.Pages
         private void ModelPage_Unloaded(object sender, RoutedEventArgs e)
         {
             Host.Shell.PropertyChanged -= Shell_PropertyChanged;
+        }
+
+        private void ApplyScaleButton_Click(object sender, RoutedEventArgs e)
+        {
+            var project = Host.Shell.CurrentSession?.Project;
+            if (project == null)
+            {
+                Host.Shell.StatusMessage = "No project is currently open.";
+                return;
+            }
+
+            var scaleFactor = GetNumberBoxValue(ScaleFactorNumberBox, 1.0f);
+            ApplyModelTransform(
+                Host.Backend.ProjectEditor.Scale(project, scaleFactor),
+                resetInputs: true);
+        }
+
+        private void ApplyRotationButton_Click(object sender, RoutedEventArgs e)
+        {
+            var project = Host.Shell.CurrentSession?.Project;
+            if (project == null)
+            {
+                Host.Shell.StatusMessage = "No project is currently open.";
+                return;
+            }
+
+            var rotation = new Vector3(
+                GetNumberBoxValue(RotateXNumberBox),
+                GetNumberBoxValue(RotateYNumberBox),
+                GetNumberBoxValue(RotateZNumberBox));
+
+            ApplyModelTransform(
+                Host.Backend.ProjectEditor.Rotate(project, rotation),
+                resetInputs: true);
+        }
+
+        private void ApplyMoveButton_Click(object sender, RoutedEventArgs e)
+        {
+            var project = Host.Shell.CurrentSession?.Project;
+            if (project == null)
+            {
+                Host.Shell.StatusMessage = "No project is currently open.";
+                return;
+            }
+
+            var translation = new Vector3(
+                GetNumberBoxValue(MoveXNumberBox),
+                GetNumberBoxValue(MoveYNumberBox),
+                GetNumberBoxValue(MoveZNumberBox));
+
+            ApplyModelTransform(
+                Host.Backend.ProjectEditor.Translate(project, translation),
+                resetInputs: true);
+        }
+
+        private void ApplyModelTransform(ServiceResult result, bool resetInputs)
+        {
+            if (!result.Success)
+            {
+                Host.Shell.StatusMessage = result.ErrorMessage ?? "Unable to apply transform.";
+                return;
+            }
+
+            var scene = Host.Shell.CurrentSession?.Project?.Scene;
+            if (scene != null)
+            {
+                Host.Viewport.SetScene(scene, resetCamera: false);
+            }
+
+            RefreshFromShell();
+
+            if (resetInputs)
+            {
+                ResetTransformToolInputs();
+            }
+
+            Host.Shell.StatusMessage = result.Messages.FirstOrDefault()
+                ?? "Applied model transform.";
+        }
+
+        private static float GetNumberBoxValue(NumberBox? numberBox, float fallback = 0.0f)
+        {
+            if (numberBox == null || double.IsNaN(numberBox.Value) || double.IsInfinity(numberBox.Value))
+            {
+                return fallback;
+            }
+
+            return (float)numberBox.Value;
         }
     }
 }

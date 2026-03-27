@@ -171,6 +171,7 @@ namespace Yggdrasil.Presentation
         {
             Host.Viewport.SetScene(Host.Shell.CurrentSession?.Project?.Scene);
             ViewportControl.SetCameraState(Host.Viewport.CurrentCameraState);
+            ViewportControl.SetLightState(Host.Viewport.CurrentLightState);
         }
 
         private void SyncViewportSelection()

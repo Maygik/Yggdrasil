@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Matrix4x4 = Yggdrasil.Types.Matrix4x4;
 using Vector3 = Yggdrasil.Types.Vector3;
 
 namespace Yggdrasil.Domain.Scene
@@ -132,12 +133,8 @@ namespace Yggdrasil.Domain.Scene
                 Name = Name,
                 MeshGroups = MeshGroups.Select(mg => mg.DeepClone()).ToList(),
                 RootBone = RootBone?.DeepClone(),
-                MaterialSettings = new Dictionary<string, SourceMaterialSettings>(MaterialSettings.Select(kvp => 
-                    new KeyValuePair<string, SourceMaterialSettings>(kvp.Key, new SourceMaterialSettings 
-                    { 
-                        Name = kvp.Value.Name,
-                        Adjusted = kvp.Value.Adjusted
-                    })))
+                MaterialSettings = new Dictionary<string, SourceMaterialSettings>(MaterialSettings.Select(kvp =>
+                    new KeyValuePair<string, SourceMaterialSettings>(kvp.Key, kvp.Value.DeepClone())))
             };
             return clone;
         }

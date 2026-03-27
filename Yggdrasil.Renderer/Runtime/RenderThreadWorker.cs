@@ -119,6 +119,15 @@ internal sealed class RenderThreadWorker
                 _state.IsInteracting = setCameraState.IsInteracting;
                 return false;
 
+            case SetLightStateCommand setLightState:
+                _state.LightState = setLightState.LightState;
+                _state.IsInteracting = setLightState.IsInteracting;
+                return false;
+
+            case SetViewportOptionsCommand setViewportOptions:
+                _state.ViewportOptions = setViewportOptions.ViewportOptions;
+                return false;
+
             case ShutdownCommand:
                 return true;
 
@@ -276,18 +285,80 @@ internal sealed class RenderThreadWorker
             1.0f,
             0);
 
-        if (_state.Scene != null && _sceneGpuCache.DrawItems.Count > 0)
+        if (_state.Scene != null)
         {
             try
             {
                 var previewShader = _shaderLibrary.GetPreviewShaderFamily();
-                previewShader.DrawScene(
-                    _deviceResources,
-                    _swapChainResources,
-                    _commonStates,
-                    _sceneGpuCache.DrawItems,
-                    _state.Selection,
-                    _state.CameraState);
+                var modelTransform = ViewportAlignmentMath.CreateModelTransform(_state.ViewportOptions);
+                var heightPlaneTransform = ViewportAlignmentMath.CreateHeightPlaneTransform(_state.ViewportOptions);
+
+                if (_state.ViewportOptions.ShowFloor && _sceneGpuCache.FloorResources != null)
+                {
+                    previewShader.DrawFloor(
+                        _deviceResources,
+                        _swapChainResources,
+                        _commonStates,
+                        _sceneGpuCache.FloorResources,
+                        _state.CameraState,
+                        _state.LightState);
+                }
+
+                if (_sceneGpuCache.DrawItems.Count > 0)
+                {
+                    previewShader.DrawScene(
+                        _deviceResources,
+                        _swapChainResources,
+                        _commonStates,
+                        _sceneGpuCache.DrawItems,
+                        _state.Selection,
+                        _state.CameraState,
+                        _state.LightState,
+                        modelTransform);
+                }
+
+                if (_state.ViewportOptions.ShowHeightPlane && _sceneGpuCache.HeightPlaneResources != null)
+                {
+                    previewShader.DrawHeightPlane(
+                        _deviceResources,
+                        _swapChainResources,
+                        _commonStates,
+                        _sceneGpuCache.HeightPlaneResources,
+                        _state.CameraState,
+                        _state.LightState,
+                        heightPlaneTransform);
+                }
+
+                if (_state.ViewportOptions.ShowBoneConnections && _sceneGpuCache.BoneConnectionResources != null)
+                {
+                    previewShader.DrawLines(
+                        _deviceResources,
+                        _swapChainResources,
+                        _commonStates,
+                        _sceneGpuCache.BoneConnectionResources,
+                        _state.CameraState,
+                        _state.LightState,
+                        modelTransform);
+                }
+
+                if (_state.ViewportOptions.ShowBones)
+                {
+                    var boneAxisResources = _sceneGpuCache.GetBoneAxisResources(
+                        _deviceResources,
+                        _state.ViewportOptions.BoneAxisLength);
+
+                    if (boneAxisResources != null)
+                    {
+                        previewShader.DrawLines(
+                            _deviceResources,
+                            _swapChainResources,
+                            _commonStates,
+                            boneAxisResources,
+                            _state.CameraState,
+                            _state.LightState,
+                            modelTransform);
+                    }
+                }
             }
             catch (Exception ex)
             {

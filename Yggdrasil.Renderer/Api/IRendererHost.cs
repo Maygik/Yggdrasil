@@ -21,4 +21,8 @@ public interface IRendererHost : IAsyncDisposable
     void SetSelection(RenderSelectionState selection);
 
     void SetCameraState(OrbitCameraState cameraState, bool isInteracting);
+
+    void SetLightState(OrbitLightState lightState, bool isInteracting);
+
+    void SetViewportOptions(ViewportRenderOptions viewportOptions);
 }

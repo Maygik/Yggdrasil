@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Yggdrasil.Renderer.Graphics.Buffers;
 using Yggdrasil.Renderer.Graphics.Shaders;
+using Yggdrasil.Renderer.Graphics.Textures;
 using Yggdrasil.Renderer.Scene;
 using Yggdrasil.Types;
 using Vortice.Direct3D11;
@@ -12,8 +13,18 @@ internal sealed class SceneGpuCache : IDisposable
 {
     private readonly Dictionary<string, MaterialGpuResources> _materials = new(StringComparer.Ordinal);
     private readonly List<MeshGpuResources> _meshes = [];
+    private readonly TextureCache _textureCache = new();
+    private BoneDebugPose[] _boneDebugPoses = [];
+    private LineListResources? _boneAxisResources;
+    private float _cachedBoneAxisLength = float.NaN;
 
     public IReadOnlyList<RenderDrawItem> DrawItems { get; private set; } = [];
+
+    public FloorGridResources? FloorResources { get; private set; }
+
+    public FloorGridResources? HeightPlaneResources { get; private set; }
+
+    public LineListResources? BoneConnectionResources { get; private set; }
 
     // Loads the provided scene snapshot into GPU resources, replacing any existing cached data. If the provided snapshot is null, the cache will be cleared.
     public void LoadScene(DeviceResources deviceResources, RenderSceneSnapshot? scene)
@@ -31,6 +42,10 @@ internal sealed class SceneGpuCache : IDisposable
         {
             _materials[materialEntry.Key] = CreateMaterialResources(deviceResources, materialEntry.Value);
         }
+
+        FloorResources = CreateFloorResources(deviceResources, scene.Bounds);
+        HeightPlaneResources = CreateHeightPlaneResources(deviceResources, scene.Bounds);
+        LoadBoneDebugResources(deviceResources, scene.Skeleton);
 
         var drawItems = new List<RenderDrawItem>(scene.Meshes.Count);
         foreach (var mesh in scene.Meshes)
@@ -90,6 +105,28 @@ internal sealed class SceneGpuCache : IDisposable
         DrawItems = updatedDrawItems;
     }
 
+    public LineListResources? GetBoneAxisResources(DeviceResources deviceResources, float axisLength)
+    {
+        ArgumentNullException.ThrowIfNull(deviceResources);
+
+        if (_boneDebugPoses.Length == 0)
+        {
+            return null;
+        }
+
+        var clampedAxisLength = MathF.Max(0.01f, axisLength);
+        if (_boneAxisResources != null
+            && MathF.Abs(_cachedBoneAxisLength - clampedAxisLength) <= 0.001f)
+        {
+            return _boneAxisResources;
+        }
+
+        _boneAxisResources?.Dispose();
+        _boneAxisResources = CreateBoneAxisResources(deviceResources, _boneDebugPoses, clampedAxisLength);
+        _cachedBoneAxisLength = clampedAxisLength;
+        return _boneAxisResources;
+    }
+
     public void Dispose()
     {
         Clear();
@@ -110,6 +147,17 @@ internal sealed class SceneGpuCache : IDisposable
         }
 
         _materials.Clear();
+        _textureCache.Clear();
+        FloorResources?.Dispose();
+        FloorResources = null;
+        HeightPlaneResources?.Dispose();
+        HeightPlaneResources = null;
+        BoneConnectionResources?.Dispose();
+        BoneConnectionResources = null;
+        _boneAxisResources?.Dispose();
+        _boneAxisResources = null;
+        _boneDebugPoses = [];
+        _cachedBoneAxisLength = float.NaN;
         DrawItems = [];
     }
 
@@ -118,10 +166,18 @@ internal sealed class SceneGpuCache : IDisposable
     {
         ArgumentNullException.ThrowIfNull(mesh);
 
+        var vertices = BuildVertices(mesh);
+        var indexData = mesh.Indices.Count == 0
+            ? Array.Empty<uint>()
+            : CopyIndices(mesh.Indices);
+        return CreateMeshResources(deviceResources, vertices, indexData);
+    }
+
+    private static MeshGpuResources CreateMeshResources(DeviceResources deviceResources, ModelVertex[] vertices, uint[] indexData)
+    {
         var device = deviceResources.Device
             ?? throw new InvalidOperationException("D3D11 device has not been initialized.");
 
-        var vertices = BuildVertices(mesh);
         var vertexBuffer = device.CreateBuffer(
             vertices,
             BindFlags.VertexBuffer,
@@ -131,9 +187,6 @@ internal sealed class SceneGpuCache : IDisposable
             0,
             0);
 
-        var indexData = mesh.Indices.Count == 0
-            ? Array.Empty<uint>()
-            : CopyIndices(mesh.Indices);
         var indexBuffer = device.CreateBuffer(
             indexData,
             BindFlags.IndexBuffer,
@@ -152,19 +205,248 @@ internal sealed class SceneGpuCache : IDisposable
         };
     }
 
+    private static FloorGridResources CreateFloorResources(DeviceResources deviceResources, SceneBounds _)
+    {
+        const float halfExtent = 48.0f;
+        const float floorZ = 0.0f;
+        return CreatePlaneResources(deviceResources, Vector3.Zero, halfExtent, floorZ);
+    }
+
+    private static FloorGridResources CreateHeightPlaneResources(DeviceResources deviceResources, SceneBounds _)
+    {
+        const float halfExtent = 12.0f;
+        return CreatePlaneResources(deviceResources, Vector3.Zero, halfExtent, 0.0f);
+    }
+
+    private static FloorGridResources CreatePlaneResources(DeviceResources deviceResources, Vector3 center, float halfExtent, float z)
+    {
+        var vertices = new[]
+        {
+            CreateFloorVertex(center.X - halfExtent, center.Y - halfExtent, z, 0.0f, 1.0f),
+            CreateFloorVertex(center.X - halfExtent, center.Y + halfExtent, z, 0.0f, 0.0f),
+            CreateFloorVertex(center.X + halfExtent, center.Y + halfExtent, z, 1.0f, 0.0f),
+            CreateFloorVertex(center.X + halfExtent, center.Y - halfExtent, z, 1.0f, 1.0f)
+        };
+
+        var indices = new uint[] { 0, 1, 2, 0, 2, 3 };
+
+        return new FloorGridResources
+        {
+            MeshResources = CreateMeshResources(deviceResources, vertices, indices)
+        };
+    }
+
+    private void LoadBoneDebugResources(DeviceResources deviceResources, RenderSkeletonSnapshot? skeleton)
+    {
+        BoneConnectionResources?.Dispose();
+        BoneConnectionResources = null;
+
+        _boneAxisResources?.Dispose();
+        _boneAxisResources = null;
+        _cachedBoneAxisLength = float.NaN;
+
+        if (skeleton == null || skeleton.Bones.Count == 0)
+        {
+            _boneDebugPoses = [];
+            return;
+        }
+
+        _boneDebugPoses = BuildBoneDebugPoses(skeleton);
+        BoneConnectionResources = CreateBoneConnectionResources(deviceResources, _boneDebugPoses);
+    }
+
+    private static BoneDebugPose[] BuildBoneDebugPoses(RenderSkeletonSnapshot skeleton)
+    {
+        var poses = new BoneDebugPose[skeleton.Bones.Count];
+        var resolvedWorldMatrices = new Matrix4x4?[skeleton.Bones.Count];
+        var resolvingWorldMatrices = new bool[skeleton.Bones.Count];
+
+        Matrix4x4 ResolveBoneWorldMatrix(int boneIndex)
+        {
+            if (resolvedWorldMatrices[boneIndex] is Matrix4x4 cachedWorldMatrix)
+            {
+                return cachedWorldMatrix;
+            }
+
+            if (resolvingWorldMatrices[boneIndex])
+            {
+                return skeleton.Bones[boneIndex].WorldMatrix.Copy();
+            }
+
+            resolvingWorldMatrices[boneIndex] = true;
+
+            var bone = skeleton.Bones[boneIndex];
+            var localMatrix = bone.LocalMatrix.Copy();
+            Matrix4x4 worldMatrix;
+
+            if (bone.ParentIndex >= 0 && bone.ParentIndex < skeleton.Bones.Count)
+            {
+                worldMatrix = ResolveBoneWorldMatrix(bone.ParentIndex) * localMatrix;
+            }
+            else
+            {
+                worldMatrix = localMatrix;
+            }
+
+            resolvingWorldMatrices[boneIndex] = false;
+            resolvedWorldMatrices[boneIndex] = worldMatrix;
+            return worldMatrix;
+        }
+
+        for (var i = 0; i < skeleton.Bones.Count; i++)
+        {
+            var bone = skeleton.Bones[i];
+            var worldMatrix = ResolveBoneWorldMatrix(i);
+            poses[i] = new BoneDebugPose(
+                TransformPoint(worldMatrix, Vector3.Zero),
+                NormalizeOrFallback(worldMatrix.GetXAxis(), new Vector3(1.0f, 0.0f, 0.0f)),
+                NormalizeOrFallback(worldMatrix.GetYAxis(), new Vector3(0.0f, 1.0f, 0.0f)),
+                NormalizeOrFallback(worldMatrix.GetZAxis(), new Vector3(0.0f, 0.0f, 1.0f)),
+                bone.ParentIndex);
+        }
+
+        return poses;
+    }
+
+    private static LineListResources? CreateBoneConnectionResources(DeviceResources deviceResources, IReadOnlyList<BoneDebugPose> bones)
+    {
+        if (bones.Count == 0)
+        {
+            return null;
+        }
+
+        const float connectionR = 0.78f;
+        const float connectionG = 0.81f;
+        const float connectionB = 0.86f;
+
+        var vertices = new List<LineVertex>(bones.Count * 2);
+        for (var i = 0; i < bones.Count; i++)
+        {
+            var bone = bones[i];
+            if (bone.ParentIndex < 0 || bone.ParentIndex >= bones.Count)
+            {
+                continue;
+            }
+
+            var parent = bones[bone.ParentIndex];
+            vertices.Add(CreateLineVertex(bone.Origin, connectionR, connectionG, connectionB));
+            vertices.Add(CreateLineVertex(parent.Origin, connectionR, connectionG, connectionB));
+        }
+
+        return CreateLineResources(deviceResources, [.. vertices]);
+    }
+
+    private static LineListResources? CreateBoneAxisResources(DeviceResources deviceResources, IReadOnlyList<BoneDebugPose> bones, float axisLength)
+    {
+        if (bones.Count == 0)
+        {
+            return null;
+        }
+
+        var vertices = new LineVertex[bones.Count * 6];
+        var vertexIndex = 0;
+
+        for (var i = 0; i < bones.Count; i++)
+        {
+            var bone = bones[i];
+            AddAxisLine(vertices, ref vertexIndex, bone.Origin, bone.Origin + (bone.XAxis * axisLength), 1.0f, 0.0f, 0.0f);
+            AddAxisLine(vertices, ref vertexIndex, bone.Origin, bone.Origin + (bone.YAxis * axisLength), 0.0f, 1.0f, 0.0f);
+            AddAxisLine(vertices, ref vertexIndex, bone.Origin, bone.Origin + (bone.ZAxis * axisLength), 0.0f, 0.0f, 1.0f);
+        }
+
+        return CreateLineResources(deviceResources, vertices);
+    }
+
+    private static LineListResources? CreateLineResources(DeviceResources deviceResources, LineVertex[] vertices)
+    {
+        if (vertices.Length == 0)
+        {
+            return null;
+        }
+
+        var device = deviceResources.Device
+            ?? throw new InvalidOperationException("D3D11 device has not been initialized.");
+
+        var vertexBuffer = device.CreateBuffer(
+            vertices,
+            BindFlags.VertexBuffer,
+            ResourceUsage.Default,
+            CpuAccessFlags.None,
+            ResourceOptionFlags.None,
+            0,
+            0);
+
+        return new LineListResources
+        {
+            VertexBuffer = vertexBuffer,
+            VertexCount = (uint)vertices.Length
+        };
+    }
+
     // Creates GPU resources for the provided material snapshot, including a constant buffer for material properties. The caller is responsible for disposing the returned resources when they are no longer needed.
-    private static MaterialGpuResources CreateMaterialResources(DeviceResources deviceResources, RenderMaterialSnapshot material)
+    private MaterialGpuResources CreateMaterialResources(DeviceResources deviceResources, RenderMaterialSnapshot material)
     {
         var device = deviceResources.Device
             ?? throw new InvalidOperationException("D3D11 device has not been initialized.");
+
+        var baseTextureView = _textureCache.GetTexture(deviceResources, material.BaseTexture);
+        var normalTextureView = _textureCache.GetTexture(deviceResources, material.BumpMap);
+        var emissiveTextureView = _textureCache.GetTexture(deviceResources, material.EmissiveTexture);
+        var lightWarpTextureView = _textureCache.GetTexture(deviceResources, material.LightWarpTexture);
+        var envMapTextureView = _textureCache.GetTexture(deviceResources, material.EnvMap);
+        var envMapMaskTextureView = _textureCache.GetTexture(deviceResources, material.EnvMapMask);
+        var phongExponentTextureView = _textureCache.GetTexture(deviceResources, material.PhongExponentTexture);
+        var phongMaskTextureView = _textureCache.GetTexture(deviceResources, material.PhongMask);
+
+        var phongFresnel = material.PhongFresnelRanges ?? new Vector3(0.0f, 1.0f, 1.0f);
+        var envMapTint = material.EnvMapTint ?? Color3.White;
+        var phongTint = material.PhongTint ?? Color3.White;
+        var rimLightTint = material.RimLightTint ?? material.PhongTint ?? Color3.White;
 
         var constants = new PerMaterialConstants
         {
             TintR = material.Tint?.R ?? Color3.White.R,
             TintG = material.Tint?.G ?? Color3.White.G,
             TintB = material.Tint?.B ?? Color3.White.B,
-            HasBaseTexture = string.IsNullOrWhiteSpace(material.BaseTexture) ? 0.0f : 1.0f,
-            HasNormalMap = string.IsNullOrWhiteSpace(material.BumpMap) ? 0.0f : 1.0f
+            HasBaseTexture = baseTextureView is null ? 0.0f : 1.0f,
+            HasNormalTexture = normalTextureView is null ? 0.0f : 1.0f,
+            HasEmissiveTexture = emissiveTextureView is null ? 0.0f : 1.0f,
+            HasLightWarpTexture = lightWarpTextureView is null ? 0.0f : 1.0f,
+            HasEnvMapTexture = envMapTextureView is null ? 0.0f : 1.0f,
+            HasEnvMapMaskTexture = envMapMaskTextureView is null ? 0.0f : 1.0f,
+            HasPhongExponentTexture = phongExponentTextureView is null ? 0.0f : 1.0f,
+            HasPhongMaskTexture = phongMaskTextureView is null ? 0.0f : 1.0f,
+            NoTint = material.NoTint == true ? 1.0f : 0.0f,
+            AlphaTest = material.AlphaTest == true ? 1.0f : 0.0f,
+            AlphaTestReference = material.AlphaTestReference ?? 0.5f,
+            AllowAlphaToCoverage = material.AllowAlphaToCoverage == true ? 1.0f : 0.0f,
+            NoCull = material.NoCull == true ? 1.0f : 0.0f,
+            Translucent = material.Translucent == true ? 1.0f : 0.0f,
+            Additive = material.Additive == true ? 1.0f : 0.0f,
+            HalfLambert = material.HalfLambert == true ? 1.0f : 0.0f,
+            SelfIllum = material.SelfIllum == true ? 1.0f : 0.0f,
+            EmissiveBlendStrength = material.EmissiveBlendStrength ?? 1.0f,
+            UseEnvMapProbes = material.UseEnvMapProbes == true ? 1.0f : 0.0f,
+            EnvMapContrast = material.EnvMapContrast ?? 1.0f,
+            Phong = material.Phong == true ? 1.0f : 0.0f,
+            EnvMapTintR = envMapTint.R,
+            EnvMapTintG = envMapTint.G,
+            EnvMapTintB = envMapTint.B,
+            RimLight = material.RimLight == true ? 1.0f : 0.0f,
+            PhongBoost = material.PhongBoost ?? 0.0f,
+            PhongExponent = material.PhongExponent ?? 0.0f,
+            RimLightExponent = material.RimLightExponent ?? 0.0f,
+            RimLightBoost = material.RimLightBoost ?? 0.0f,
+            PhongFresnelX = phongFresnel.X,
+            PhongFresnelY = phongFresnel.Y,
+            PhongFresnelZ = phongFresnel.Z,
+            Adjusted = material.Adjusted ? 1.0f : 0.0f,
+            PhongTintR = phongTint.R,
+            PhongTintG = phongTint.G,
+            PhongTintB = phongTint.B,
+            RimLightTintR = rimLightTint.R,
+            RimLightTintG = rimLightTint.G,
+            RimLightTintB = rimLightTint.B
         };
 
         var constantBuffer = device.CreateBuffer(
@@ -180,8 +462,25 @@ internal sealed class SceneGpuCache : IDisposable
         {
             Snapshot = material,
             ShaderKey = BuildShaderKey(material),
-            BaseTextureView = null,
-            NormalTextureView = null,
+            BaseTextureView = baseTextureView,
+            NormalTextureView = normalTextureView,
+            EmissiveTextureView = emissiveTextureView,
+            LightWarpTextureView = lightWarpTextureView,
+            EnvMapTextureView = envMapTextureView,
+            EnvMapMaskTextureView = envMapMaskTextureView,
+            PhongExponentTextureView = phongExponentTextureView,
+            PhongMaskTextureView = phongMaskTextureView,
+            TextureViews =
+            [
+                baseTextureView!,
+                normalTextureView!,
+                emissiveTextureView!,
+                lightWarpTextureView!,
+                envMapTextureView!,
+                envMapMaskTextureView!,
+                phongExponentTextureView!,
+                phongMaskTextureView!
+            ],
             MaterialConstantsBuffer = constantBuffer
         };
     }
@@ -223,10 +522,16 @@ internal sealed class SceneGpuCache : IDisposable
 
         for (var i = 0; i < vertexCount; i++)
         {
-            var position = mesh.Vertices[i];
-            var normal = GetOrDefault(mesh.Normals, i, Vector3.Zero);
-            var tangent = GetOrDefault(mesh.Tangents, i, Vector3.Zero);
-            var bitangent = GetOrDefault(mesh.BiTangents, i, Vector3.Zero);
+            var position = TransformPoint(mesh.ModelMatrix, mesh.Vertices[i]);
+            var normal = NormalizeOrFallback(
+                TransformDirection(mesh.ModelMatrix, GetOrDefault(mesh.Normals, i, Vector3.Zero)),
+                Vector3.Zero);
+            var tangent = NormalizeOrFallback(
+                TransformDirection(mesh.ModelMatrix, GetOrDefault(mesh.Tangents, i, Vector3.Zero)),
+                Vector3.Zero);
+            var bitangent = NormalizeOrFallback(
+                TransformDirection(mesh.ModelMatrix, GetOrDefault(mesh.BiTangents, i, Vector3.Zero)),
+                Vector3.Zero);
             var uv = GetOrDefault(mesh.UVs, i, Vector2.Zero);
             var weights = GetOrDefault(mesh.SkinWeights, i, default);
 
@@ -276,6 +581,77 @@ internal sealed class SceneGpuCache : IDisposable
         return index >= 0 && index < values.Count
             ? values[index]
             : fallback;
+    }
+
+    private static ModelVertex CreateFloorVertex(float x, float y, float z, float u, float v)
+    {
+        return new ModelVertex
+        {
+            PositionX = x,
+            PositionY = y,
+            PositionZ = z,
+            NormalX = 0.0f,
+            NormalY = 0.0f,
+            NormalZ = 1.0f,
+            TangentX = 1.0f,
+            TangentY = 0.0f,
+            TangentZ = 0.0f,
+            BitangentX = 0.0f,
+            BitangentY = 1.0f,
+            BitangentZ = 0.0f,
+            TexCoordX = u,
+            TexCoordY = v
+        };
+    }
+
+    private static void AddAxisLine(
+        LineVertex[] vertices,
+        ref int vertexIndex,
+        Vector3 start,
+        Vector3 end,
+        float colorR,
+        float colorG,
+        float colorB)
+    {
+        vertices[vertexIndex++] = CreateLineVertex(start, colorR, colorG, colorB);
+        vertices[vertexIndex++] = CreateLineVertex(end, colorR, colorG, colorB);
+    }
+
+    private static LineVertex CreateLineVertex(Vector3 position, float colorR, float colorG, float colorB, float colorA = 1.0f)
+    {
+        return new LineVertex
+        {
+            PositionX = position.X,
+            PositionY = position.Y,
+            PositionZ = position.Z,
+            ColorR = colorR,
+            ColorG = colorG,
+            ColorB = colorB,
+            ColorA = colorA
+        };
+    }
+
+    private static Vector3 NormalizeOrFallback(Vector3 axis, Vector3 fallback)
+    {
+        return axis.LengthSquared() <= float.Epsilon
+            ? fallback
+            : axis.Normalized();
+    }
+
+    private static Vector3 TransformPoint(Matrix4x4 matrix, Vector3 point)
+    {
+        var transformed = matrix * new Vector4(point.X, point.Y, point.Z, 1.0f);
+        if (MathF.Abs(transformed.W) > float.Epsilon && transformed.W != 1.0f)
+        {
+            return transformed.XYZ / transformed.W;
+        }
+
+        return transformed.XYZ;
+    }
+
+    private static Vector3 TransformDirection(Matrix4x4 matrix, Vector3 direction)
+    {
+        return (matrix * new Vector4(direction.X, direction.Y, direction.Z, 0.0f)).XYZ;
     }
 
     // Builds a MaterialShaderKey for the provided material snapshot, determining the appropriate shader features based on the material properties.
@@ -342,4 +718,11 @@ internal sealed class SceneGpuCache : IDisposable
             renderMode,
             features);
     }
+
+    private readonly record struct BoneDebugPose(
+        Vector3 Origin,
+        Vector3 XAxis,
+        Vector3 YAxis,
+        Vector3 ZAxis,
+        int ParentIndex);
 }

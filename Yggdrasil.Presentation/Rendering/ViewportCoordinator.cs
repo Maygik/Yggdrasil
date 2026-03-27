@@ -13,6 +13,8 @@ public sealed class ViewportCoordinator
     private readonly IRendererHost _rendererHost;
     private readonly SceneToRenderSnapshotMapper _sceneMapper;
     private OrbitCameraState _currentCameraState = OrbitCameraState.Default;
+    private OrbitLightState _currentLightState = OrbitLightState.Default;
+    private ViewportRenderOptions _currentViewportOptions = ViewportRenderOptions.Default;
 
     public ViewportCoordinator(IRendererHost rendererHost, SceneToRenderSnapshotMapper sceneMapper)
     {
@@ -29,20 +31,30 @@ public sealed class ViewportCoordinator
 
     public OrbitCameraState CurrentCameraState => _currentCameraState;
 
+    public OrbitLightState CurrentLightState => _currentLightState;
+
+    public ViewportRenderOptions CurrentViewportOptions => _currentViewportOptions;
+
     public ValueTask DetachSurfaceAsync(CancellationToken cancellationToken = default)
     {
         return _rendererHost.DetachSurfaceAsync(cancellationToken);
     }
 
-    public void SetScene(SceneModel? scene)
+    public void SetScene(SceneModel? scene, bool resetCamera = true)
     {
         var snapshot = scene == null ? null : _sceneMapper.MapScene(scene);
         _rendererHost.SetScene(snapshot);
 
-        _currentCameraState = snapshot == null
-            ? OrbitCameraState.Default
-            : OrbitCameraMath.CreateFramedState(snapshot.Bounds);
+        if (resetCamera)
+        {
+            _currentCameraState = snapshot == null
+                ? OrbitCameraState.Default
+                : OrbitCameraMath.CreateFramedState(snapshot.Bounds);
+        }
+
         _rendererHost.SetCameraState(_currentCameraState, false);
+        _rendererHost.SetLightState(_currentLightState, false);
+        _rendererHost.SetViewportOptions(_currentViewportOptions);
     }
 
     public void UpdateMaterial(string materialName, SourceMaterialSettings material)
@@ -65,6 +77,22 @@ public sealed class ViewportCoordinator
 
         _currentCameraState = cameraState;
         _rendererHost.SetCameraState(cameraState, isInteracting);
+    }
+
+    public void UpdateLightState(OrbitLightState lightState, bool isInteracting)
+    {
+        System.ArgumentNullException.ThrowIfNull(lightState);
+
+        _currentLightState = lightState;
+        _rendererHost.SetLightState(lightState, isInteracting);
+    }
+
+    public void UpdateViewportOptions(ViewportRenderOptions viewportOptions)
+    {
+        System.ArgumentNullException.ThrowIfNull(viewportOptions);
+
+        _currentViewportOptions = viewportOptions;
+        _rendererHost.SetViewportOptions(viewportOptions);
     }
 
     public void Resize(Vector2i pixelSize)

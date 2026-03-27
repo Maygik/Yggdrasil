@@ -8,6 +8,7 @@ using Yggdrasil.Application.UseCases;
 using Yggdrasil.Domain.Project;
 using Yggdrasil.Domain.QC;
 using Yggdrasil.Domain.Scene;
+using Matrix4x4 = Yggdrasil.Types.Matrix4x4;
 using Vector3 = Yggdrasil.Types.Vector3;
 
 namespace Yggdrasil.Application.Services
@@ -63,6 +64,12 @@ namespace Yggdrasil.Application.Services
                 return result;
             }
 
+            if (!float.IsFinite(scaleFactor) || scaleFactor <= 0.0f)
+            {
+                result.ErrorMessage = "Scale factor must be a finite value greater than zero.";
+                return result;
+            }
+
             if (project.Scene.RootBone != null)
             {
                 // Scale all bone positions
@@ -84,29 +91,84 @@ namespace Yggdrasil.Application.Services
             }
             else
             {
-                result.Warnings.Add("No root bone. Only scaling vertices");
+                result.Warnings.Add("No root bone. Only scaling mesh transforms.");
             }
 
-            // Scale vertices
-            result.Messages.Add("Scaling all vertex positions");
             foreach (var meshGroup in project.Scene.MeshGroups)
             {
-                foreach (var mesh in meshGroup.Meshes)
-                {
-                    for (int i = 0; i < mesh.Vertices.Count; i++)
-                    {
-                        var vertex = mesh.Vertices[i];
-                        vertex.X *= scaleFactor;
-                        vertex.Y *= scaleFactor;
-                        vertex.Z *= scaleFactor;
-                        mesh.Vertices[i] = vertex;
-                    }
-                }
+                meshGroup.LocalMatrix = Yggdrasil.Types.SceneAlignmentMath.CreateAlignmentMatrix(
+                    scaleFactor,
+                    Vector3.Zero,
+                    Vector3.Zero) * meshGroup.LocalMatrix;
             }
 
-            result.Messages.Add($"Finished scaling model by a factor of {scaleFactor}");
+            result.Messages.Add($"Finished scaling model by a factor of {scaleFactor}.");
+            result.Messages.Add("Scale is now stored on the model itself and will persist when saving.");
 
             result.Success = true;
+            return result;
+        }
+
+        public ServiceResult Rotate(Project project, Vector3 rotationDegrees)
+        {
+            var result = new ServiceResult(false);
+
+            if (project.Scene == null)
+            {
+                result.ErrorMessage = "No scene to rotate. Please import a model first.";
+                return result;
+            }
+
+            if (!IsFiniteVector(rotationDegrees))
+            {
+                result.ErrorMessage = "Rotation must use finite numeric values.";
+                return result;
+            }
+
+            if (rotationDegrees == Vector3.Zero)
+            {
+                result.ErrorMessage = "Rotation values are all zero.";
+                return result;
+            }
+
+            var rotationMatrix = Yggdrasil.Types.SceneAlignmentMath.CreateRotationMatrix(rotationDegrees);
+            ApplySceneTransform(project.Scene, rotationMatrix);
+
+            result.Success = true;
+            result.Messages.Add(
+                $"Rotated model by ({rotationDegrees.X}, {rotationDegrees.Y}, {rotationDegrees.Z}) degrees.");
+            result.Messages.Add("Rotation is saved with the project and applied to exports.");
+            return result;
+        }
+
+        public ServiceResult Translate(Project project, Vector3 translation)
+        {
+            var result = new ServiceResult(false);
+
+            if (project.Scene == null)
+            {
+                result.ErrorMessage = "No scene to move. Please import a model first.";
+                return result;
+            }
+
+            if (!IsFiniteVector(translation))
+            {
+                result.ErrorMessage = "Position offset must use finite numeric values.";
+                return result;
+            }
+
+            if (translation == Vector3.Zero)
+            {
+                result.ErrorMessage = "Position values are all zero.";
+                return result;
+            }
+
+            var translationMatrix = Yggdrasil.Types.SceneAlignmentMath.CreateTranslationMatrix(translation);
+            ApplySceneTransform(project.Scene, translationMatrix);
+
+            result.Success = true;
+            result.Messages.Add($"Moved model by ({translation.X}, {translation.Y}, {translation.Z}) units.");
+            result.Messages.Add("Position changes are saved with the project and applied to exports.");
             return result;
         }
 
@@ -146,6 +208,30 @@ namespace Yggdrasil.Application.Services
 
             trimmedPath = trimmedPath.Replace('\\', '/').TrimStart('/');
             return trimmedPath;
+        }
+
+        public ServiceResult UpdateMaterial(Project project, string materialName, Action<SourceMaterialSettings> applyChanges)
+        {
+            var result = new ServiceResult(false);
+
+            if (project.Scene == null)
+            {
+                result.ErrorMessage = "No scene is loaded for this project.";
+                return result;
+            }
+
+            if (!project.Scene.MaterialSettings.TryGetValue(materialName, out var material))
+            {
+                result.ErrorMessage = $"Material '{materialName}' was not found in the current scene.";
+                return result;
+            }
+
+            applyChanges(material);
+            material.Adjusted = true;
+
+            result.Success = true;
+            result.Messages.Add($"Updated material '{materialName}'.");
+            return result;
         }
 
 
@@ -384,6 +470,26 @@ namespace Yggdrasil.Application.Services
             var result = new ServiceResult(true);
             result.Messages.Add($"Removed submodel \"{removedValue}\" from bodygroup '{bodyGroup.Name}' at option index {optionIndex}.");
             return result;
+        }
+
+        private static void ApplySceneTransform(SceneModel scene, Matrix4x4 transformMatrix)
+        {
+            foreach (var meshGroup in scene.MeshGroups)
+            {
+                meshGroup.LocalMatrix = transformMatrix * meshGroup.LocalMatrix;
+            }
+
+            if (scene.RootBone != null)
+            {
+                scene.RootBone.WorldMatrix = transformMatrix * scene.RootBone.WorldMatrix;
+            }
+        }
+
+        private static bool IsFiniteVector(Vector3 value)
+        {
+            return float.IsFinite(value.X)
+                && float.IsFinite(value.Y)
+                && float.IsFinite(value.Z);
         }
     }
 }

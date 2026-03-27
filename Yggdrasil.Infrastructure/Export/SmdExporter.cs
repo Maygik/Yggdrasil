@@ -86,7 +86,7 @@ namespace Yggdrasil.Infrastructure.Export
 
             foreach (var meshData in mesh.Meshes)
             {
-                sb.Append(BuildTrianglesForMeshData(meshData, boneIds));
+                sb.Append(BuildTrianglesForMeshData(meshData, boneIds, mesh.WorldMatrix));
             }
 
             sb.AppendLine("end");
@@ -197,7 +197,10 @@ namespace Yggdrasil.Infrastructure.Export
 
         // Creates the "triangles" section of the SMD file for a given mesh, which defines the geometry of the mesh.
         // Does not include the "triangles" or "end" lines
-        public string BuildTrianglesForMeshData(Domain.Scene.MeshData mesh, Dictionary<string, int> boneIds)
+        public string BuildTrianglesForMeshData(
+            Domain.Scene.MeshData mesh,
+            Dictionary<string, int> boneIds,
+            Matrix4x4 meshTransform)
         {
             var sb = new StringBuilder();
 
@@ -222,8 +225,17 @@ namespace Yggdrasil.Infrastructure.Export
                     // Better than the blender exporter 😎
                     string parentBone = "0";
 
-                    string pos = $"{mesh.Vertices[triangle[vertIdx]].X:F6} {mesh.Vertices[triangle[vertIdx]].Y:F6} {mesh.Vertices[triangle[vertIdx]].Z:F6}";
-                    string normal = $"{mesh.Normals[triangle[vertIdx]].X:F6} {mesh.Normals[triangle[vertIdx]].Y:F6} {mesh.Normals[triangle[vertIdx]].Z:F6}";
+                    var transformedPosition = Yggdrasil.Types.SceneAlignmentMath.TransformPoint(
+                        meshTransform,
+                        mesh.Vertices[triangle[vertIdx]]);
+                    var transformedNormal = NormalizeOrFallback(
+                        Yggdrasil.Types.SceneAlignmentMath.TransformDirection(
+                            meshTransform,
+                            mesh.Normals[triangle[vertIdx]]),
+                        mesh.Normals[triangle[vertIdx]]);
+
+                    string pos = $"{transformedPosition.X:F6} {transformedPosition.Y:F6} {transformedPosition.Z:F6}";
+                    string normal = $"{transformedNormal.X:F6} {transformedNormal.Y:F6} {transformedNormal.Z:F6}";
                     string uv = $"{mesh.UVs[triangle[vertIdx]].X:F6} {mesh.UVs[triangle[vertIdx]].Y:F6}";
 
                     string numLinks = mesh.BoneWeights[triangle[vertIdx]].Count.ToString();
@@ -287,6 +299,13 @@ namespace Yggdrasil.Infrastructure.Export
                 Console.WriteLine($"Error exporting animation: {ex.Message}");
                 return false;
             }
+        }
+
+        private static Vector3 NormalizeOrFallback(Vector3 axis, Vector3 fallback)
+        {
+            return axis.LengthSquared() <= float.Epsilon
+                ? fallback
+                : axis.Normalized();
         }
     }
 }

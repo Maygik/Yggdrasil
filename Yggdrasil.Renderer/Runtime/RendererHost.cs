@@ -91,6 +91,25 @@ public sealed class RendererHost : IRendererHost
         _mailbox.Enqueue(new SetCameraStateCommand(cameraState, isInteracting));
     }
 
+    // Updates the current light state in the renderer.
+    // isInteracting indicates whether it's currently being moved (e.g. by user input)
+    public void SetLightState(OrbitLightState lightState, bool isInteracting)
+    {
+        ArgumentNullException.ThrowIfNull(lightState);
+
+        EnsureNotDisposed();
+        _mailbox.Enqueue(new SetLightStateCommand(lightState, isInteracting));
+    }
+
+    // Updates viewport rendering options such as helper visibility.
+    public void SetViewportOptions(ViewportRenderOptions viewportOptions)
+    {
+        ArgumentNullException.ThrowIfNull(viewportOptions);
+
+        EnsureNotDisposed();
+        _mailbox.Enqueue(new SetViewportOptionsCommand(viewportOptions));
+    }
+
     // Disposes the renderer host and releases all resources. This will stop the render thread and clean up any associated resources. After disposal, the renderer host should not be used.
     public async ValueTask DisposeAsync()
     {

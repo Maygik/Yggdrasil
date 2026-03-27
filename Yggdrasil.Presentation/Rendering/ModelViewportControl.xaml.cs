@@ -22,6 +22,7 @@ public sealed partial class ModelViewportControl : UserControl
         _surfaceHost = new SwapChainPanelSurfaceHost(ViewportSwapChainPanel);
         _cameraController = new OrbitCameraController();
         _cameraController.StateChanged += CameraController_StateChanged;
+        _cameraController.LightStateChanged += CameraController_LightStateChanged;
         _cameraController.Attach(ViewportSwapChainPanel);
 
         Loaded += ModelViewportControl_Loaded;
@@ -45,6 +46,7 @@ public sealed partial class ModelViewportControl : UserControl
         var wasAttached = _isSurfaceAttached;
         _coordinator = coordinator;
         SetCameraState(coordinator.CurrentCameraState);
+        SetLightState(coordinator.CurrentLightState);
 
         if (wasAttached)
         {
@@ -64,6 +66,12 @@ public sealed partial class ModelViewportControl : UserControl
     {
         ArgumentNullException.ThrowIfNull(cameraState);
         _cameraController.SetState(cameraState);
+    }
+
+    public void SetLightState(OrbitLightState lightState)
+    {
+        ArgumentNullException.ThrowIfNull(lightState);
+        _cameraController.SetLightState(lightState);
     }
 
     public Task DisconnectAsync()
@@ -107,6 +115,11 @@ public sealed partial class ModelViewportControl : UserControl
     private void CameraController_StateChanged(OrbitCameraState cameraState, bool isInteracting)
     {
         _coordinator?.UpdateCameraState(cameraState, isInteracting);
+    }
+
+    private void CameraController_LightStateChanged(OrbitLightState lightState, bool isInteracting)
+    {
+        _coordinator?.UpdateLightState(lightState, isInteracting);
     }
 
     private void QueueRefresh()

@@ -18,6 +18,17 @@
             x:Key="SelectedMaterialBorderConverter"
             FalseBrush="Transparent"
             TrueBrush="{ThemeResource AppSelectionBorderBrush}" />
+        <Style x:Key="MaterialSectionExpanderStyle" TargetType="Expander">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style
+            x:Key="MaterialFieldLabelTextStyle"
+            TargetType="TextBlock"
+            BasedOn="{StaticResource CaptionTextStyle}">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
     </Page.Resources>
 
     <Grid>
@@ -87,9 +98,9 @@
                                                 BorderThickness="1"
                                                 CornerRadius="8"
                                                 Tag="{x:Bind}"
+                                                Tapped="MaterialRow_Tapped"
                                                 PointerEntered="MaterialRow_PointerEntered"
                                                 PointerExited="MaterialRow_PointerExited"
-                                                Tapped="MaterialRow_Tapped"
                                                 ToolTipService.ToolTip="{x:Bind Name}">
                                                 <TextBlock
                                                     Style="{StaticResource BodyStrongTextStyle}"
@@ -115,21 +126,728 @@
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                             <StackPanel MinHeight="600" Spacing="12">
                                 <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
-                                    <TextBlock
-                                        x:Name="SelectedMaterialNameTextBlock"
-                                        Style="{StaticResource BodyStrongTextStyle}"
-                                        Text="Selected material: None" />
+                                    <StackPanel Spacing="6">
+                                        <TextBlock
+                                            x:Name="SelectedMaterialNameTextBlock"
+                                            Style="{StaticResource BodyStrongTextStyle}"
+                                            Text="Selected material: None" />
+                                        <TextBlock
+                                            x:Name="SelectedMaterialShaderTextBlock"
+                                            Style="{StaticResource CaptionTextStyle}"
+                                            Text="Shader: -" />
+                                    </StackPanel>
                                 </Border>
 
-                                <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                                <Border
+                                    x:Name="NoSelectedMaterialPanel"
+                                    Style="{StaticResource SubtlePanelBorderStyle}"
+                                    Padding="16">
                                     <StackPanel Spacing="8">
-                                        <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="Editor Coming Soon" />
+                                        <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="Select A Material" />
                                         <TextBlock
                                             Style="{StaticResource CaptionTextStyle}"
-                                            Text="This pane will host the selected material editor. For now, the list on the left is populated from the current scene's imported materials."
+                                            Text="Choose a material from the list to inspect and edit its Source material parameters."
                                             TextWrapping="WrapWholeWords" />
                                     </StackPanel>
                                 </Border>
+
+                                <StackPanel x:Name="MaterialEditorPanel" Spacing="12">
+                                    <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                                        <StackPanel Spacing="12">
+                                            <Grid ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="160" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="Shader" />
+                                                <ComboBox x:Name="ShaderComboBox" Grid.Column="1">
+                                                    <x:String>VertexLitGeneric</x:String>
+                                                </ComboBox>
+                                            </Grid>
+
+                                            <Grid ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="160" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$basetexture" />
+                                                <Border
+                                                    x:Name="BaseTexturePreviewBorder"
+                                                    Grid.Column="1"
+                                                    Width="40"
+                                                    Height="40"
+                                                    Padding="0"
+                                                    Style="{StaticResource SubtlePanelBorderStyle}">
+                                                    <Image x:Name="BaseTexturePreviewImage" Stretch="UniformToFill" />
+                                                </Border>
+                                                <Button
+                                                    Grid.Column="2"
+                                                    Margin="8,0,0,0"
+                                                    MinWidth="88"
+                                                    Content="Browse..."
+                                                    Tag="BaseTextureTextBox"
+                                                    Click="TextureBrowseButton_Click" />
+                                                <TextBox
+                                                    x:Name="BaseTextureTextBox"
+                                                    Grid.Column="3"
+                                                    Visibility="Collapsed"
+                                                    PlaceholderText="textures/models/example" />
+                                            </Grid>
+
+                                            <Grid ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="160" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$bumpmap" />
+                                                <Border
+                                                    x:Name="BumpMapPreviewBorder"
+                                                    Grid.Column="1"
+                                                    Width="40"
+                                                    Height="40"
+                                                    Padding="0"
+                                                    Style="{StaticResource SubtlePanelBorderStyle}">
+                                                    <Image x:Name="BumpMapPreviewImage" Stretch="UniformToFill" />
+                                                </Border>
+                                                <Button
+                                                    Grid.Column="2"
+                                                    Margin="8,0,0,0"
+                                                    MinWidth="88"
+                                                    Content="Browse..."
+                                                    Tag="BumpMapTextBox"
+                                                    Click="TextureBrowseButton_Click" />
+                                                <TextBox
+                                                    x:Name="BumpMapTextBox"
+                                                    Grid.Column="3"
+                                                    Visibility="Collapsed"
+                                                    PlaceholderText="textures/models/example_normal" />
+                                            </Grid>
+
+                                            <StackPanel Spacing="6">
+                                                <TextBlock Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$color2" />
+                                                <ColorPicker
+                                                    x:Name="TintColorPicker"
+                                                    IsAlphaEnabled="False"
+                                                    IsColorChannelTextInputVisible="True"
+                                                    IsColorPreviewVisible="False"
+                                                    IsColorSliderVisible="False"
+                                                    IsColorSpectrumVisible="False"
+                                                    IsHexInputVisible="True"
+                                                    ColorChanged="TintColorPicker_ColorChanged" />
+                                                <Border
+                                                    x:Name="TintValuePreviewBorder"
+                                                    MinHeight="40"
+                                                    Padding="10,8"
+                                                    Style="{StaticResource SubtlePanelBorderStyle}">
+                                                    <TextBlock
+                                                        x:Name="TintValueTextBlock"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Style="{StaticResource CaptionTextStyle}"
+                                                        Text="Unset" />
+                                                </Border>
+                                            </StackPanel>
+
+                                            <Grid ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="160" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$notint" />
+                                                <ToggleSwitch
+                                                    x:Name="NoTintToggleSwitch"
+                                                    Grid.Column="1"
+                                                    HorizontalAlignment="Left"
+                                                    OffContent="Allow tinting"
+                                                    OnContent="Ignore tinting" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Expander Header="Surface Flags" Style="{StaticResource MaterialSectionExpanderStyle}">
+                                        <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                                            <StackPanel Spacing="12">
+                                                <Grid ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="160" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$alphatest" />
+                                                    <ToggleSwitch
+                                                        x:Name="AlphaTestToggleSwitch"
+                                                        Grid.Column="1"
+                                                        HorizontalAlignment="Left"
+                                                        OffContent="Off"
+                                                        OnContent="On" />
+                                                </Grid>
+
+                                                <Grid ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="160" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$alphatestreference" />
+                                                    <NumberBox
+                                                        x:Name="AlphaTestReferenceNumberBox"
+                                                        Grid.Column="1"
+                                                        SmallChange="0.05"
+                                                        SpinButtonPlacementMode="Hidden"
+                                                        PlaceholderText="0.5" />
+                                                </Grid>
+
+                                                <Grid ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="160" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$allowalphatocoverage" />
+                                                    <ToggleSwitch
+                                                        x:Name="AllowAlphaToCoverageToggleSwitch"
+                                                        Grid.Column="1"
+                                                        HorizontalAlignment="Left"
+                                                        OffContent="Off"
+                                                        OnContent="On" />
+                                                </Grid>
+
+                                                <Grid ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="160" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$nocull" />
+                                                    <ToggleSwitch
+                                                        x:Name="NoCullToggleSwitch"
+                                                        Grid.Column="1"
+                                                        HorizontalAlignment="Left"
+                                                        OffContent="Cull backfaces"
+                                                        OnContent="Render both sides" />
+                                                </Grid>
+
+                                                <Grid ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="160" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$translucent" />
+                                                    <ToggleSwitch
+                                                        x:Name="TranslucentToggleSwitch"
+                                                        Grid.Column="1"
+                                                        HorizontalAlignment="Left"
+                                                        OffContent="Opaque"
+                                                        OnContent="Translucent" />
+                                                </Grid>
+
+                                                <Grid ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="160" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$additive" />
+                                                    <ToggleSwitch
+                                                        x:Name="AdditiveToggleSwitch"
+                                                        Grid.Column="1"
+                                                        HorizontalAlignment="Left"
+                                                        OffContent="Normal blend"
+                                                        OnContent="Additive blend" />
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </Expander>
+
+                                    <Expander Header="Emissive" Style="{StaticResource MaterialSectionExpanderStyle}">
+                                        <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                                            <StackPanel Spacing="12">
+                                                <Grid ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="160" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$selfillum" />
+                                                    <ToggleSwitch
+                                                        x:Name="SelfIllumToggleSwitch"
+                                                        Grid.Column="1"
+                                                        HorizontalAlignment="Left"
+                                                        OffContent="Lit"
+                                                        OnContent="Self illuminated" />
+                                                </Grid>
+
+                                                <Grid ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="160" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$emissiveblend" />
+                                                    <Border
+                                                        x:Name="EmissiveTexturePreviewBorder"
+                                                        Grid.Column="1"
+                                                        Width="40"
+                                                        Height="40"
+                                                        Padding="0"
+                                                        Style="{StaticResource SubtlePanelBorderStyle}">
+                                                        <Image x:Name="EmissiveTexturePreviewImage" Stretch="UniformToFill" />
+                                                    </Border>
+                                                    <Button
+                                                        Grid.Column="2"
+                                                        Margin="8,0,0,0"
+                                                        MinWidth="88"
+                                                        Content="Browse..."
+                                                        Tag="EmissiveTextureTextBox"
+                                                        Click="TextureBrowseButton_Click" />
+                                                    <TextBox
+                                                        x:Name="EmissiveTextureTextBox"
+                                                        Grid.Column="3"
+                                                        Visibility="Collapsed"
+                                                        PlaceholderText="textures/models/example_emissive" />
+                                                </Grid>
+
+                                                <Grid ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="160" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$emissiveblendstrength" />
+                                                    <NumberBox
+                                                        x:Name="EmissiveBlendStrengthNumberBox"
+                                                        Grid.Column="1"
+                                                        SmallChange="0.1"
+                                                        SpinButtonPlacementMode="Hidden"
+                                                        PlaceholderText="1.0" />
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </Expander>
+
+                                    <Expander Header="Lighting" Style="{StaticResource MaterialSectionExpanderStyle}">
+                                        <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                                            <StackPanel Spacing="12">
+                                                <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                                                    <StackPanel Spacing="12">
+                                                        <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="General" />
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$halflambert" />
+                                                            <ToggleSwitch
+                                                                x:Name="HalfLambertToggleSwitch"
+                                                                Grid.Column="1"
+                                                                HorizontalAlignment="Left"
+                                                                OffContent="Off"
+                                                                OnContent="On" />
+                                                        </Grid>
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$lightwarptexture" />
+                                                            <Border
+                                                                x:Name="LightWarpTexturePreviewBorder"
+                                                                Grid.Column="1"
+                                                                Width="40"
+                                                                Height="40"
+                                                                Padding="0"
+                                                                Style="{StaticResource SubtlePanelBorderStyle}">
+                                                                <Image x:Name="LightWarpTexturePreviewImage" Stretch="UniformToFill" />
+                                                            </Border>
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Margin="8,0,0,0"
+                                                                MinWidth="88"
+                                                                Content="Browse..."
+                                                                Tag="LightWarpTextureTextBox"
+                                                                Click="TextureBrowseButton_Click" />
+                                                            <TextBox
+                                                                x:Name="LightWarpTextureTextBox"
+                                                                Grid.Column="3"
+                                                                Visibility="Collapsed"
+                                                                PlaceholderText="textures/models/example_lightwarp" />
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                                                    <StackPanel Spacing="12">
+                                                        <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="Environment" />
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="Use envmap probes" />
+                                                            <ToggleSwitch
+                                                                x:Name="UseEnvMapProbesToggleSwitch"
+                                                                Grid.Column="1"
+                                                                HorizontalAlignment="Left"
+                                                                OffContent="Use explicit envmap"
+                                                                OnContent="Use env_cubemap probes" />
+                                                        </Grid>
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$envmap" />
+                                                            <Border
+                                                                x:Name="EnvMapPreviewBorder"
+                                                                Grid.Column="1"
+                                                                Width="40"
+                                                                Height="40"
+                                                                Padding="0"
+                                                                Style="{StaticResource SubtlePanelBorderStyle}">
+                                                                <Image x:Name="EnvMapPreviewImage" Stretch="UniformToFill" />
+                                                            </Border>
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Margin="8,0,0,0"
+                                                                MinWidth="88"
+                                                                Content="Browse..."
+                                                                Tag="EnvMapTextBox"
+                                                                Click="TextureBrowseButton_Click" />
+                                                            <TextBox
+                                                                x:Name="EnvMapTextBox"
+                                                                Grid.Column="3"
+                                                                Visibility="Collapsed"
+                                                                PlaceholderText="env_cubemap or texture path" />
+                                                        </Grid>
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$envmapmask" />
+                                                            <Border
+                                                                x:Name="EnvMapMaskPreviewBorder"
+                                                                Grid.Column="1"
+                                                                Width="40"
+                                                                Height="40"
+                                                                Padding="0"
+                                                                Style="{StaticResource SubtlePanelBorderStyle}">
+                                                                <Image x:Name="EnvMapMaskPreviewImage" Stretch="UniformToFill" />
+                                                            </Border>
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Margin="8,0,0,0"
+                                                                MinWidth="88"
+                                                                Content="Browse..."
+                                                                Tag="EnvMapMaskTextBox"
+                                                                Click="TextureBrowseButton_Click" />
+                                                            <TextBox
+                                                                x:Name="EnvMapMaskTextBox"
+                                                                Grid.Column="3"
+                                                                Visibility="Collapsed"
+                                                                PlaceholderText="textures/models/example_mask" />
+                                                        </Grid>
+
+                                                        <StackPanel Spacing="6">
+                                                            <TextBlock Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$envmaptint" />
+                                                            <ColorPicker
+                                                                x:Name="EnvMapTintColorPicker"
+                                                                IsAlphaEnabled="False"
+                                                                IsColorChannelTextInputVisible="True"
+                                                                IsColorPreviewVisible="False"
+                                                                IsColorSliderVisible="False"
+                                                                IsColorSpectrumVisible="False"
+                                                                IsHexInputVisible="True"
+                                                                ColorChanged="EnvMapTintColorPicker_ColorChanged" />
+                                                            <Border
+                                                                x:Name="EnvMapTintValuePreviewBorder"
+                                                                MinHeight="40"
+                                                                Padding="10,8"
+                                                                Style="{StaticResource SubtlePanelBorderStyle}">
+                                                                <TextBlock
+                                                                    x:Name="EnvMapTintValueTextBlock"
+                                                                    HorizontalAlignment="Center"
+                                                                    VerticalAlignment="Center"
+                                                                    Style="{StaticResource CaptionTextStyle}"
+                                                                    Text="Unset" />
+                                                            </Border>
+                                                        </StackPanel>
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$envmapcontrast" />
+                                                            <NumberBox
+                                                                x:Name="EnvMapContrastNumberBox"
+                                                                Grid.Column="1"
+                                                                SmallChange="0.1"
+                                                                SpinButtonPlacementMode="Hidden"
+                                                                PlaceholderText="1.0" />
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                                                    <StackPanel Spacing="12">
+                                                        <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="Phong" />
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$phong" />
+                                                            <ToggleSwitch
+                                                                x:Name="PhongToggleSwitch"
+                                                                Grid.Column="1"
+                                                                HorizontalAlignment="Left"
+                                                                OffContent="Off"
+                                                                OnContent="On" />
+                                                        </Grid>
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$phongboost" />
+                                                            <NumberBox
+                                                                x:Name="PhongBoostNumberBox"
+                                                                Grid.Column="1"
+                                                                SmallChange="0.1"
+                                                                SpinButtonPlacementMode="Hidden"
+                                                                PlaceholderText="0.0" />
+                                                        </Grid>
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$phongexponent" />
+                                                            <NumberBox
+                                                                x:Name="PhongExponentNumberBox"
+                                                                Grid.Column="1"
+                                                                SmallChange="1"
+                                                                SpinButtonPlacementMode="Inline"
+                                                                PlaceholderText="5" />
+                                                        </Grid>
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$phongexponenttexture" />
+                                                            <Border
+                                                                x:Name="PhongExponentTexturePreviewBorder"
+                                                                Grid.Column="1"
+                                                                Width="40"
+                                                                Height="40"
+                                                                Padding="0"
+                                                                Style="{StaticResource SubtlePanelBorderStyle}">
+                                                                <Image x:Name="PhongExponentTexturePreviewImage" Stretch="UniformToFill" />
+                                                            </Border>
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Margin="8,0,0,0"
+                                                                MinWidth="88"
+                                                                Content="Browse..."
+                                                                Tag="PhongExponentTextureTextBox"
+                                                                Click="TextureBrowseButton_Click" />
+                                                            <TextBox
+                                                                x:Name="PhongExponentTextureTextBox"
+                                                                Grid.Column="3"
+                                                                Visibility="Collapsed"
+                                                                PlaceholderText="textures/models/example_exponent" />
+                                                        </Grid>
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$phongmask" />
+                                                            <Border
+                                                                x:Name="PhongMaskPreviewBorder"
+                                                                Grid.Column="1"
+                                                                Width="40"
+                                                                Height="40"
+                                                                Padding="0"
+                                                                Style="{StaticResource SubtlePanelBorderStyle}">
+                                                                <Image x:Name="PhongMaskPreviewImage" Stretch="UniformToFill" />
+                                                            </Border>
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Margin="8,0,0,0"
+                                                                MinWidth="88"
+                                                                Content="Browse..."
+                                                                Tag="PhongMaskTextBox"
+                                                                Click="TextureBrowseButton_Click" />
+                                                            <TextBox
+                                                                x:Name="PhongMaskTextBox"
+                                                                Grid.Column="3"
+                                                                Visibility="Collapsed"
+                                                                PlaceholderText="textures/models/example_mask" />
+                                                        </Grid>
+
+                                                        <StackPanel Spacing="8">
+                                                            <TextBlock Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$phongfresnelranges" />
+                                                            <Grid ColumnSpacing="8">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*" />
+                                                                    <ColumnDefinition Width="*" />
+                                                                    <ColumnDefinition Width="*" />
+                                                                </Grid.ColumnDefinitions>
+
+                                                                <NumberBox
+                                                                    x:Name="PhongFresnelXNumberBox"
+                                                                    Grid.Column="0"
+                                                                    Header="X"
+                                                                    SmallChange="0.1"
+                                                                    SpinButtonPlacementMode="Hidden"
+                                                                    ValueChanged="PhongFresnelNumberBox_ValueChanged" />
+                                                                <NumberBox
+                                                                    x:Name="PhongFresnelYNumberBox"
+                                                                    Grid.Column="1"
+                                                                    Header="Y"
+                                                                    SmallChange="0.1"
+                                                                    SpinButtonPlacementMode="Hidden"
+                                                                    ValueChanged="PhongFresnelNumberBox_ValueChanged" />
+                                                                <NumberBox
+                                                                    x:Name="PhongFresnelZNumberBox"
+                                                                    Grid.Column="2"
+                                                                    Header="Z"
+                                                                    SmallChange="0.1"
+                                                                    SpinButtonPlacementMode="Hidden"
+                                                                    ValueChanged="PhongFresnelNumberBox_ValueChanged" />
+                                                            </Grid>
+                                                            <TextBlock
+                                                                x:Name="PhongFresnelRangesValueTextBlock"
+                                                                Style="{StaticResource CaptionTextStyle}"
+                                                                Text="Unset" />
+                                                        </StackPanel>
+
+                                                        <StackPanel Spacing="6">
+                                                            <TextBlock Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$phongtint / $rimlighttint" />
+                                                            <ColorPicker
+                                                                x:Name="PhongTintColorPicker"
+                                                                IsAlphaEnabled="False"
+                                                                IsColorChannelTextInputVisible="True"
+                                                                IsColorPreviewVisible="False"
+                                                                IsColorSliderVisible="False"
+                                                                IsColorSpectrumVisible="False"
+                                                                IsHexInputVisible="True"
+                                                                ColorChanged="PhongTintColorPicker_ColorChanged" />
+                                                            <Border
+                                                                x:Name="PhongTintValuePreviewBorder"
+                                                                MinHeight="40"
+                                                                Padding="10,8"
+                                                                Style="{StaticResource SubtlePanelBorderStyle}">
+                                                                <TextBlock
+                                                                    x:Name="PhongTintValueTextBlock"
+                                                                    HorizontalAlignment="Center"
+                                                                    VerticalAlignment="Center"
+                                                                    Style="{StaticResource CaptionTextStyle}"
+                                                                    Text="Unset" />
+                                                            </Border>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                                                    <StackPanel Spacing="12">
+                                                        <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="Rim Light" />
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$rimlight" />
+                                                            <ToggleSwitch
+                                                                x:Name="RimLightToggleSwitch"
+                                                                Grid.Column="1"
+                                                                HorizontalAlignment="Left"
+                                                                OffContent="Off"
+                                                                OnContent="On" />
+                                                        </Grid>
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$rimlightexponent" />
+                                                            <NumberBox
+                                                                x:Name="RimLightExponentNumberBox"
+                                                                Grid.Column="1"
+                                                                SmallChange="1"
+                                                                SpinButtonPlacementMode="Inline"
+                                                                PlaceholderText="4" />
+                                                        </Grid>
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$rimlightboost" />
+                                                            <NumberBox
+                                                                x:Name="RimLightBoostNumberBox"
+                                                                Grid.Column="1"
+                                                                SmallChange="0.1"
+                                                                SpinButtonPlacementMode="Hidden"
+                                                                PlaceholderText="0.0" />
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </Border>
+                                            </StackPanel>
+                                        </Border>
+                                    </Expander>
+                                </StackPanel>
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>

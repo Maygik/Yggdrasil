@@ -15,5 +15,4 @@ public sealed class OrbitCameraState
     public float PitchRadians { get; init; }
 
     public float FieldOfViewDegrees { get; init; } = 70.0f;
-
 }

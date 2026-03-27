@@ -115,19 +115,6 @@
                         </Grid>
                     </Border>
 
-                    <Border
-                        x:Name="ViewportDetailsSurface"
-                        Style="{StaticResource SubtlePanelBorderStyle}"
-                        Grid.Row="2"
-                        Margin="0,8,0,0"
-                        Padding="16">
-                        <StackPanel Spacing="6">
-                            <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Selection Details" />
-                            <TextBlock
-                                Text="Hovered and selected scene details will live here without competing with the page-local editing UI."
-                                TextWrapping="WrapWholeWords" />
-                        </StackPanel>
-                    </Border>
                 </Grid>
             </Border>
         </Grid>

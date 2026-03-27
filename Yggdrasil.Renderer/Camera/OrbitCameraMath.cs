@@ -59,14 +59,7 @@ public static class OrbitCameraMath
 
     public static Vector3 CalculateCameraPosition(OrbitCameraState cameraState)
     {
-        var cosPitch = MathF.Cos(cameraState.PitchRadians);
-        var sinPitch = MathF.Sin(cameraState.PitchRadians);
-        var cosYaw = MathF.Cos(cameraState.YawRadians);
-        var sinYaw = MathF.Sin(cameraState.YawRadians);
-        var direction = new Vector3(
-            cosPitch * cosYaw,
-            cosPitch * sinYaw,
-            sinPitch).Normalized();
+        var direction = OrbitRotationMath.CalculateDirection(cameraState.YawRadians, cameraState.PitchRadians);
         return cameraState.Target - direction * MathF.Max(cameraState.Distance, 0.01f);
     }
 

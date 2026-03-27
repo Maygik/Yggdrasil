@@ -232,15 +232,131 @@
                     </StackPanel>
                 </Border>
 
-                <!--Editing/Debug Tools-->
+                <!--Transform Tools-->
                 <Border x:Name="ModelToolsPanel" Style="{StaticResource PanelBorderStyle}" Padding="20">
                     <StackPanel Spacing="16">
-                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Coming Soon" />
+                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Transform Model" />
                         <TextBlock
                             Style="{StaticResource CaptionTextStyle}"
-                            Text="More model editing and cleanup tools will be added here." />
-                        <TextBlock Style="{StaticResource CaptionTextStyle}"
-                                   Text="Currently Planned: Material Merging, Material Renaming, Mesh Merging, Mesh Renaming"/>
+                            Text="Apply saved scale, rotation, or movement corrections directly to the imported model. Rotation uses degrees, movement uses inches, and these changes persist in the project and affect export output."
+                            TextWrapping="WrapWholeWords" />
+
+                        <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="110" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock
+                                    Grid.Column="0"
+                                    VerticalAlignment="Center"
+                                    Style="{StaticResource BodyStrongTextStyle}"
+                                    Text="Scale" />
+                                <NumberBox
+                                    x:Name="ScaleFactorNumberBox"
+                                    Grid.Column="1"
+                                    Grid.ColumnSpan="3"
+                                    Header="Factor"
+                                    Minimum="0.01"
+                                    Value="1"
+                                    SmallChange="0.1"
+                                    SpinButtonPlacementMode="Hidden" />
+                                <Button
+                                    Grid.Column="4"
+                                    MinWidth="112"
+                                    VerticalAlignment="Bottom"
+                                    Content="Apply Scale"
+                                    Click="ApplyScaleButton_Click" />
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="110" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock
+                                    Grid.Column="0"
+                                    VerticalAlignment="Center"
+                                    Style="{StaticResource BodyStrongTextStyle}"
+                                    Text="Rotation" />
+                                <NumberBox
+                                    x:Name="RotateXNumberBox"
+                                    Grid.Column="1"
+                                    Header="X"
+                                    SmallChange="1"
+                                    SpinButtonPlacementMode="Hidden" />
+                                <NumberBox
+                                    x:Name="RotateYNumberBox"
+                                    Grid.Column="2"
+                                    Header="Y"
+                                    SmallChange="1"
+                                    SpinButtonPlacementMode="Hidden" />
+                                <NumberBox
+                                    x:Name="RotateZNumberBox"
+                                    Grid.Column="3"
+                                    Header="Z"
+                                    SmallChange="1"
+                                    SpinButtonPlacementMode="Hidden" />
+                                <Button
+                                    Grid.Column="4"
+                                    MinWidth="112"
+                                    VerticalAlignment="Bottom"
+                                    Content="Apply Rotation"
+                                    Click="ApplyRotationButton_Click" />
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="110" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock
+                                    Grid.Column="0"
+                                    VerticalAlignment="Center"
+                                    Style="{StaticResource BodyStrongTextStyle}"
+                                    Text="Position" />
+                                <NumberBox
+                                    x:Name="MoveXNumberBox"
+                                    Grid.Column="1"
+                                    Header="X"
+                                    SmallChange="1"
+                                    SpinButtonPlacementMode="Hidden" />
+                                <NumberBox
+                                    x:Name="MoveYNumberBox"
+                                    Grid.Column="2"
+                                    Header="Y"
+                                    SmallChange="1"
+                                    SpinButtonPlacementMode="Hidden" />
+                                <NumberBox
+                                    x:Name="MoveZNumberBox"
+                                    Grid.Column="3"
+                                    Header="Z"
+                                    SmallChange="1"
+                                    SpinButtonPlacementMode="Hidden" />
+                                <Button
+                                    Grid.Column="4"
+                                    MinWidth="112"
+                                    VerticalAlignment="Bottom"
+                                    Content="Apply Move"
+                                    Click="ApplyMoveButton_Click" />
+                            </Grid>
+                        </Border>
                     </StackPanel>
                 </Border>
             </StackPanel>

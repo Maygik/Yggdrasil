@@ -14,6 +14,10 @@ internal sealed class RendererState
 
     public OrbitCameraState CameraState { get; set; } = OrbitCameraState.Default;
 
+    public OrbitLightState LightState { get; set; } = OrbitLightState.Default;
+
+    public ViewportRenderOptions ViewportOptions { get; set; } = ViewportRenderOptions.Default;
+
     public Vector2i PixelSize { get; set; } = Vector2i.Zero;
 
     public bool SurfaceDirty { get; set; }

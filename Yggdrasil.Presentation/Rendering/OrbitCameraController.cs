@@ -9,8 +9,6 @@ namespace Yggdrasil.Presentation.Rendering;
 
 public sealed class OrbitCameraController
 {
-    private const float OrbitSensitivity = 0.01f;
-    private const float PitchLimit = 1.55f;
     private const float MinDistance = 0.1f;
     private const float MaxDistance = 5000.0f;
 
@@ -21,7 +19,11 @@ public sealed class OrbitCameraController
 
     public OrbitCameraState CurrentState { get; private set; } = OrbitCameraState.Default;
 
+    public OrbitLightState CurrentLightState { get; private set; } = OrbitLightState.Default;
+
     public event Action<OrbitCameraState, bool>? StateChanged;
+
+    public event Action<OrbitLightState, bool>? LightStateChanged;
 
     public void Attach(UIElement element)
     {
@@ -67,6 +69,11 @@ public sealed class OrbitCameraController
         CurrentState = cameraState ?? throw new ArgumentNullException(nameof(cameraState));
     }
 
+    public void SetLightState(OrbitLightState lightState)
+    {
+        CurrentLightState = lightState ?? throw new ArgumentNullException(nameof(lightState));
+    }
+
     private void OnPointerPressed(object sender, PointerRoutedEventArgs e)
     {
         if (_element == null || _interactionMode != InteractionMode.None)
@@ -79,7 +86,11 @@ public sealed class OrbitCameraController
         {
             BeginInteraction(InteractionMode.Orbit, e, ToVector2(point.Position.X, point.Position.Y));
         }
-        else if (point.Properties.IsMiddleButtonPressed || point.Properties.IsRightButtonPressed)
+        else if (point.Properties.IsMiddleButtonPressed)
+        {
+            BeginInteraction(InteractionMode.LightOrbit, e, ToVector2(point.Position.X, point.Position.Y));
+        }
+        else if (point.Properties.IsRightButtonPressed)
         {
             BeginInteraction(InteractionMode.Pan, e, ToVector2(point.Position.X, point.Position.Y));
         }
@@ -102,14 +113,24 @@ public sealed class OrbitCameraController
 
         _lastPointerPosition = position;
 
-        CurrentState = _interactionMode switch
+        switch (_interactionMode)
         {
-            InteractionMode.Orbit => ApplyOrbit(CurrentState, delta),
-            InteractionMode.Pan => ApplyPan(CurrentState, delta, _element),
-            _ => CurrentState
-        };
+            case InteractionMode.Orbit:
+                CurrentState = ApplyOrbit(CurrentState, delta);
+                StateChanged?.Invoke(CurrentState, true);
+                break;
 
-        StateChanged?.Invoke(CurrentState, true);
+            case InteractionMode.Pan:
+                CurrentState = ApplyPan(CurrentState, delta, _element);
+                StateChanged?.Invoke(CurrentState, true);
+                break;
+
+            case InteractionMode.LightOrbit:
+                CurrentLightState = ApplyLightOrbit(CurrentLightState, delta);
+                LightStateChanged?.Invoke(CurrentLightState, true);
+                break;
+        }
+
         e.Handled = true;
     }
 
@@ -189,19 +210,32 @@ public sealed class OrbitCameraController
 
     private void EndInteraction()
     {
+        var completedInteraction = _interactionMode;
         _interactionMode = InteractionMode.None;
         _activePointerId = null;
-        StateChanged?.Invoke(CurrentState, false);
+
+        switch (completedInteraction)
+        {
+            case InteractionMode.Orbit:
+            case InteractionMode.Pan:
+                StateChanged?.Invoke(CurrentState, false);
+                break;
+
+            case InteractionMode.LightOrbit:
+                LightStateChanged?.Invoke(CurrentLightState, false);
+                break;
+        }
     }
 
     private static OrbitCameraState ApplyOrbit(OrbitCameraState currentState, Vector2 delta)
     {
+        var (yawRadians, pitchRadians) = OrbitRotationMath.ApplyOrbit(currentState.YawRadians, currentState.PitchRadians, delta);
         return new OrbitCameraState
         {
             Target = currentState.Target,
             Distance = currentState.Distance,
-            YawRadians = currentState.YawRadians - (delta.X * OrbitSensitivity),
-            PitchRadians = Math.Clamp(currentState.PitchRadians - (delta.Y * OrbitSensitivity), -PitchLimit, PitchLimit),
+            YawRadians = yawRadians,
+            PitchRadians = pitchRadians,
             FieldOfViewDegrees = currentState.FieldOfViewDegrees
         };
     }
@@ -234,6 +268,18 @@ public sealed class OrbitCameraController
         };
     }
 
+    private static OrbitLightState ApplyLightOrbit(OrbitLightState currentState, Vector2 delta)
+    {
+        // Inverting the delta feels nicer
+        var (yawRadians, pitchRadians) = OrbitRotationMath.ApplyOrbit(currentState.YawRadians, currentState.PitchRadians, delta * -1);
+        return new OrbitLightState
+        {
+            YawRadians = yawRadians,
+            PitchRadians = pitchRadians,
+            AmbientStrength = currentState.AmbientStrength
+        };
+    }
+
     private static Vector3 CalculateCameraPosition(OrbitCameraState cameraState)
     {
         return OrbitCameraMath.CalculateCameraPosition(cameraState);
@@ -248,6 +294,7 @@ public sealed class OrbitCameraController
     {
         None,
         Orbit,
-        Pan
+        Pan,
+        LightOrbit
     }
 }

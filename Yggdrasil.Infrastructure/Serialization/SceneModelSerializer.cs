@@ -22,7 +22,12 @@ namespace Yggdrasil.Infrastructure.Serialization
                 var modelCopy = new SceneModel
                 {
                     Name = model.Name,
-                    MeshGroups = new(),
+                    MeshGroups = model.MeshGroups.Select(meshGroup => new MeshGroup
+                    {
+                        Name = meshGroup.Name,
+                        LocalMatrix = meshGroup.LocalMatrix.Copy(),
+                        Meshes = new()
+                    }).ToList(),
                     RootBone = model.RootBone,
                     MaterialSettings = model.MaterialSettings
                 };
@@ -303,7 +308,9 @@ namespace Yggdrasil.Infrastructure.Serialization
                 {
                     throw new Exception("Failed to deserialize scene model from JSON.");
                 }
+                ApplySerializedMeshGroupTransforms(meshGroups, sceneModel.MeshGroups);
                 sceneModel.MeshGroups = meshGroups;
+                RestoreTransformParents(sceneModel.RootBone);
 
                 return sceneModel;
             }
@@ -313,6 +320,47 @@ namespace Yggdrasil.Infrastructure.Serialization
             }
 
             return null;
+        }
+
+        private static void ApplySerializedMeshGroupTransforms(IList<MeshGroup> binaryMeshGroups, IList<MeshGroup> serializedMeshGroups)
+        {
+            if (binaryMeshGroups.Count == 0 || serializedMeshGroups.Count == 0)
+            {
+                return;
+            }
+
+            if (binaryMeshGroups.Count == serializedMeshGroups.Count)
+            {
+                for (var i = 0; i < binaryMeshGroups.Count; i++)
+                {
+                    binaryMeshGroups[i].LocalMatrix = serializedMeshGroups[i].LocalMatrix.Copy();
+                }
+
+                return;
+            }
+
+            var meshGroupsByName = serializedMeshGroups.ToDictionary(group => group.Name, StringComparer.Ordinal);
+            foreach (var meshGroup in binaryMeshGroups)
+            {
+                if (meshGroupsByName.TryGetValue(meshGroup.Name, out var serializedGroup))
+                {
+                    meshGroup.LocalMatrix = serializedGroup.LocalMatrix.Copy();
+                }
+            }
+        }
+
+        private static void RestoreTransformParents(Transform? transform)
+        {
+            if (transform == null)
+            {
+                return;
+            }
+
+            foreach (var child in transform.Children)
+            {
+                child.Parent = transform;
+                RestoreTransformParents(child);
+            }
         }
     }
 }

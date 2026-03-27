@@ -13,9 +13,9 @@ namespace Yggdrasil.Domain.Scene
     {
         public string Name { get; set; } = "Material"; // The name of the material (VMT filename without extension). Used for reference and export.
 
-        public string Shader = "VertexLitGeneric"; // The shader used by this material. Only VertexLitGeneric is supported for now, but this can be extended in the future if needed.
+        public string Shader { get; set; } = "VertexLitGeneric"; // The shader used by this material. Only VertexLitGeneric is supported for now, but this can be extended in the future if needed.
 
-        public bool Adjusted = false; // Whether this material has been adjusted from the default settings. Used to determine if we need to deal with it at all.
+        public bool Adjusted { get; set; } = false; // Whether this material has been adjusted from the default settings. Used to determine if we need to deal with it at all.
 
         // ----- Parameters -----
         // All null by default, only assigned a value if they are used.
@@ -72,5 +72,44 @@ namespace Yggdrasil.Domain.Scene
         public float? RimLightBoost { get; set; } = null; // $rimlightboost parameter. Strength of the rim light effect. Default is 0.0 (no rim light).
         public Color3? RimLightTint { get { return PhongTint; } set { PhongTint = value; } } // Rim light uses the same tint as the phong reflections, so we can just reuse that parameter.
 
+        public SourceMaterialSettings DeepClone()
+        {
+            return new SourceMaterialSettings
+            {
+                Name = Name,
+                Shader = Shader,
+                Adjusted = Adjusted,
+                BaseTexture = BaseTexture,
+                Tint = Tint,
+                NoTint = NoTint,
+                AlphaTest = AlphaTest,
+                AlphaTestReference = AlphaTestReference,
+                AllowAlphaToCoverage = AllowAlphaToCoverage,
+                NoCull = NoCull,
+                Translucent = Translucent,
+                Additive = Additive,
+                BumpMap = BumpMap,
+                LightWarpTexture = LightWarpTexture,
+                HalfLambert = HalfLambert,
+                SelfIllum = SelfIllum,
+                EmissiveTexture = EmissiveTexture,
+                EmissiveBlendStrength = EmissiveBlendStrength,
+                UseEnvMapProbes = UseEnvMapProbes,
+                EnvMap = EnvMap,
+                EnvMapMask = EnvMapMask,
+                EnvMapTint = EnvMapTint,
+                EnvMapContrast = EnvMapContrast,
+                Phong = Phong,
+                PhongBoost = PhongBoost,
+                PhongExponent = PhongExponent,
+                PhongExponentTexture = PhongExponentTexture,
+                PhongMask = PhongMask,
+                PhongFresnelRanges = PhongFresnelRanges,
+                PhongTint = PhongTint,
+                RimLight = RimLight,
+                RimLightExponent = RimLightExponent,
+                RimLightBoost = RimLightBoost
+            };
+        }
     }
 }

@@ -19,18 +19,13 @@ cbuffer PerObjectConstants : register(b1)
 struct VSInput
 {
     float3 Position : POSITION;
-    float3 Normal : NORMAL;
-    float3 Tangent : TANGENT;
-    float3 Bitangent : BINORMAL;
-    float2 TexCoord : TEXCOORD0;
-    int4 BoneIndices : BLENDINDICES;
-    float4 BoneWeights : BLENDWEIGHT;
+    float4 Color : COLOR0;
 };
 
 struct VSOutput
 {
     float4 Position : SV_POSITION;
-    float2 TexCoord : TEXCOORD0;
+    float4 Color : COLOR0;
 };
 
 VSOutput VSMain(VSInput input)
@@ -38,18 +33,11 @@ VSOutput VSMain(VSInput input)
     VSOutput output;
     float4 worldPosition = mul(float4(input.Position, 1.0f), World);
     output.Position = mul(worldPosition, ViewProjection);
-    output.TexCoord = input.TexCoord;
+    output.Color = input.Color;
     return output;
 }
 
 float4 PSMain(VSOutput input) : SV_TARGET
 {
-    float2 tiledUv = input.TexCoord * 16.0f;
-    float checker = fmod(floor(tiledUv.x) + floor(tiledUv.y), 2.0f);
-
-    float3 darkColor = float3(0.16f, 0.18f, 0.20f);
-    float3 lightColor = float3(0.19f, 0.21f, 0.24f);
-    float3 floorColor = lerp(darkColor, lightColor, checker);
-
-    return float4(floorColor, 1.0f);
+    return input.Color;
 }

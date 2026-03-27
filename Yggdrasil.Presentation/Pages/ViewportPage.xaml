@@ -19,15 +19,6 @@
                 Style="{StaticResource CaptionTextStyle}"
                 Text="Configure shared viewport overlays, helpers, and preview modes in one place."
                 TextWrapping="WrapWholeWords" />
-            <Border
-                Style="{StaticResource SubtlePanelBorderStyle}"
-                Padding="12"
-                Margin="0,8,0,0">
-                <TextBlock
-                    Style="{StaticResource CaptionTextStyle}"
-                    Text="This page is scaffolded for upcoming viewport controls. The renderer wiring for these options will be added in a later pass."
-                    TextWrapping="WrapWholeWords" />
-            </Border>
         </StackPanel>
 
         <Grid Grid.Row="1" ColumnSpacing="16">
@@ -50,24 +41,124 @@
                             <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
                                 <StackPanel Spacing="8">
                                     <ToggleSwitch
+                                        x:Name="ShowFloorToggle"
                                         Header="Show floor"
-                                        IsEnabled="False"
+                                        Toggled="ShowFloorToggle_Toggled"
                                         OffContent="Hidden"
                                         OnContent="Visible" />
                                     <TextBlock
                                         Style="{StaticResource CaptionTextStyle}"
-                                        Text="Shoows a ground plane."
+                                        Text="Shows a ground plane beneath the current scene."
+                                        TextWrapping="WrapWholeWords" />
+
+                                    <ToggleSwitch
+                                        x:Name="ShowHeightPlaneToggle"
+                                        Header="Show height plane"
+                                        Toggled="ShowHeightPlaneToggle_Toggled"
+                                        OffContent="Hidden"
+                                        OnContent="Visible" />
+                                    <TextBlock
+                                        Style="{StaticResource CaptionTextStyle}"
+                                        Text="Shows a transparent orange reference plane at the chosen height."
+                                        TextWrapping="WrapWholeWords" />
+
+                                    <NumberBox
+                                        x:Name="HeightPlaneHeightNumberBox"
+                                        Header="Height plane"
+                                        SmallChange="1"
+                                        SpinButtonPlacementMode="Hidden"
+                                        Value="72"
+                                        ValueChanged="AlignmentNumberBox_ValueChanged" />
+                                    <TextBlock
+                                        Style="{StaticResource CaptionTextStyle}"
+                                        Text="The height plane is rendered as a transparent orange guide. One unit equals one inch."
                                         TextWrapping="WrapWholeWords" />
                                 </StackPanel>
                             </Border>
 
                             <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
-                                <StackPanel Spacing="8">
-                                    <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="Alignment Tools" />
+                                <StackPanel Spacing="10">
+                                    <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="Preview Alignment" />
                                     <TextBlock
                                         Style="{StaticResource CaptionTextStyle}"
-                                        Text="Model position and rotation will be adjustable here."
+                                        Text="These controls only affect the current viewport preview. Use the Model page to apply saved transforms to the imported model."
                                         TextWrapping="WrapWholeWords" />
+
+                                    <NumberBox
+                                        x:Name="ModelScaleNumberBox"
+                                        Header="Scale"
+                                        Minimum="0.01"
+                                        Value="1"
+                                        SmallChange="0.1"
+                                        SpinButtonPlacementMode="Hidden"
+                                        ValueChanged="AlignmentNumberBox_ValueChanged" />
+
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="Rotation" />
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <NumberBox
+                                                x:Name="ModelRotationXNumberBox"
+                                                Grid.Column="0"
+                                                Header="X"
+                                                SmallChange="1"
+                                                SpinButtonPlacementMode="Hidden"
+                                                ValueChanged="AlignmentNumberBox_ValueChanged" />
+                                            <NumberBox
+                                                x:Name="ModelRotationYNumberBox"
+                                                Grid.Column="1"
+                                                Header="Y"
+                                                SmallChange="1"
+                                                SpinButtonPlacementMode="Hidden"
+                                                ValueChanged="AlignmentNumberBox_ValueChanged" />
+                                            <NumberBox
+                                                x:Name="ModelRotationZNumberBox"
+                                                Grid.Column="2"
+                                                Header="Z"
+                                                SmallChange="1"
+                                                SpinButtonPlacementMode="Hidden"
+                                                ValueChanged="AlignmentNumberBox_ValueChanged" />
+                                        </Grid>
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="Position" />
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <NumberBox
+                                                x:Name="ModelPositionXNumberBox"
+                                                Grid.Column="0"
+                                                Header="X"
+                                                SmallChange="1"
+                                                SpinButtonPlacementMode="Hidden"
+                                                ValueChanged="AlignmentNumberBox_ValueChanged" />
+                                            <NumberBox
+                                                x:Name="ModelPositionYNumberBox"
+                                                Grid.Column="1"
+                                                Header="Y"
+                                                SmallChange="1"
+                                                SpinButtonPlacementMode="Hidden"
+                                                ValueChanged="AlignmentNumberBox_ValueChanged" />
+                                            <NumberBox
+                                                x:Name="ModelPositionZNumberBox"
+                                                Grid.Column="2"
+                                                Header="Z"
+                                                SmallChange="1"
+                                                SpinButtonPlacementMode="Hidden"
+                                                ValueChanged="AlignmentNumberBox_ValueChanged" />
+                                        </Grid>
+                                    </StackPanel>
+
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -89,27 +180,45 @@
                             <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
                                 <StackPanel Spacing="8">
                                     <ToggleSwitch
+                                        x:Name="ShowBonesToggle"
                                         Header="Show bones"
-                                        IsEnabled="True"
+                                        Toggled="ShowBonesToggle_Toggled"
                                         OffContent="Hidden"
                                         OnContent="Visible" />
                                     <TextBlock
                                         Style="{StaticResource CaptionTextStyle}"
-                                        Text="Show the bone origins."
+                                        Text="Show RGB axes at each bone origin."
                                         TextWrapping="WrapWholeWords" />
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="Bone axis length" />
+                                        <Slider
+                                            x:Name="BoneAxisLengthSlider"
+                                            Minimum="0.1"
+                                            Maximum="12"
+                                            Value="2"
+                                            SmallChange="0.1"
+                                            LargeChange="0.5"
+                                            StepFrequency="0.1"
+                                            ValueChanged="BoneAxisLengthSlider_ValueChanged" />
+                                        <TextBlock
+                                            x:Name="BoneAxisLengthValueText"
+                                            Style="{StaticResource CaptionTextStyle}"
+                                            Text="Axis length: 2.0" />
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
 
                             <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
                                 <StackPanel Spacing="8">
                                     <ToggleSwitch
+                                        x:Name="ShowBoneConnectionsToggle"
                                         Header="Show bone connections"
-                                        IsEnabled="True"
+                                        Toggled="ShowBoneConnectionsToggle_Toggled"
                                         OffContent="Hidden"
                                         OnContent="Visible" />
                                     <TextBlock
                                         Style="{StaticResource CaptionTextStyle}"
-                                        Text="Show bone connects."
+                                        Text="Draw parent-child lines for the active skeleton."
                                         TextWrapping="WrapWholeWords" />
                                 </StackPanel>
                             </Border>

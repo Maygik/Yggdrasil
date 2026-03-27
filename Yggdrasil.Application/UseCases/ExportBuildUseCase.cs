@@ -45,13 +45,14 @@ namespace Yggdrasil.Application.UseCases
 
             if (request.exportMeshes)
             {
-                var sceneToExport = request.Project.Scene;
+                var preparedScene = request.Project.Scene.DeepClone();
+                var sceneToExport = preparedScene;
 
                 // Export the animations (Do here just to get proportions)
 
                 ProportionTrickResult? proportions = null;
 
-                if (request.Project.Scene.RootBone != null)
+                if (preparedScene.RootBone != null)
                 {
                     //Console.WriteLine($"Exporting animations...");
 
@@ -74,7 +75,7 @@ namespace Yggdrasil.Application.UseCases
                         // Create a temporary project copy with a cloned scene to avoid modifying the original
                         var tempProject = new Project
                         {
-                            Scene = request.Project.Scene.DeepClone(),
+                            Scene = preparedScene.DeepClone(),
                             RigMapping = request.Project.RigMapping,
                             Qc = request.Project.Qc
                         };
@@ -91,7 +92,7 @@ namespace Yggdrasil.Application.UseCases
                     else
                     {
                         // Just export a normal skeleton with the bind pose as the only frame
-                        exporter.ExportAnimationAsync(animOutputDir, "ragdoll", request.Project.Scene);
+                        exporter.ExportAnimationAsync(animOutputDir, "ragdoll", preparedScene);
                         result.Messages.Add($"Wrote ragdoll animation to '{animOutputDir}'.");
                     }
 
@@ -104,7 +105,7 @@ namespace Yggdrasil.Application.UseCases
 
                 if (proportions != null)
                 {
-                    sceneToExport = request.Project.Scene.DeepClone();
+                    sceneToExport = preparedScene.DeepClone();
                     sceneToExport.RootBone = proportions.Proportions.RootBone;
                     RemapMeshBoneWeightsToRigSlots(sceneToExport, request.Project.RigMapping);
                 }

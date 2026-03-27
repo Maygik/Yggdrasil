@@ -20,4 +20,8 @@ internal sealed record SetSelectionCommand(RenderSelectionState Selection) : Ren
 
 internal sealed record SetCameraStateCommand(OrbitCameraState CameraState, bool IsInteracting) : RendererCommand;
 
+internal sealed record SetLightStateCommand(OrbitLightState LightState, bool IsInteracting) : RendererCommand;
+
+internal sealed record SetViewportOptionsCommand(ViewportRenderOptions ViewportOptions) : RendererCommand;
+
 internal sealed record ShutdownCommand() : RendererCommand;
