@@ -31,12 +31,18 @@ namespace Yggdrasil.Presentation.Pages
                 || e.PropertyName == nameof(Host.Shell.CanExportModel))
             {
                 RefreshFromShell();
+                return;
+            }
+
+            if (e.PropertyName == nameof(Host.Shell.SelectedMaterialName))
+            {
+                ApplyShellSelection();
             }
         }
 
         private void RefreshFromShell()
         {
-            var selectedMaterialName = _selectedMaterial?.Name;
+            var selectedMaterialName = Host.Shell.SelectedMaterialName;
 
             NoProjectPanel.Visibility = Host.Shell.HasOpenProject ? Visibility.Collapsed : Visibility.Visible;
             MaterialsPanel.Visibility = Host.Shell.HasOpenProject ? Visibility.Visible : Visibility.Collapsed;
@@ -62,7 +68,7 @@ namespace Yggdrasil.Presentation.Pages
 
             SetSelectedMaterial(selectedMaterialName is not null
                 ? MaterialItems.FirstOrDefault(item => string.Equals(item.Name, selectedMaterialName, System.StringComparison.Ordinal))
-                : MaterialItems.FirstOrDefault());
+                : null);
         }
 
         private void MaterialRow_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
@@ -73,10 +79,29 @@ namespace Yggdrasil.Presentation.Pages
             }
         }
 
+        private void MaterialRow_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.Tag is MaterialListItem materialItem)
+            {
+                Host.Shell.HoveredMaterialName = materialItem.Name;
+            }
+        }
+
+        private void MaterialRow_PointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+        {
+            if (sender is FrameworkElement element
+                && element.Tag is MaterialListItem materialItem
+                && string.Equals(Host.Shell.HoveredMaterialName, materialItem.Name, System.StringComparison.Ordinal))
+            {
+                Host.Shell.HoveredMaterialName = null;
+            }
+        }
+
         private void SetSelectedMaterial(MaterialListItem? materialItem)
         {
             if (ReferenceEquals(_selectedMaterial, materialItem))
             {
+                Host.Shell.SelectedMaterialName = materialItem?.Name;
                 UpdateSelectedMaterialUi();
                 return;
             }
@@ -84,6 +109,7 @@ namespace Yggdrasil.Presentation.Pages
             _selectedMaterial?.UpdateSelection(false);
             _selectedMaterial = materialItem;
             _selectedMaterial?.UpdateSelection(true);
+            Host.Shell.SelectedMaterialName = materialItem?.Name;
 
             UpdateSelectedMaterialUi();
         }
@@ -97,7 +123,24 @@ namespace Yggdrasil.Presentation.Pages
 
         private void MaterialsPage_Unloaded(object sender, RoutedEventArgs e)
         {
+            Host.Shell.HoveredMaterialName = null;
             Host.Shell.PropertyChanged -= Shell_PropertyChanged;
+        }
+
+        private void ApplyShellSelection()
+        {
+            var selectedMaterialName = Host.Shell.SelectedMaterialName;
+            var selectedItem = selectedMaterialName is null
+                ? null
+                : MaterialItems.FirstOrDefault(item => string.Equals(item.Name, selectedMaterialName, System.StringComparison.Ordinal));
+
+            if (selectedMaterialName is not null && selectedItem is null)
+            {
+                Host.Shell.SelectedMaterialName = null;
+                return;
+            }
+
+            SetSelectedMaterial(selectedItem);
         }
     }
 }

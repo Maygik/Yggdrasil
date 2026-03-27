@@ -16,6 +16,7 @@ using Windows.Foundation.Collections;
 using Yggdrasil.Presentation.Pages;
 using Yggdrasil.Presentation.Services;
 using Yggdrasil.Presentation.ViewModels;
+using Yggdrasil.Renderer.Scene;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -28,6 +29,7 @@ namespace Yggdrasil.Presentation
     public sealed partial class MainWindow : Window
     {
         public AppHost Host { get; }
+
         public MainWindow(AppHost host)
         {
             Host = host;
@@ -39,12 +41,17 @@ namespace Yggdrasil.Presentation
             MainNavigationView.SelectedItem = HomeNavigationItem;
             ContentFrame.Navigate(typeof(HomePage));
             Activated += MainWindow_Activated;
+            Closed += MainWindow_Closed;
         }
 
         private async void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
         {
             Activated -= MainWindow_Activated;
             await Host.Shell.InitializeAsync();
+
+            ViewportControl.Connect(Host.Viewport);
+            SyncViewportScene();
+            SyncViewportSelection();
         }
 
         private void OnShellPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -52,6 +59,37 @@ namespace Yggdrasil.Presentation
             if (e.PropertyName == nameof(ShellViewModel.WindowTitle))
             {
                 Title = Host.Shell.WindowTitle;
+            }
+
+            if (e.PropertyName == nameof(ShellViewModel.CurrentSession)
+                || e.PropertyName == nameof(ShellViewModel.HasOpenProject)
+                || e.PropertyName == nameof(ShellViewModel.CanExportModel))
+            {
+                SyncViewportScene();
+                SyncViewportSelection();
+            }
+
+            if (e.PropertyName == nameof(ShellViewModel.SelectedMaterialName)
+                || e.PropertyName == nameof(ShellViewModel.HoveredMaterialName))
+            {
+                SyncViewportSelection();
+            }
+        }
+
+        private async void MainWindow_Closed(object sender, WindowEventArgs args)
+        {
+            Closed -= MainWindow_Closed;
+            Host.Shell.PropertyChanged -= OnShellPropertyChanged;
+            ContentFrame.NavigationFailed -= ContentFrame_NavigationFailed;
+
+            try
+            {
+                await ViewportControl.DisconnectAsync();
+                await Host.Renderer.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex);
             }
         }
 
@@ -124,8 +162,24 @@ namespace Yggdrasil.Presentation
             "model" => typeof(ModelPage),
             "materials" => typeof(MaterialsPage),
             "rigging" => typeof(RiggingPage),
+            "viewport" => typeof(ViewportPage),
             "export" => typeof(ExportPage),
             _ => typeof(HomePage),
         };
+
+        private void SyncViewportScene()
+        {
+            Host.Viewport.SetScene(Host.Shell.CurrentSession?.Project?.Scene);
+            ViewportControl.SetCameraState(Host.Viewport.CurrentCameraState);
+        }
+
+        private void SyncViewportSelection()
+        {
+            Host.Viewport.UpdateSelection(new RenderSelectionState
+            {
+                SelectedMaterialName = Host.Shell.SelectedMaterialName,
+                HoveredMaterialName = Host.Shell.HoveredMaterialName
+            });
+        }
     }
 }

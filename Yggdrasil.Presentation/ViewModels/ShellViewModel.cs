@@ -39,6 +39,7 @@ namespace Yggdrasil.Presentation.ViewModels
             {
                 if (_currentSession == value) return;
 
+                ResetViewportMaterialState();
                 _currentSession = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(WindowTitle));
@@ -73,6 +74,32 @@ namespace Yggdrasil.Presentation.ViewModels
         public string CurrentProjectName => CurrentSession?.DisplayName ?? "No project open";
         public string CurrentProjectPath => CurrentSession?.ProjectFilePath ?? "Open or create a project to get started.";
 
+        private string? _selectedMaterialName;
+        public string? SelectedMaterialName
+        {
+            get => _selectedMaterialName;
+            set
+            {
+                if (_selectedMaterialName == value) return;
+
+                _selectedMaterialName = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private string? _hoveredMaterialName;
+        public string? HoveredMaterialName
+        {
+            get => _hoveredMaterialName;
+            set
+            {
+                if (_hoveredMaterialName == value) return;
+
+                _hoveredMaterialName = value;
+                OnPropertyChanged();
+            }
+        }
+
         private string? _statusMessage;
         public string? StatusMessage
         {
@@ -85,7 +112,6 @@ namespace Yggdrasil.Presentation.ViewModels
                 OnPropertyChanged();
             }
         }
-
 
         public async Task CreateProjectAsync(FrameworkElement owner)
         {
@@ -223,6 +249,7 @@ namespace Yggdrasil.Presentation.ViewModels
             }
 
             StatusMessage = result.Messages.FirstOrDefault() ?? $"Imported model '{modelPath}'.";
+            ResetViewportMaterialState();
 
             // The project session object stays the same, but several UI surfaces depend on
             // the scene/imported-model state changing underneath it.
@@ -244,6 +271,12 @@ namespace Yggdrasil.Presentation.ViewModels
         public void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+        }
+
+        private void ResetViewportMaterialState()
+        {
+            SelectedMaterialName = null;
+            HoveredMaterialName = null;
         }
     }
 }

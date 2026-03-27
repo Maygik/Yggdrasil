@@ -24,6 +24,7 @@
     <None Remove="Pages\MaterialsPage.xaml" />
     <None Remove="Pages\ModelPage.xaml" />
     <None Remove="Pages\RiggingPage.xaml" />
+    <None Remove="Pages\ViewportPage.xaml" />
   </ItemGroup>
 
   <ItemGroup>
@@ -51,11 +52,13 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7705" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260317003" />
+    <PackageReference Include="Vortice.WinUI" Version="3.8.3" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Yggdrasil.Application\Yggdrasil.Application.csproj" />
     <ProjectReference Include="..\Yggdrasil.Domain\Yggdrasil.Domain.csproj" />
     <ProjectReference Include="..\Yggdrasil.Infrastructure\Yggdrasil.Infrastructure.csproj" />
+    <ProjectReference Include="..\Yggdrasil.Renderer\Yggdrasil.Renderer.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Styles\" />
@@ -72,6 +75,11 @@
   </ItemGroup>
   <ItemGroup>
     <Page Update="Pages\RiggingPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Pages\ViewportPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>

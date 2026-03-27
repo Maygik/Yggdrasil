@@ -13,7 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yggdrasil.Cli", "Yggdrasil.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yggdrasil.Presentation", "Yggdrasil.Presentation\Yggdrasil.Presentation.csproj", "{E5B27C2E-A96B-4182-BF9A-C648B2613ACC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yggdrasil.Renderer", "Yggdrasil.Bridge\Yggdrasil.Renderer.csproj", "{F772E5B6-AFD9-4FE1-B466-642F374A784A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yggdrasil.Renderer", "Yggdrasil.Renderer\Yggdrasil.Renderer.csproj", "{F772E5B6-AFD9-4FE1-B466-642F374A784A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yggdrasil.Types", "Yggdrasil.Types\Yggdrasil.Types.csproj", "{1037203F-E178-46EC-9212-84EEB3C86305}"
 EndProject

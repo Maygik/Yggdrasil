@@ -140,6 +140,8 @@ public struct Vector3 : IEquatable<Vector3>
             (Z * other.X) - (X * other.Z),
             (X * other.Y) - (Y * other.X));
 
+    public static Vector3 Cross(Vector3 left, Vector3 right) => left.Cross(right);
+
     public float Dot(Vector3 other) => (X * other.X) + (Y * other.Y) + (Z * other.Z);
 
     public static float Dot(Vector3 left, Vector3 right) => left.Dot(right);

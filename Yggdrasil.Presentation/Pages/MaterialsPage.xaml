@@ -87,6 +87,8 @@
                                                 BorderThickness="1"
                                                 CornerRadius="8"
                                                 Tag="{x:Bind}"
+                                                PointerEntered="MaterialRow_PointerEntered"
+                                                PointerExited="MaterialRow_PointerExited"
                                                 Tapped="MaterialRow_Tapped"
                                                 ToolTipService.ToolTip="{x:Bind Name}">
                                                 <TextBlock

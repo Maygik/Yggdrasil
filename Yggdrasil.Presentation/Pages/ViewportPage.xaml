@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Yggdrasil.Presentation.Pages.ViewportPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Padding="24" RowSpacing="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Spacing="6">
+            <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Viewport" />
+            <TextBlock
+                Style="{StaticResource CaptionTextStyle}"
+                Text="Configure shared viewport overlays, helpers, and preview modes in one place."
+                TextWrapping="WrapWholeWords" />
+            <Border
+                Style="{StaticResource SubtlePanelBorderStyle}"
+                Padding="12"
+                Margin="0,8,0,0">
+                <TextBlock
+                    Style="{StaticResource CaptionTextStyle}"
+                    Text="This page is scaffolded for upcoming viewport controls. The renderer wiring for these options will be added in a later pass."
+                    TextWrapping="WrapWholeWords" />
+            </Border>
+        </StackPanel>
+
+        <Grid Grid.Row="1" ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource PanelBorderStyle}" Padding="20">
+                <Grid RowSpacing="4">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Style="{StaticResource SectionTitleTextStyle}" Text="Scene Helpers" />
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel MinHeight="600" Spacing="12">
+                            <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                                <StackPanel Spacing="8">
+                                    <ToggleSwitch
+                                        Header="Show floor"
+                                        IsEnabled="False"
+                                        OffContent="Hidden"
+                                        OnContent="Visible" />
+                                    <TextBlock
+                                        Style="{StaticResource CaptionTextStyle}"
+                                        Text="Shoows a ground plane."
+                                        TextWrapping="WrapWholeWords" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="Alignment Tools" />
+                                    <TextBlock
+                                        Style="{StaticResource CaptionTextStyle}"
+                                        Text="Model position and rotation will be adjustable here."
+                                        TextWrapping="WrapWholeWords" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Style="{StaticResource PanelBorderStyle}" Padding="20">
+                <Grid RowSpacing="4">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Style="{StaticResource SectionTitleTextStyle}" Text="Overlays And Preview" />
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel MinHeight="600" Spacing="12">
+                            <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                                <StackPanel Spacing="8">
+                                    <ToggleSwitch
+                                        Header="Show bones"
+                                        IsEnabled="True"
+                                        OffContent="Hidden"
+                                        OnContent="Visible" />
+                                    <TextBlock
+                                        Style="{StaticResource CaptionTextStyle}"
+                                        Text="Show the bone origins."
+                                        TextWrapping="WrapWholeWords" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                                <StackPanel Spacing="8">
+                                    <ToggleSwitch
+                                        Header="Show bone connections"
+                                        IsEnabled="True"
+                                        OffContent="Hidden"
+                                        OnContent="Visible" />
+                                    <TextBlock
+                                        Style="{StaticResource CaptionTextStyle}"
+                                        Text="Show bone connects."
+                                        TextWrapping="WrapWholeWords" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                                <StackPanel Spacing="8">
+                                    <ToggleSwitch
+                                        Header="Preview blendshapes"
+                                        IsEnabled="False"
+                                        OffContent="Coming later"
+                                        OnContent="Coming later" />
+                                    <TextBlock
+                                        Style="{StaticResource CaptionTextStyle}"
+                                        Text="Blendshape support will be added in the future."
+                                        TextWrapping="WrapWholeWords" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Page>
