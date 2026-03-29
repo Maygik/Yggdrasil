@@ -28,7 +28,7 @@ namespace Yggdrasil.Domain.Scene
 
         // Adjustment
         public Color3? Tint { get; set; } = null; // $color2 parameter. Used to tint the material. Default is white (no tint).
-        public bool? NoTint { get; set; } = null; // $notint parameter. Whether to let the model be tinted. Default is true (allow tinting).
+        public bool? NoTint { get; set; } = null; // $notint parameter. Whether to disable tinting. Default is false (allow tinting).
 
         // Transparency
         public bool? AlphaTest { get; set; } = null; // Whether to use alpha testing for transparency. Default is false (opaque).
@@ -55,21 +55,20 @@ namespace Yggdrasil.Domain.Scene
         public string? EnvMap { get; set; } = null; // Path to the original image file used for $envmap. Full path on disk. Used for reflections.
         public string? EnvMapMask { get; set; } = null; // Path to the original image file used for $envmapmask. Full path on disk. Used to mask reflections, e.g. for partial reflections or fresnel effects. Not compatible with $bumpmap.
         public Color3? EnvMapTint { get; set; } = null; // $envmaptint parameter. Used to tint the reflections. Default is white (no tint).
-        public float? EnvMapContrast { get; set; } = null; // $envmapcontrast parameter. Used to adjust the contrast of the reflections. Default is 1.0 (no change).
+        public float? EnvMapContrast { get; set; } = null; // $envmapcontrast parameter. Used to adjust the contrast of the reflections. Default is 0.0.
 
 
         public bool? Phong { get; set; } = null; // $phong parameter. Whether to use phong shading for reflections. Default is false (use normal reflection).
-        public float? PhongBoost { get; set; } = null; // $phongboost parameter. Strength of the phong effect. Default is 0.0 (Just use per-pixel lighting, not shiny).
-        public int? PhongExponent { get; set; } = null; // $phongexponent parameter. Exponent for the phong effect. Higher values make the reflections sharper.
+        public float? PhongBoost { get; set; } = null; // $phongboost parameter. Strength of the phong effect. Default is 1.0.
+        public int? PhongExponent { get; set; } = null; // $phongexponent parameter. Exponent for the phong effect. Higher values make the reflections sharper. Default is 5.
         public string? PhongExponentTexture { get; set; } = null; // Path to the original image file used for $phongexponenttexture. Full path on disk. Used to vary the phong exponent across the surface, e.g. for sharper reflections on edges or specific areas.
-        public string? PhongMask { get; set; } = null; // Path to the original image file used for $phongmask. Full path on disk. Used to mask the phong effect. Packed into $bumpmap alpha channel on conversion.
-        public Vector3? PhongFresnelRanges { get; set; } = null; // $phongfresnelranges parameter. Fresnel ranges for the phong effect. Default is (0.0, 1.0, 1.0) (No fresnel effect, just use the boost for all angles).
+        public Vector3? PhongFresnelRanges { get; set; } = null; // $phongfresnelranges parameter. Fresnel ranges for the phong effect. Default is (0.0, 0.5, 1.0).
         public Color3? PhongTint { get; set; } = null; // $phongtint parameter. Used to tint the phong reflections. Default is white (no tint). Also affects the rim light if $rimlight is enabled.
 
 
         public bool? RimLight { get; set; } = null; // $rimlight parameter. Whether to use rim lighting for reflections. Default is false (no rim lighting).
-        public int? RimLightExponent { get; set; } = null; // $rimlightexponent parameter. Exponent for the rim light effect. Higher values make the rim light sharper.
-        public float? RimLightBoost { get; set; } = null; // $rimlightboost parameter. Strength of the rim light effect. Default is 0.0 (no rim light).
+        public int? RimLightExponent { get; set; } = null; // $rimlightexponent parameter. Exponent for the rim light effect. Higher values make the rim light sharper. Default is 2.
+        public float? RimLightBoost { get; set; } = null; // $rimlightboost parameter. Strength of the rim light effect. Default is 0.2.
         public Color3? RimLightTint { get { return PhongTint; } set { PhongTint = value; } } // Rim light uses the same tint as the phong reflections, so we can just reuse that parameter.
 
         public SourceMaterialSettings DeepClone()
@@ -103,7 +102,6 @@ namespace Yggdrasil.Domain.Scene
                 PhongBoost = PhongBoost,
                 PhongExponent = PhongExponent,
                 PhongExponentTexture = PhongExponentTexture,
-                PhongMask = PhongMask,
                 PhongFresnelRanges = PhongFresnelRanges,
                 PhongTint = PhongTint,
                 RimLight = RimLight,

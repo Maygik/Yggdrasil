@@ -396,18 +396,18 @@ internal sealed class SceneGpuCache : IDisposable
         var envMapTextureView = _textureCache.GetTexture(deviceResources, material.EnvMap);
         var envMapMaskTextureView = _textureCache.GetTexture(deviceResources, material.EnvMapMask);
         var phongExponentTextureView = _textureCache.GetTexture(deviceResources, material.PhongExponentTexture);
-        var phongMaskTextureView = _textureCache.GetTexture(deviceResources, material.PhongMask);
 
-        var phongFresnel = material.PhongFresnelRanges ?? new Vector3(0.0f, 1.0f, 1.0f);
-        var envMapTint = material.EnvMapTint ?? Color3.White;
-        var phongTint = material.PhongTint ?? Color3.White;
-        var rimLightTint = material.RimLightTint ?? material.PhongTint ?? Color3.White;
+        var tint = material.Tint ?? SourceMaterialDefaults.Color2;
+        var phongFresnel = material.PhongFresnelRanges ?? SourceMaterialDefaults.PhongFresnelRanges;
+        var envMapTint = material.EnvMapTint ?? SourceMaterialDefaults.EnvMapTint;
+        var phongTint = material.PhongTint ?? SourceMaterialDefaults.PhongTint;
+        var rimLightTint = material.RimLightTint ?? material.PhongTint ?? SourceMaterialDefaults.RimLightTint;
 
         var constants = new PerMaterialConstants
         {
-            TintR = material.Tint?.R ?? Color3.White.R,
-            TintG = material.Tint?.G ?? Color3.White.G,
-            TintB = material.Tint?.B ?? Color3.White.B,
+            TintR = tint.R,
+            TintG = tint.G,
+            TintB = tint.B,
             HasBaseTexture = baseTextureView is null ? 0.0f : 1.0f,
             HasNormalTexture = normalTextureView is null ? 0.0f : 1.0f,
             HasEmissiveTexture = emissiveTextureView is null ? 0.0f : 1.0f,
@@ -415,28 +415,28 @@ internal sealed class SceneGpuCache : IDisposable
             HasEnvMapTexture = envMapTextureView is null ? 0.0f : 1.0f,
             HasEnvMapMaskTexture = envMapMaskTextureView is null ? 0.0f : 1.0f,
             HasPhongExponentTexture = phongExponentTextureView is null ? 0.0f : 1.0f,
-            HasPhongMaskTexture = phongMaskTextureView is null ? 0.0f : 1.0f,
+            HasPhongMaskTexture = 0.0f,
             NoTint = material.NoTint == true ? 1.0f : 0.0f,
             AlphaTest = material.AlphaTest == true ? 1.0f : 0.0f,
-            AlphaTestReference = material.AlphaTestReference ?? 0.5f,
+            AlphaTestReference = material.AlphaTestReference ?? SourceMaterialDefaults.AlphaTestReference,
             AllowAlphaToCoverage = material.AllowAlphaToCoverage == true ? 1.0f : 0.0f,
             NoCull = material.NoCull == true ? 1.0f : 0.0f,
             Translucent = material.Translucent == true ? 1.0f : 0.0f,
             Additive = material.Additive == true ? 1.0f : 0.0f,
             HalfLambert = material.HalfLambert == true ? 1.0f : 0.0f,
             SelfIllum = material.SelfIllum == true ? 1.0f : 0.0f,
-            EmissiveBlendStrength = material.EmissiveBlendStrength ?? 1.0f,
+            EmissiveBlendStrength = material.EmissiveBlendStrength ?? SourceMaterialDefaults.EmissiveBlendStrength,
             UseEnvMapProbes = material.UseEnvMapProbes == true ? 1.0f : 0.0f,
-            EnvMapContrast = material.EnvMapContrast ?? 1.0f,
+            EnvMapContrast = material.EnvMapContrast ?? SourceMaterialDefaults.EnvMapContrast,
             Phong = material.Phong == true ? 1.0f : 0.0f,
             EnvMapTintR = envMapTint.R,
             EnvMapTintG = envMapTint.G,
             EnvMapTintB = envMapTint.B,
             RimLight = material.RimLight == true ? 1.0f : 0.0f,
-            PhongBoost = material.PhongBoost ?? 0.0f,
-            PhongExponent = material.PhongExponent ?? 0.0f,
-            RimLightExponent = material.RimLightExponent ?? 0.0f,
-            RimLightBoost = material.RimLightBoost ?? 0.0f,
+            PhongBoost = material.PhongBoost ?? SourceMaterialDefaults.PhongBoost,
+            PhongExponent = material.PhongExponent ?? SourceMaterialDefaults.PhongExponent,
+            RimLightExponent = material.RimLightExponent ?? SourceMaterialDefaults.RimLightExponent,
+            RimLightBoost = material.RimLightBoost ?? SourceMaterialDefaults.RimLightBoost,
             PhongFresnelX = phongFresnel.X,
             PhongFresnelY = phongFresnel.Y,
             PhongFresnelZ = phongFresnel.Z,
@@ -469,7 +469,6 @@ internal sealed class SceneGpuCache : IDisposable
             EnvMapTextureView = envMapTextureView,
             EnvMapMaskTextureView = envMapMaskTextureView,
             PhongExponentTextureView = phongExponentTextureView,
-            PhongMaskTextureView = phongMaskTextureView,
             TextureViews =
             [
                 baseTextureView!,
@@ -479,7 +478,7 @@ internal sealed class SceneGpuCache : IDisposable
                 envMapTextureView!,
                 envMapMaskTextureView!,
                 phongExponentTextureView!,
-                phongMaskTextureView!
+                null!
             ],
             MaterialConstantsBuffer = constantBuffer
         };

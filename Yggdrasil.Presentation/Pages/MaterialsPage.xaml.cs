@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System;
@@ -97,40 +98,39 @@ namespace Yggdrasil.Presentation.Pages
 
             try
             {
-                ShaderComboBox.SelectedItem = selectedMaterial?.Shader ?? "VertexLitGeneric";
+                ShaderComboBox.SelectedItem = selectedMaterial?.Shader ?? SourceMaterialDefaults.Shader;
                 BaseTextureTextBox.Text = selectedMaterial?.BaseTexture ?? string.Empty;
                 BumpMapTextBox.Text = selectedMaterial?.BumpMap ?? string.Empty;
-                ApplyColorPicker(TintColorPicker, TintValueTextBlock, TintValuePreviewBorder, selectedMaterial?.Tint, Color3.White);
-                NoTintToggleSwitch.IsOn = selectedMaterial?.NoTint ?? false;
+                ApplyColorPicker(TintColorPicker, TintValueTextBlock, TintValuePreviewBorder, selectedMaterial?.Tint, SourceMaterialDefaults.Color2);
+                NoTintToggleSwitch.IsOn = selectedMaterial?.NoTint ?? SourceMaterialDefaults.Toggle;
 
-                AlphaTestToggleSwitch.IsOn = selectedMaterial?.AlphaTest ?? false;
-                AlphaTestReferenceNumberBox.Text = FormatNullableFloat(selectedMaterial?.AlphaTestReference);
-                AllowAlphaToCoverageToggleSwitch.IsOn = selectedMaterial?.AllowAlphaToCoverage ?? false;
-                NoCullToggleSwitch.IsOn = selectedMaterial?.NoCull ?? false;
-                TranslucentToggleSwitch.IsOn = selectedMaterial?.Translucent ?? false;
-                AdditiveToggleSwitch.IsOn = selectedMaterial?.Additive ?? false;
-                SelfIllumToggleSwitch.IsOn = selectedMaterial?.SelfIllum ?? false;
+                AlphaTestToggleSwitch.IsOn = selectedMaterial?.AlphaTest ?? SourceMaterialDefaults.Toggle;
+                ApplyNullableFloatNumberBox(AlphaTestReferenceNumberBox, selectedMaterial?.AlphaTestReference ?? SourceMaterialDefaults.AlphaTestReference);
+                AllowAlphaToCoverageToggleSwitch.IsOn = selectedMaterial?.AllowAlphaToCoverage ?? SourceMaterialDefaults.Toggle;
+                NoCullToggleSwitch.IsOn = selectedMaterial?.NoCull ?? SourceMaterialDefaults.Toggle;
+                TranslucentToggleSwitch.IsOn = selectedMaterial?.Translucent ?? SourceMaterialDefaults.Toggle;
+                AdditiveToggleSwitch.IsOn = selectedMaterial?.Additive ?? SourceMaterialDefaults.Toggle;
+                SelfIllumToggleSwitch.IsOn = selectedMaterial?.SelfIllum ?? SourceMaterialDefaults.Toggle;
                 EmissiveTextureTextBox.Text = selectedMaterial?.EmissiveTexture ?? string.Empty;
-                EmissiveBlendStrengthNumberBox.Text = FormatNullableFloat(selectedMaterial?.EmissiveBlendStrength);
+                ApplyNullableFloatNumberBox(EmissiveBlendStrengthNumberBox, selectedMaterial?.EmissiveBlendStrength ?? SourceMaterialDefaults.EmissiveBlendStrength);
 
-                HalfLambertToggleSwitch.IsOn = selectedMaterial?.HalfLambert ?? false;
+                HalfLambertToggleSwitch.IsOn = selectedMaterial?.HalfLambert ?? SourceMaterialDefaults.Toggle;
                 LightWarpTextureTextBox.Text = selectedMaterial?.LightWarpTexture ?? string.Empty;
-                UseEnvMapProbesToggleSwitch.IsOn = selectedMaterial?.UseEnvMapProbes ?? false;
+                UseEnvMapProbesToggleSwitch.IsOn = selectedMaterial?.UseEnvMapProbes ?? SourceMaterialDefaults.Toggle;
                 EnvMapTextBox.Text = selectedMaterial?.EnvMap ?? string.Empty;
                 EnvMapMaskTextBox.Text = selectedMaterial?.EnvMapMask ?? string.Empty;
-                ApplyColorPicker(EnvMapTintColorPicker, EnvMapTintValueTextBlock, EnvMapTintValuePreviewBorder, selectedMaterial?.EnvMapTint, Color3.White);
-                EnvMapContrastNumberBox.Text = FormatNullableFloat(selectedMaterial?.EnvMapContrast);
+                ApplyColorPicker(EnvMapTintColorPicker, EnvMapTintValueTextBlock, EnvMapTintValuePreviewBorder, selectedMaterial?.EnvMapTint, SourceMaterialDefaults.EnvMapTint);
+                ApplyNullableFloatNumberBox(EnvMapContrastNumberBox, selectedMaterial?.EnvMapContrast ?? SourceMaterialDefaults.EnvMapContrast);
 
-                PhongToggleSwitch.IsOn = selectedMaterial?.Phong ?? false;
-                PhongBoostNumberBox.Text = FormatNullableFloat(selectedMaterial?.PhongBoost);
-                PhongExponentNumberBox.Text = FormatNullableInt(selectedMaterial?.PhongExponent);
+                PhongToggleSwitch.IsOn = selectedMaterial?.Phong ?? SourceMaterialDefaults.Toggle;
+                ApplyNullableFloatNumberBox(PhongBoostNumberBox, selectedMaterial?.PhongBoost ?? SourceMaterialDefaults.PhongBoost);
+                ApplyNullableIntNumberBox(PhongExponentNumberBox, selectedMaterial?.PhongExponent ?? SourceMaterialDefaults.PhongExponent);
                 PhongExponentTextureTextBox.Text = selectedMaterial?.PhongExponentTexture ?? string.Empty;
-                PhongMaskTextBox.Text = selectedMaterial?.PhongMask ?? string.Empty;
-                ApplyTripletEditors(selectedMaterial?.PhongFresnelRanges);
-                ApplyColorPicker(PhongTintColorPicker, PhongTintValueTextBlock, PhongTintValuePreviewBorder, selectedMaterial?.PhongTint, Color3.White);
-                RimLightToggleSwitch.IsOn = selectedMaterial?.RimLight ?? false;
-                RimLightExponentNumberBox.Text = FormatNullableInt(selectedMaterial?.RimLightExponent);
-                RimLightBoostNumberBox.Text = FormatNullableFloat(selectedMaterial?.RimLightBoost);
+                ApplyTripletEditors(selectedMaterial?.PhongFresnelRanges, SourceMaterialDefaults.PhongFresnelRanges);
+                ApplyColorPicker(PhongTintColorPicker, PhongTintValueTextBlock, PhongTintValuePreviewBorder, selectedMaterial?.PhongTint, SourceMaterialDefaults.PhongTint);
+                RimLightToggleSwitch.IsOn = selectedMaterial?.RimLight ?? SourceMaterialDefaults.Toggle;
+                ApplyNullableIntNumberBox(RimLightExponentNumberBox, selectedMaterial?.RimLightExponent ?? SourceMaterialDefaults.RimLightExponent);
+                ApplyNullableFloatNumberBox(RimLightBoostNumberBox, selectedMaterial?.RimLightBoost ?? SourceMaterialDefaults.RimLightBoost);
                 RefreshTexturePreviews();
             }
             finally
@@ -200,13 +200,19 @@ namespace Yggdrasil.Presentation.Pages
             PhongToggleSwitch.Toggled += MaterialToggleSwitch_Toggled;
             RimLightToggleSwitch.Toggled += MaterialToggleSwitch_Toggled;
 
-            AlphaTestReferenceNumberBox.ValueChanged += MaterialNumberBox_ValueChanged;
-            EmissiveBlendStrengthNumberBox.ValueChanged += MaterialNumberBox_ValueChanged;
-            EnvMapContrastNumberBox.ValueChanged += MaterialNumberBox_ValueChanged;
-            PhongBoostNumberBox.ValueChanged += MaterialNumberBox_ValueChanged;
-            PhongExponentNumberBox.ValueChanged += MaterialNumberBox_ValueChanged;
-            RimLightExponentNumberBox.ValueChanged += MaterialNumberBox_ValueChanged;
-            RimLightBoostNumberBox.ValueChanged += MaterialNumberBox_ValueChanged;
+            RegisterNumberBoxHandlers(
+                AlphaTestReferenceNumberBox,
+                EmissiveBlendStrengthNumberBox,
+                EnvMapContrastNumberBox,
+                PhongBoostNumberBox,
+                PhongExponentNumberBox,
+                RimLightExponentNumberBox,
+                RimLightBoostNumberBox);
+
+            RegisterNumberBoxCommitHandlers(
+                PhongFresnelXNumberBox,
+                PhongFresnelYNumberBox,
+                PhongFresnelZNumberBox);
         }
 
         private void ShaderComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -271,51 +277,79 @@ namespace Yggdrasil.Presentation.Pages
                 return;
             }
 
+            if (IsPhongFresnelNumberBox(sender))
+            {
+                CommitPhongFresnelRanges();
+                return;
+            }
+
             switch (sender.Name)
             {
                 case nameof(AlphaTestReferenceNumberBox):
-                    if (TryParseNullableFloat(sender.Text, out var alphaTestReference))
+                    if (TryReadNullableFloat(sender, args.NewValue, out var alphaTestReference))
                     {
                         UpdateSelectedMaterial(material => material.AlphaTestReference = alphaTestReference);
                     }
                     break;
                 case nameof(EmissiveBlendStrengthNumberBox):
-                    if (TryParseNullableFloat(sender.Text, out var emissiveBlendStrength))
+                    if (TryReadNullableFloat(sender, args.NewValue, out var emissiveBlendStrength))
                     {
                         UpdateSelectedMaterial(material => material.EmissiveBlendStrength = emissiveBlendStrength);
                     }
                     break;
                 case nameof(EnvMapContrastNumberBox):
-                    if (TryParseNullableFloat(sender.Text, out var envMapContrast))
+                    if (TryReadNullableFloat(sender, args.NewValue, out var envMapContrast))
                     {
                         UpdateSelectedMaterial(material => material.EnvMapContrast = envMapContrast);
                     }
                     break;
                 case nameof(PhongBoostNumberBox):
-                    if (TryParseNullableFloat(sender.Text, out var phongBoost))
+                    if (TryReadNullableFloat(sender, args.NewValue, out var phongBoost))
                     {
                         UpdateSelectedMaterial(material => material.PhongBoost = phongBoost);
                     }
                     break;
                 case nameof(PhongExponentNumberBox):
-                    if (TryParseNullableInt(sender.Text, out var phongExponent))
+                    if (TryReadNullableInt(sender, args.NewValue, out var phongExponent))
                     {
                         UpdateSelectedMaterial(material => material.PhongExponent = phongExponent);
                     }
                     break;
                 case nameof(RimLightExponentNumberBox):
-                    if (TryParseNullableInt(sender.Text, out var rimLightExponent))
+                    if (TryReadNullableInt(sender, args.NewValue, out var rimLightExponent))
                     {
                         UpdateSelectedMaterial(material => material.RimLightExponent = rimLightExponent);
                     }
                     break;
                 case nameof(RimLightBoostNumberBox):
-                    if (TryParseNullableFloat(sender.Text, out var rimLightBoost))
+                    if (TryReadNullableFloat(sender, args.NewValue, out var rimLightBoost))
                     {
                         UpdateSelectedMaterial(material => material.RimLightBoost = rimLightBoost);
                     }
                     break;
             }
+        }
+
+        private void MaterialNumberBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (_isRefreshingEditor || sender is not NumberBox numberBox)
+            {
+                return;
+            }
+
+            CommitNumberBox(numberBox);
+        }
+
+        private void MaterialNumberBox_KeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            if (_isRefreshingEditor || sender is not NumberBox numberBox || e.Key != Windows.System.VirtualKey.Enter)
+            {
+                return;
+            }
+
+            CommitNumberBox(numberBox);
+            MaterialEditorPanelHost.Focus(FocusState.Programmatic);
+            e.Handled = true;
         }
 
         private void TintColorPicker_ColorChanged(ColorPicker sender, ColorChangedEventArgs args)
@@ -361,15 +395,7 @@ namespace Yggdrasil.Presentation.Pages
                 return;
             }
 
-            PhongFresnelRangesValueTextBlock.Text = FormatTriplet(
-                PhongFresnelXNumberBox.Text,
-                PhongFresnelYNumberBox.Text,
-                PhongFresnelZNumberBox.Text);
-
-            if (TryParseNullableTriplet(out var phongFresnelRanges))
-            {
-                UpdateSelectedMaterial(material => material.PhongFresnelRanges = phongFresnelRanges);
-            }
+            CommitPhongFresnelRanges();
         }
 
         private async void TextureBrowseButton_Click(object sender, RoutedEventArgs e)
@@ -394,10 +420,38 @@ namespace Yggdrasil.Presentation.Pages
             }
         }
 
+        private void TextureClearButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button button || button.Tag is not string targetName)
+            {
+                return;
+            }
+
+            var textBox = ResolveTexturePathTextBox(targetName);
+            if (textBox is null)
+            {
+                return;
+            }
+
+            textBox.Text = string.Empty;
+            ApplyTexturePreview(targetName, null);
+            ApplyTexturePathChange(targetName, null);
+        }
+
         private void MaterialsPage_Unloaded(object sender, RoutedEventArgs e)
         {
             Host.Shell.HoveredMaterialName = null;
             Host.Shell.PropertyChanged -= Shell_PropertyChanged;
+        }
+
+        private void MaterialEditorPanelHost_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            if (e.OriginalSource is DependencyObject dependencyObject && IsInteractiveInput(dependencyObject))
+            {
+                return;
+            }
+
+            MaterialEditorPanelHost.Focus(FocusState.Pointer);
         }
 
         private void ApplyColorPicker(ColorPicker colorPicker, TextBlock valueTextBlock, Border previewBorder, Color3? color, Color3 defaultColor)
@@ -408,7 +462,7 @@ namespace Yggdrasil.Presentation.Pages
 
         private void ApplyColorPreview(TextBlock valueTextBlock, Border previewBorder, Color3? color)
         {
-            ApplyColorPreview(valueTextBlock, previewBorder, color, Color3.White);
+            ApplyColorPreview(valueTextBlock, previewBorder, color, SourceMaterialDefaults.Color2);
         }
 
         private void ApplyColorPreview(TextBlock valueTextBlock, Border previewBorder, Color3? color, Color3 defaultColor)
@@ -424,21 +478,13 @@ namespace Yggdrasil.Presentation.Pages
             valueTextBlock.Foreground = new SolidColorBrush(GetContrastingTextColor(uiColor));
         }
 
-        private void ApplyTripletEditors(Vector3? value)
+        private void ApplyTripletEditors(Vector3? value, Vector3 defaultValue)
         {
-            if (value is null)
-            {
-                PhongFresnelXNumberBox.Text = string.Empty;
-                PhongFresnelYNumberBox.Text = string.Empty;
-                PhongFresnelZNumberBox.Text = string.Empty;
-                PhongFresnelRangesValueTextBlock.Text = "Unset";
-                return;
-            }
-
-            PhongFresnelXNumberBox.Text = value.Value.X.ToString("0.###", CultureInfo.InvariantCulture);
-            PhongFresnelYNumberBox.Text = value.Value.Y.ToString("0.###", CultureInfo.InvariantCulture);
-            PhongFresnelZNumberBox.Text = value.Value.Z.ToString("0.###", CultureInfo.InvariantCulture);
-            PhongFresnelRangesValueTextBlock.Text = FormatVector(value.Value);
+            var effectiveValue = value ?? defaultValue;
+            ApplyNullableFloatNumberBox(PhongFresnelXNumberBox, effectiveValue.X);
+            ApplyNullableFloatNumberBox(PhongFresnelYNumberBox, effectiveValue.Y);
+            ApplyNullableFloatNumberBox(PhongFresnelZNumberBox, effectiveValue.Z);
+            PhongFresnelRangesValueTextBlock.Text = FormatVector(effectiveValue);
         }
 
         private void UpdateSelectedMaterial(Action<SourceMaterialSettings> applyChanges)
@@ -469,33 +515,32 @@ namespace Yggdrasil.Presentation.Pages
             }
         }
 
-        private void ApplyTexturePathChange(string targetName, string texturePath)
+        private void ApplyTexturePathChange(string targetName, string? texturePath)
         {
+            var normalizedPath = string.IsNullOrWhiteSpace(texturePath) ? null : texturePath;
+
             switch (targetName)
             {
                 case nameof(BaseTextureTextBox):
-                    UpdateSelectedMaterial(material => material.BaseTexture = texturePath);
+                    UpdateSelectedMaterial(material => material.BaseTexture = normalizedPath);
                     break;
                 case nameof(BumpMapTextBox):
-                    UpdateSelectedMaterial(material => material.BumpMap = texturePath);
+                    UpdateSelectedMaterial(material => material.BumpMap = normalizedPath);
                     break;
                 case nameof(EmissiveTextureTextBox):
-                    UpdateSelectedMaterial(material => material.EmissiveTexture = texturePath);
+                    UpdateSelectedMaterial(material => material.EmissiveTexture = normalizedPath);
                     break;
                 case nameof(LightWarpTextureTextBox):
-                    UpdateSelectedMaterial(material => material.LightWarpTexture = texturePath);
+                    UpdateSelectedMaterial(material => material.LightWarpTexture = normalizedPath);
                     break;
                 case nameof(EnvMapTextBox):
-                    UpdateSelectedMaterial(material => material.EnvMap = texturePath);
+                    UpdateSelectedMaterial(material => material.EnvMap = normalizedPath);
                     break;
                 case nameof(EnvMapMaskTextBox):
-                    UpdateSelectedMaterial(material => material.EnvMapMask = texturePath);
+                    UpdateSelectedMaterial(material => material.EnvMapMask = normalizedPath);
                     break;
                 case nameof(PhongExponentTextureTextBox):
-                    UpdateSelectedMaterial(material => material.PhongExponentTexture = texturePath);
-                    break;
-                case nameof(PhongMaskTextBox):
-                    UpdateSelectedMaterial(material => material.PhongMask = texturePath);
+                    UpdateSelectedMaterial(material => material.PhongExponentTexture = normalizedPath);
                     break;
             }
         }
@@ -511,7 +556,6 @@ namespace Yggdrasil.Presentation.Pages
                 nameof(EnvMapTextBox) => EnvMapTextBox,
                 nameof(EnvMapMaskTextBox) => EnvMapMaskTextBox,
                 nameof(PhongExponentTextureTextBox) => PhongExponentTextureTextBox,
-                nameof(PhongMaskTextBox) => PhongMaskTextBox,
                 _ => null
             };
         }
@@ -525,7 +569,6 @@ namespace Yggdrasil.Presentation.Pages
             ApplyTexturePreview(nameof(EnvMapTextBox), EnvMapTextBox.Text);
             ApplyTexturePreview(nameof(EnvMapMaskTextBox), EnvMapMaskTextBox.Text);
             ApplyTexturePreview(nameof(PhongExponentTextureTextBox), PhongExponentTextureTextBox.Text);
-            ApplyTexturePreview(nameof(PhongMaskTextBox), PhongMaskTextBox.Text);
         }
 
         private void ApplyTexturePreview(string targetName, string? texturePath)
@@ -554,7 +597,6 @@ namespace Yggdrasil.Presentation.Pages
                 nameof(EnvMapTextBox) => EnvMapPreviewImage,
                 nameof(EnvMapMaskTextBox) => EnvMapMaskPreviewImage,
                 nameof(PhongExponentTextureTextBox) => PhongExponentTexturePreviewImage,
-                nameof(PhongMaskTextBox) => PhongMaskPreviewImage,
                 _ => null
             };
         }
@@ -570,7 +612,6 @@ namespace Yggdrasil.Presentation.Pages
                 nameof(EnvMapTextBox) => EnvMapPreviewBorder,
                 nameof(EnvMapMaskTextBox) => EnvMapMaskPreviewBorder,
                 nameof(PhongExponentTextureTextBox) => PhongExponentTexturePreviewBorder,
-                nameof(PhongMaskTextBox) => PhongMaskPreviewBorder,
                 _ => null
             };
         }
@@ -638,6 +679,23 @@ namespace Yggdrasil.Presentation.Pages
             return false;
         }
 
+        private static bool TryReadNullableFloat(NumberBox numberBox, double rawValue, out float? value)
+        {
+            if (string.IsNullOrWhiteSpace(numberBox.Text))
+            {
+                value = null;
+                return true;
+            }
+
+            if (!double.IsNaN(rawValue))
+            {
+                value = (float)rawValue;
+                return true;
+            }
+
+            return TryParseNullableFloat(numberBox.Text, out value);
+        }
+
         private static bool TryParseNullableInt(string? text, out int? value)
         {
             if (string.IsNullOrWhiteSpace(text))
@@ -654,6 +712,23 @@ namespace Yggdrasil.Presentation.Pages
 
             value = null;
             return false;
+        }
+
+        private static bool TryReadNullableInt(NumberBox numberBox, double rawValue, out int? value)
+        {
+            if (string.IsNullOrWhiteSpace(numberBox.Text))
+            {
+                value = null;
+                return true;
+            }
+
+            if (!double.IsNaN(rawValue))
+            {
+                value = Convert.ToInt32(Math.Round(rawValue, MidpointRounding.AwayFromZero));
+                return true;
+            }
+
+            return TryParseNullableInt(numberBox.Text, out value);
         }
 
         private static string FormatNullableFloat(float? value)
@@ -718,6 +793,133 @@ namespace Yggdrasil.Presentation.Pages
         {
             var clamped = Math.Clamp(value, 0f, 1f);
             return (byte)Math.Round(clamped * 255f);
+        }
+
+        private void RegisterNumberBoxHandlers(params NumberBox[] numberBoxes)
+        {
+            foreach (var numberBox in numberBoxes)
+            {
+                numberBox.ValueChanged += MaterialNumberBox_ValueChanged;
+                numberBox.LostFocus += MaterialNumberBox_LostFocus;
+                numberBox.KeyDown += MaterialNumberBox_KeyDown;
+            }
+        }
+
+        private void RegisterNumberBoxCommitHandlers(params NumberBox[] numberBoxes)
+        {
+            foreach (var numberBox in numberBoxes)
+            {
+                numberBox.LostFocus += MaterialNumberBox_LostFocus;
+                numberBox.KeyDown += MaterialNumberBox_KeyDown;
+            }
+        }
+
+        private void CommitNumberBox(NumberBox numberBox)
+        {
+            if (IsPhongFresnelNumberBox(numberBox))
+            {
+                CommitPhongFresnelRanges();
+                return;
+            }
+
+            switch (numberBox.Name)
+            {
+                case nameof(AlphaTestReferenceNumberBox):
+                    if (TryParseNullableFloat(numberBox.Text, out var alphaTestReference))
+                    {
+                        UpdateSelectedMaterial(material => material.AlphaTestReference = alphaTestReference);
+                    }
+                    break;
+                case nameof(EmissiveBlendStrengthNumberBox):
+                    if (TryParseNullableFloat(numberBox.Text, out var emissiveBlendStrength))
+                    {
+                        UpdateSelectedMaterial(material => material.EmissiveBlendStrength = emissiveBlendStrength);
+                    }
+                    break;
+                case nameof(EnvMapContrastNumberBox):
+                    if (TryParseNullableFloat(numberBox.Text, out var envMapContrast))
+                    {
+                        UpdateSelectedMaterial(material => material.EnvMapContrast = envMapContrast);
+                    }
+                    break;
+                case nameof(PhongBoostNumberBox):
+                    if (TryParseNullableFloat(numberBox.Text, out var phongBoost))
+                    {
+                        UpdateSelectedMaterial(material => material.PhongBoost = phongBoost);
+                    }
+                    break;
+                case nameof(PhongExponentNumberBox):
+                    if (TryParseNullableInt(numberBox.Text, out var phongExponent))
+                    {
+                        UpdateSelectedMaterial(material => material.PhongExponent = phongExponent);
+                    }
+                    break;
+                case nameof(RimLightExponentNumberBox):
+                    if (TryParseNullableInt(numberBox.Text, out var rimLightExponent))
+                    {
+                        UpdateSelectedMaterial(material => material.RimLightExponent = rimLightExponent);
+                    }
+                    break;
+                case nameof(RimLightBoostNumberBox):
+                    if (TryParseNullableFloat(numberBox.Text, out var rimLightBoost))
+                    {
+                        UpdateSelectedMaterial(material => material.RimLightBoost = rimLightBoost);
+                    }
+                    break;
+            }
+        }
+
+        private void CommitPhongFresnelRanges()
+        {
+            PhongFresnelRangesValueTextBlock.Text = FormatTriplet(
+                PhongFresnelXNumberBox.Text,
+                PhongFresnelYNumberBox.Text,
+                PhongFresnelZNumberBox.Text);
+
+            if (TryParseNullableTriplet(out var phongFresnelRanges))
+            {
+                UpdateSelectedMaterial(material => material.PhongFresnelRanges = phongFresnelRanges);
+            }
+        }
+
+        private static bool IsPhongFresnelNumberBox(NumberBox numberBox)
+        {
+            return numberBox.Name == nameof(PhongFresnelXNumberBox)
+                || numberBox.Name == nameof(PhongFresnelYNumberBox)
+                || numberBox.Name == nameof(PhongFresnelZNumberBox);
+        }
+
+        private static bool IsInteractiveInput(DependencyObject dependencyObject)
+        {
+            var current = dependencyObject;
+            while (current is not null)
+            {
+                if (current is NumberBox
+                    || current is TextBox
+                    || current is ComboBox
+                    || current is ToggleSwitch
+                    || current is Button
+                    || current is ColorPicker)
+                {
+                    return true;
+                }
+
+                current = VisualTreeHelper.GetParent(current);
+            }
+
+            return false;
+        }
+
+        private static void ApplyNullableFloatNumberBox(NumberBox numberBox, float? value)
+        {
+            numberBox.Value = value ?? double.NaN;
+            numberBox.Text = FormatNullableFloat(value);
+        }
+
+        private static void ApplyNullableIntNumberBox(NumberBox numberBox, int? value)
+        {
+            numberBox.Value = value ?? double.NaN;
+            numberBox.Text = FormatNullableInt(value);
         }
     }
 }

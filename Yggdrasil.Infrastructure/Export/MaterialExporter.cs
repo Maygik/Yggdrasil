@@ -195,7 +195,7 @@ namespace Yggdrasil.Infrastructure.Export
                     sb.AppendLine($"\t\"$phongtint\" \"[{phongTint.R} {phongTint.G} {phongTint.B}]\"");
                 }
 
-                // Phong mask is handled by baking it into the alpha of the normal map
+                // Source uses the normal map alpha path for phong masking, so there is no separate texture slot here.
             }
 
             // Rimlight

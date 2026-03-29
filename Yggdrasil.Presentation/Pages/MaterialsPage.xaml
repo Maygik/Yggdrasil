@@ -28,6 +28,22 @@
             TargetType="TextBlock"
             BasedOn="{StaticResource CaptionTextStyle}">
             <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextWrapping" Value="WrapWholeWords" />
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="MaxWidth" Value="360" />
+        </Style>
+        <Style TargetType="NumberBox">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="MaxWidth" Value="280" />
+        </Style>
+        <Style TargetType="ColorPicker">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="MaxWidth" Value="420" />
+        </Style>
+        <Style TargetType="ToggleSwitch">
+            <Setter Property="HorizontalAlignment" Value="Left" />
         </Style>
     </Page.Resources>
 
@@ -61,10 +77,14 @@
             <Grid Grid.Row="1" ColumnSpacing="16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="2*" />
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Style="{StaticResource PanelBorderStyle}" Padding="20">
+                <Border
+                    x:Name="MaterialListPanel"
+                    Grid.Column="0"
+                    Style="{StaticResource PanelBorderStyle}"
+                    Padding="20">
                     <Grid RowSpacing="4">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -114,7 +134,14 @@
                     </Grid>
                 </Border>
 
-                <Border Grid.Column="1" Style="{StaticResource PanelBorderStyle}" Padding="20">
+                <Border
+                    x:Name="MaterialEditorPanelHost"
+                    Grid.Column="1"
+                    Style="{StaticResource PanelBorderStyle}"
+                    Padding="20"
+                    IsTabStop="True"
+                    UseSystemFocusVisuals="False"
+                    Tapped="MaterialEditorPanelHost_Tapped">
                     <Grid RowSpacing="4">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -123,7 +150,7 @@
 
                         <TextBlock Grid.Row="0" Style="{StaticResource SectionTitleTextStyle}" Text="Selected Material" />
 
-                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled">
                             <StackPanel MinHeight="600" Spacing="12">
                                 <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
                                     <StackPanel Spacing="6">
@@ -168,10 +195,11 @@
 
                                             <Grid ColumnSpacing="12">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="160" />
+                                                    <ColumnDefinition Width="100" />
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
 
                                                 <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$basetexture" />
@@ -191,19 +219,27 @@
                                                     Content="Browse..."
                                                     Tag="BaseTextureTextBox"
                                                     Click="TextureBrowseButton_Click" />
+                                                <Button
+                                                    Grid.Column="3"
+                                                    Margin="8,0,0,0"
+                                                    MinWidth="12"
+                                                    Content="X"
+                                                    Tag="BaseTextureTextBox"
+                                                    Click="TextureClearButton_Click" />
                                                 <TextBox
                                                     x:Name="BaseTextureTextBox"
-                                                    Grid.Column="3"
+                                                    Grid.Column="4"
                                                     Visibility="Collapsed"
                                                     PlaceholderText="textures/models/example" />
                                             </Grid>
 
                                             <Grid ColumnSpacing="12">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="160" />
+                                                    <ColumnDefinition Width="100" />
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
 
                                                 <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$bumpmap" />
@@ -223,9 +259,16 @@
                                                     Content="Browse..."
                                                     Tag="BumpMapTextBox"
                                                     Click="TextureBrowseButton_Click" />
+                                                <Button
+                                                    Grid.Column="3"
+                                                    Margin="8,0,0,0"
+                                                    MinWidth="12"
+                                                    Content="X"
+                                                    Tag="BumpMapTextBox"
+                                                    Click="TextureClearButton_Click" />
                                                 <TextBox
                                                     x:Name="BumpMapTextBox"
-                                                    Grid.Column="3"
+                                                    Grid.Column="4"
                                                     Visibility="Collapsed"
                                                     PlaceholderText="textures/models/example_normal" />
                                             </Grid>
@@ -388,10 +431,11 @@
 
                                                 <Grid ColumnSpacing="12">
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="160" />
+                                                        <ColumnDefinition Width="100" />
                                                         <ColumnDefinition Width="Auto" />
                                                         <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
 
                                                     <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$emissiveblend" />
@@ -411,9 +455,16 @@
                                                         Content="Browse..."
                                                         Tag="EmissiveTextureTextBox"
                                                         Click="TextureBrowseButton_Click" />
+                                                    <Button
+                                                        Grid.Column="3"
+                                                        Margin="8,0,0,0"
+                                                        MinWidth="12"
+                                                        Content="X"
+                                                        Tag="EmissiveTextureTextBox"
+                                                        Click="TextureClearButton_Click" />
                                                     <TextBox
                                                         x:Name="EmissiveTextureTextBox"
-                                                        Grid.Column="3"
+                                                        Grid.Column="4"
                                                         Visibility="Collapsed"
                                                         PlaceholderText="textures/models/example_emissive" />
                                                 </Grid>
@@ -460,10 +511,11 @@
 
                                                         <Grid ColumnSpacing="12">
                                                             <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="100" />
                                                                 <ColumnDefinition Width="Auto" />
                                                                 <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
                                                             </Grid.ColumnDefinitions>
 
                                                             <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$lightwarptexture" />
@@ -483,136 +535,18 @@
                                                                 Content="Browse..."
                                                                 Tag="LightWarpTextureTextBox"
                                                                 Click="TextureBrowseButton_Click" />
+                                                            <Button
+                                                                Grid.Column="3"
+                                                                Margin="8,0,0,0"
+                                                                MinWidth="12"
+                                                                Content="X"
+                                                                Tag="LightWarpTextureTextBox"
+                                                                Click="TextureClearButton_Click" />
                                                             <TextBox
                                                                 x:Name="LightWarpTextureTextBox"
-                                                                Grid.Column="3"
+                                                                Grid.Column="4"
                                                                 Visibility="Collapsed"
                                                                 PlaceholderText="textures/models/example_lightwarp" />
-                                                        </Grid>
-                                                    </StackPanel>
-                                                </Border>
-
-                                                <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
-                                                    <StackPanel Spacing="12">
-                                                        <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="Environment" />
-
-                                                        <Grid ColumnSpacing="12">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="160" />
-                                                                <ColumnDefinition Width="*" />
-                                                            </Grid.ColumnDefinitions>
-
-                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="Use envmap probes" />
-                                                            <ToggleSwitch
-                                                                x:Name="UseEnvMapProbesToggleSwitch"
-                                                                Grid.Column="1"
-                                                                HorizontalAlignment="Left"
-                                                                OffContent="Use explicit envmap"
-                                                                OnContent="Use env_cubemap probes" />
-                                                        </Grid>
-
-                                                        <Grid ColumnSpacing="12">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="160" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="*" />
-                                                            </Grid.ColumnDefinitions>
-
-                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$envmap" />
-                                                            <Border
-                                                                x:Name="EnvMapPreviewBorder"
-                                                                Grid.Column="1"
-                                                                Width="40"
-                                                                Height="40"
-                                                                Padding="0"
-                                                                Style="{StaticResource SubtlePanelBorderStyle}">
-                                                                <Image x:Name="EnvMapPreviewImage" Stretch="UniformToFill" />
-                                                            </Border>
-                                                            <Button
-                                                                Grid.Column="2"
-                                                                Margin="8,0,0,0"
-                                                                MinWidth="88"
-                                                                Content="Browse..."
-                                                                Tag="EnvMapTextBox"
-                                                                Click="TextureBrowseButton_Click" />
-                                                            <TextBox
-                                                                x:Name="EnvMapTextBox"
-                                                                Grid.Column="3"
-                                                                Visibility="Collapsed"
-                                                                PlaceholderText="env_cubemap or texture path" />
-                                                        </Grid>
-
-                                                        <Grid ColumnSpacing="12">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="160" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="*" />
-                                                            </Grid.ColumnDefinitions>
-
-                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$envmapmask" />
-                                                            <Border
-                                                                x:Name="EnvMapMaskPreviewBorder"
-                                                                Grid.Column="1"
-                                                                Width="40"
-                                                                Height="40"
-                                                                Padding="0"
-                                                                Style="{StaticResource SubtlePanelBorderStyle}">
-                                                                <Image x:Name="EnvMapMaskPreviewImage" Stretch="UniformToFill" />
-                                                            </Border>
-                                                            <Button
-                                                                Grid.Column="2"
-                                                                Margin="8,0,0,0"
-                                                                MinWidth="88"
-                                                                Content="Browse..."
-                                                                Tag="EnvMapMaskTextBox"
-                                                                Click="TextureBrowseButton_Click" />
-                                                            <TextBox
-                                                                x:Name="EnvMapMaskTextBox"
-                                                                Grid.Column="3"
-                                                                Visibility="Collapsed"
-                                                                PlaceholderText="textures/models/example_mask" />
-                                                        </Grid>
-
-                                                        <StackPanel Spacing="6">
-                                                            <TextBlock Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$envmaptint" />
-                                                            <ColorPicker
-                                                                x:Name="EnvMapTintColorPicker"
-                                                                IsAlphaEnabled="False"
-                                                                IsColorChannelTextInputVisible="True"
-                                                                IsColorPreviewVisible="False"
-                                                                IsColorSliderVisible="False"
-                                                                IsColorSpectrumVisible="False"
-                                                                IsHexInputVisible="True"
-                                                                ColorChanged="EnvMapTintColorPicker_ColorChanged" />
-                                                            <Border
-                                                                x:Name="EnvMapTintValuePreviewBorder"
-                                                                MinHeight="40"
-                                                                Padding="10,8"
-                                                                Style="{StaticResource SubtlePanelBorderStyle}">
-                                                                <TextBlock
-                                                                    x:Name="EnvMapTintValueTextBlock"
-                                                                    HorizontalAlignment="Center"
-                                                                    VerticalAlignment="Center"
-                                                                    Style="{StaticResource CaptionTextStyle}"
-                                                                    Text="Unset" />
-                                                            </Border>
-                                                        </StackPanel>
-
-                                                        <Grid ColumnSpacing="12">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="160" />
-                                                                <ColumnDefinition Width="*" />
-                                                            </Grid.ColumnDefinitions>
-
-                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$envmapcontrast" />
-                                                            <NumberBox
-                                                                x:Name="EnvMapContrastNumberBox"
-                                                                Grid.Column="1"
-                                                                SmallChange="0.1"
-                                                                SpinButtonPlacementMode="Hidden"
-                                                                PlaceholderText="1.0" />
                                                         </Grid>
                                                     </StackPanel>
                                                 </Border>
@@ -668,10 +602,11 @@
 
                                                         <Grid ColumnSpacing="12">
                                                             <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="100" />
                                                                 <ColumnDefinition Width="Auto" />
                                                                 <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
                                                             </Grid.ColumnDefinitions>
 
                                                             <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$phongexponenttexture" />
@@ -691,43 +626,18 @@
                                                                 Content="Browse..."
                                                                 Tag="PhongExponentTextureTextBox"
                                                                 Click="TextureBrowseButton_Click" />
+                                                            <Button
+                                                                Grid.Column="3"
+                                                                Margin="8,0,0,0"
+                                                                MinWidth="12"
+                                                                Content="X"
+                                                                Tag="PhongExponentTextureTextBox"
+                                                                Click="TextureClearButton_Click" />
                                                             <TextBox
                                                                 x:Name="PhongExponentTextureTextBox"
-                                                                Grid.Column="3"
+                                                                Grid.Column="4"
                                                                 Visibility="Collapsed"
                                                                 PlaceholderText="textures/models/example_exponent" />
-                                                        </Grid>
-
-                                                        <Grid ColumnSpacing="12">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="160" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="*" />
-                                                            </Grid.ColumnDefinitions>
-
-                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$phongmask" />
-                                                            <Border
-                                                                x:Name="PhongMaskPreviewBorder"
-                                                                Grid.Column="1"
-                                                                Width="40"
-                                                                Height="40"
-                                                                Padding="0"
-                                                                Style="{StaticResource SubtlePanelBorderStyle}">
-                                                                <Image x:Name="PhongMaskPreviewImage" Stretch="UniformToFill" />
-                                                            </Border>
-                                                            <Button
-                                                                Grid.Column="2"
-                                                                Margin="8,0,0,0"
-                                                                MinWidth="88"
-                                                                Content="Browse..."
-                                                                Tag="PhongMaskTextBox"
-                                                                Click="TextureBrowseButton_Click" />
-                                                            <TextBox
-                                                                x:Name="PhongMaskTextBox"
-                                                                Grid.Column="3"
-                                                                Visibility="Collapsed"
-                                                                PlaceholderText="textures/models/example_mask" />
                                                         </Grid>
 
                                                         <StackPanel Spacing="8">
@@ -841,6 +751,147 @@
                                                                 SmallChange="0.1"
                                                                 SpinButtonPlacementMode="Hidden"
                                                                 PlaceholderText="0.0" />
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <Border Style="{StaticResource SubtlePanelBorderStyle}" Padding="16">
+                                                    <StackPanel Spacing="12">
+                                                        <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="Environment" />
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="Use envmap probes" />
+                                                            <ToggleSwitch
+                                                                x:Name="UseEnvMapProbesToggleSwitch"
+                                                                Grid.Column="1"
+                                                                HorizontalAlignment="Left"
+                                                                OffContent="Use explicit envmap"
+                                                                OnContent="Use env_cubemap probes" />
+                                                        </Grid>
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="100" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$envmap" />
+                                                            <Border
+                                                                x:Name="EnvMapPreviewBorder"
+                                                                Grid.Column="1"
+                                                                Width="40"
+                                                                Height="40"
+                                                                Padding="0"
+                                                                Style="{StaticResource SubtlePanelBorderStyle}">
+                                                                <Image x:Name="EnvMapPreviewImage" Stretch="UniformToFill" />
+                                                            </Border>
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Margin="8,0,0,0"
+                                                                MinWidth="88"
+                                                                Content="Browse..."
+                                                                Tag="EnvMapTextBox"
+                                                                Click="TextureBrowseButton_Click" />
+                                                            <Button
+                                                                Grid.Column="3"
+                                                                Margin="8,0,0,0"
+                                                                MinWidth="12"
+                                                                Content="X"
+                                                                Tag="EnvMapTextBox"
+                                                                Click="TextureClearButton_Click" />
+                                                            <TextBox
+                                                                x:Name="EnvMapTextBox"
+                                                                Grid.Column="4"
+                                                                Visibility="Collapsed"
+                                                                PlaceholderText="env_cubemap or texture path" />
+                                                        </Grid>
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="100" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$envmapmask" />
+                                                            <Border
+                                                                x:Name="EnvMapMaskPreviewBorder"
+                                                                Grid.Column="1"
+                                                                Width="40"
+                                                                Height="40"
+                                                                Padding="0"
+                                                                Style="{StaticResource SubtlePanelBorderStyle}">
+                                                                <Image x:Name="EnvMapMaskPreviewImage" Stretch="UniformToFill" />
+                                                            </Border>
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Margin="8,0,0,0"
+                                                                MinWidth="88"
+                                                                Content="Browse..."
+                                                                Tag="EnvMapMaskTextBox"
+                                                                Click="TextureBrowseButton_Click" />
+                                                            <Button
+                                                                Grid.Column="3"
+                                                                Margin="8,0,0,0"
+                                                                MinWidth="12"
+                                                                Content="X"
+                                                                Tag="EnvMapMaskTextBox"
+                                                                Click="TextureClearButton_Click" />
+                                                            <TextBox
+                                                                x:Name="EnvMapMaskTextBox"
+                                                                Grid.Column="4"
+                                                                Visibility="Collapsed"
+                                                                PlaceholderText="textures/models/example_mask" />
+                                                        </Grid>
+
+                                                        <StackPanel Spacing="6">
+                                                            <TextBlock Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$envmaptint" />
+                                                            <ColorPicker
+                                                                x:Name="EnvMapTintColorPicker"
+                                                                IsAlphaEnabled="False"
+                                                                IsColorChannelTextInputVisible="True"
+                                                                IsColorPreviewVisible="False"
+                                                                IsColorSliderVisible="False"
+                                                                IsColorSpectrumVisible="False"
+                                                                IsHexInputVisible="True"
+                                                                ColorChanged="EnvMapTintColorPicker_ColorChanged" />
+                                                            <Border
+                                                                x:Name="EnvMapTintValuePreviewBorder"
+                                                                MinHeight="40"
+                                                                Padding="10,8"
+                                                                Style="{StaticResource SubtlePanelBorderStyle}">
+                                                                <TextBlock
+                                                                    x:Name="EnvMapTintValueTextBlock"
+                                                                    HorizontalAlignment="Center"
+                                                                    VerticalAlignment="Center"
+                                                                    Style="{StaticResource CaptionTextStyle}"
+                                                                    Text="Unset" />
+                                                            </Border>
+                                                        </StackPanel>
+
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Style="{StaticResource MaterialFieldLabelTextStyle}" Text="$envmapcontrast" />
+                                                            <NumberBox
+                                                                x:Name="EnvMapContrastNumberBox"
+                                                                Grid.Column="1"
+                                                                SmallChange="0.1"
+                                                                SpinButtonPlacementMode="Hidden"
+                                                                PlaceholderText="1.0" />
                                                         </Grid>
                                                     </StackPanel>
                                                 </Border>

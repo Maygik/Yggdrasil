@@ -24,8 +24,6 @@ internal sealed class MaterialGpuResources : IDisposable
 
     public ID3D11ShaderResourceView? PhongExponentTextureView { get; init; }
 
-    public ID3D11ShaderResourceView? PhongMaskTextureView { get; init; }
-
     public ID3D11ShaderResourceView[] TextureViews { get; init; } = Array.Empty<ID3D11ShaderResourceView>();
 
     public ID3D11Buffer? MaterialConstantsBuffer { get; init; }

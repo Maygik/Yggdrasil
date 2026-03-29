@@ -52,7 +52,6 @@ public sealed class RenderMaterialSnapshot
     public float? PhongBoost { get; init; }
     public int? PhongExponent { get; init; }
     public string? PhongExponentTexture { get; init; }
-    public string? PhongMask { get; init; }
     public Vector3? PhongFresnelRanges { get; init; }
     public Color3? PhongTint { get; init; }
 

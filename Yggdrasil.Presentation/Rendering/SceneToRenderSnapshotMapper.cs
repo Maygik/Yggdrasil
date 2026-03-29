@@ -71,7 +71,6 @@ public sealed class SceneToRenderSnapshotMapper
             PhongBoost = material.PhongBoost,
             PhongExponent = material.PhongExponent,
             PhongExponentTexture = material.PhongExponentTexture,
-            PhongMask = material.PhongMask,
             PhongFresnelRanges = material.PhongFresnelRanges,
             PhongTint = material.PhongTint,
             RimLight = material.RimLight,
