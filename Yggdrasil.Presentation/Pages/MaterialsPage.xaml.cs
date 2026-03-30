@@ -4,11 +4,15 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Windows.UI;
+using Yggdrasil.Application;
+using Yggdrasil.Application.UseCases;
 using Yggdrasil.Domain.Scene;
 using Yggdrasil.Presentation.Models;
 using Yggdrasil.Presentation.Services;
@@ -21,6 +25,7 @@ namespace Yggdrasil.Presentation.Pages
         public AppHost Host { get; }
         public ObservableCollection<MaterialListItem> MaterialItems { get; } = new();
         private bool _isRefreshingEditor;
+        private bool _isExportingMaterials;
 
         public MaterialsPage()
         {
@@ -78,6 +83,7 @@ namespace Yggdrasil.Presentation.Pages
             MaterialListItemsControl.Visibility = MaterialItems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
             RefreshSelectedMaterialEditor();
+            RefreshMaterialExportState();
         }
 
         private void RefreshSelectedMaterialEditor()
@@ -438,10 +444,116 @@ namespace Yggdrasil.Presentation.Pages
             ApplyTexturePathChange(targetName, null);
         }
 
+        private async void ExportSelectedMaterialButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isExportingMaterials)
+            {
+                return;
+            }
+
+            var selectedMaterialName = Host.Shell.SelectedMaterialName;
+            if (string.IsNullOrWhiteSpace(selectedMaterialName))
+            {
+                Host.Shell.StatusMessage = "Select a material before exporting a single material set.";
+                return;
+            }
+
+            await ExportMaterialsAsync(new[] { selectedMaterialName });
+        }
+
+        private async void ExportAllMaterialsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isExportingMaterials)
+            {
+                return;
+            }
+
+            await ExportMaterialsAsync(null);
+        }
+
         private void MaterialsPage_Unloaded(object sender, RoutedEventArgs e)
         {
             Host.Shell.HoveredMaterialName = null;
             Host.Shell.PropertyChanged -= Shell_PropertyChanged;
+        }
+
+        private void RefreshMaterialExportState()
+        {
+            var addonPath = Host.Shell.CurrentSession?.Project?.Build?.AddonDirectory;
+            var hasAddonPath = !string.IsNullOrWhiteSpace(addonPath);
+            var hasVtfCmdPath = PackagedToolPaths.HasVtfCmd();
+            var canExportMaterials = hasAddonPath && hasVtfCmdPath;
+            var hasSelectedMaterial = GetSelectedMaterial() is not null;
+
+            MaterialExportPanel.IsHitTestVisible = canExportMaterials;
+            MaterialExportPanel.Opacity = canExportMaterials ? 1.0 : 0.55;
+            ExportSelectedMaterialButton.IsEnabled = canExportMaterials && hasSelectedMaterial && !_isExportingMaterials;
+            ExportAllMaterialsButton.IsEnabled = canExportMaterials && !_isExportingMaterials;
+            MaterialExportHintTextBlock.Text = !hasAddonPath && !hasVtfCmdPath
+                ? "Set an addon root on the Project page and include the bundled VTFCmd tool in this app build to enable material export."
+                : !hasAddonPath
+                    ? "Set an addon root on the Project page to enable material export."
+                    : !hasVtfCmdPath
+                        ? "This app build does not include the bundled VTFCmd tool yet."
+                : _isExportingMaterials
+                    ? "Writing VMT and VTF files..."
+                    : hasSelectedMaterial
+                        ? "Export the selected material or the full material set to the configured addon."
+                        : "Export all materials now, or select one to enable single-material export.";
+        }
+
+        private async Task ExportMaterialsAsync(IReadOnlyCollection<string>? materialNames)
+        {
+            if (Host.Shell.CurrentSession?.Project is null)
+            {
+                Host.Shell.StatusMessage = "No project is currently open.";
+                return;
+            }
+
+            var request = new ExportMaterialsRequest
+            {
+                Project = Host.Shell.CurrentSession.Project,
+                MaterialNames = materialNames
+            };
+
+            try
+            {
+                _isExportingMaterials = true;
+                RefreshMaterialExportState();
+
+                var result = await Task.Run(() => Host.Backend.ExportMaterials.Execute(request));
+                RenderMaterialExportResult(result);
+            }
+            catch (Exception ex)
+            {
+                Host.Shell.StatusMessage = $"Material export failed: {ex.Message}";
+            }
+            finally
+            {
+                _isExportingMaterials = false;
+                RefreshMaterialExportState();
+            }
+        }
+
+        private void RenderMaterialExportResult(ExportMaterialsResult result)
+        {
+            if (!result.Success)
+            {
+                Host.Shell.StatusMessage = $"Material export failed: {result.ErrorMessage ?? "Unknown error."}";
+                return;
+            }
+
+            if (result.HasWarnings)
+            {
+                var message = result.Messages.FirstOrDefault();
+                var warning = result.Warnings.FirstOrDefault() ?? "Material export completed with warnings.";
+                Host.Shell.StatusMessage = string.IsNullOrWhiteSpace(message)
+                    ? warning
+                    : $"{message} {warning}";
+                return;
+            }
+
+            Host.Shell.StatusMessage = result.Messages.FirstOrDefault() ?? "Material export completed successfully.";
         }
 
         private void MaterialEditorPanelHost_Tapped(object sender, TappedRoutedEventArgs e)

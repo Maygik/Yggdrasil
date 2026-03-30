@@ -35,7 +35,7 @@
                     <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Export" />
                     <TextBlock
                         Style="{StaticResource CaptionTextStyle}"
-                        Text="Choose what to export to the current project's output directory." />
+                        Text="Choose which model outputs to export to the current project's output directory." />
                 </StackPanel>
 
                 <!--Output directory-->
@@ -88,10 +88,6 @@
                             Content="Meshes + animations"
                             Checked="ExportOptionCheckBox_Changed"
                             Unchecked="ExportOptionCheckBox_Changed" />
-                        <CheckBox
-                            x:Name="ExportMaterialsCheckBox"
-                            Content="Material export (coming soon)"
-                            IsEnabled="False" />
                     </StackPanel>
                 </Border>
 

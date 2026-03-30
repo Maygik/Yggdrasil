@@ -12,6 +12,24 @@ namespace Yggdrasil.Domain.Rigging
     /// </summary>
     public class SourceBoneMapping
     {
+        public IEnumerable<RigSlot> GetSlots()
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                yield return this[i];
+            }
+        }
+
+        public IReadOnlyDictionary<string, string> CreateAssignedBoneRenameMap(IExportBoneNamingConvention namingConvention)
+        {
+            return CreateBoneRenameMap(slot => slot.AssignedBone, namingConvention);
+        }
+
+        public IReadOnlyDictionary<string, string> CreateLogicalBoneRenameMap(IExportBoneNamingConvention namingConvention)
+        {
+            return CreateBoneRenameMap(slot => slot.LogicalBone, namingConvention);
+        }
+
         public RigSlot? TryGetRigSlotFromName(string name)
         {
             // Check if works as an integer index first
@@ -92,7 +110,51 @@ namespace Yggdrasil.Domain.Rigging
             if (RightToesAlias.Contains(name, StringComparer.OrdinalIgnoreCase))
                 return RightToesSlot;
 
+            foreach (var slot in GetSlots())
+            {
+                if (string.Equals(slot.LogicalBone, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return slot;
+                }
+            }
+
             return null;
+        }
+
+        private IReadOnlyDictionary<string, string> CreateBoneRenameMap(
+            Func<RigSlot, string?> sourceNameSelector,
+            IExportBoneNamingConvention namingConvention)
+        {
+            ArgumentNullException.ThrowIfNull(sourceNameSelector);
+            ArgumentNullException.ThrowIfNull(namingConvention);
+
+            var renameMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var slot in GetSlots())
+            {
+                var sourceName = sourceNameSelector(slot);
+                if (string.IsNullOrWhiteSpace(sourceName))
+                {
+                    continue;
+                }
+
+                var targetName = namingConvention.GetBoneName(slot);
+                if (string.IsNullOrWhiteSpace(targetName))
+                {
+                    continue;
+                }
+
+                if (renameMap.TryGetValue(sourceName, out var existingTarget)
+                    && !string.Equals(existingTarget, targetName, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Bone '{sourceName}' cannot be mapped to both '{existingTarget}' and '{targetName}' for export.");
+                }
+
+                renameMap[sourceName] = targetName;
+            }
+
+            return renameMap;
         }
 
         // Allow accessing by index

@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Windows.Foundation;
@@ -34,6 +35,7 @@ namespace Yggdrasil.Presentation
         {
             Host = host;
             InitializeComponent();
+            ApplyWindowIcon();
 
             Title = Host.Shell.WindowTitle;
             Host.Shell.PropertyChanged += OnShellPropertyChanged;
@@ -49,9 +51,27 @@ namespace Yggdrasil.Presentation
             Activated -= MainWindow_Activated;
             await Host.Shell.InitializeAsync();
 
+
             ViewportControl.Connect(Host.Viewport);
             SyncViewportScene();
             SyncViewportSelection();
+        }
+
+        private void ApplyWindowIcon()
+        {
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Yggdrasil.ico");
+            if (!File.Exists(iconPath))
+                return;
+
+            try
+            {
+                AppWindow.SetIcon(iconPath);
+                AppWindow.SetTaskbarIcon(iconPath);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex);
+            }
         }
 
         private void OnShellPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

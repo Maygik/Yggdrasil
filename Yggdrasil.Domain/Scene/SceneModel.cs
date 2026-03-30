@@ -138,5 +138,155 @@ namespace Yggdrasil.Domain.Scene
             };
             return clone;
         }
+
+        public void RenameBone(string currentName, string newName)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(currentName);
+            ArgumentException.ThrowIfNullOrWhiteSpace(newName);
+
+            RenameBones(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [currentName] = newName
+            });
+        }
+
+        public void RenameBones(IReadOnlyDictionary<string, string> boneRenames)
+        {
+            ArgumentNullException.ThrowIfNull(boneRenames);
+
+            if (boneRenames.Count == 0)
+            {
+                return;
+            }
+
+            var normalizedRenames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var rename in boneRenames)
+            {
+                ArgumentException.ThrowIfNullOrWhiteSpace(rename.Key);
+                ArgumentException.ThrowIfNullOrWhiteSpace(rename.Value);
+
+                if (normalizedRenames.TryGetValue(rename.Key, out var existingTarget)
+                    && !string.Equals(existingTarget, rename.Value, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Bone '{rename.Key}' cannot be renamed to both '{existingTarget}' and '{rename.Value}'.");
+                }
+
+                if (string.Equals(rename.Key, rename.Value, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                normalizedRenames[rename.Key] = rename.Value;
+            }
+
+            if (normalizedRenames.Count == 0)
+            {
+                return;
+            }
+
+            RenameBoneNodes(normalizedRenames);
+            RenameMeshBoneWeights(normalizedRenames);
+        }
+
+        private void RenameBoneNodes(IReadOnlyDictionary<string, string> boneRenames)
+        {
+            if (RootBone == null)
+            {
+                return;
+            }
+
+            var allBones = RootBone.GetAllDescendantsAndSelf();
+            var existingBoneNames = new HashSet<string>(allBones.Select(b => b.Name), StringComparer.OrdinalIgnoreCase);
+            var sourceNamesInScene = boneRenames.Keys
+                .Where(existingBoneNames.Contains)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            if (sourceNamesInScene.Count == 0)
+            {
+                return;
+            }
+
+            var nodeRenames = boneRenames
+                .Where(rename => sourceNamesInScene.Contains(rename.Key))
+                .ToList();
+
+            var duplicateTargets = nodeRenames
+                .GroupBy(rename => rename.Value, StringComparer.OrdinalIgnoreCase)
+                .Where(group => group.Select(rename => rename.Key).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 1)
+                .Select(group => group.Key)
+                .ToList();
+
+            if (duplicateTargets.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Multiple scene bones cannot be renamed to the same target: {string.Join(", ", duplicateTargets)}.");
+            }
+
+            var unaffectedBoneNames = new HashSet<string>(existingBoneNames, StringComparer.OrdinalIgnoreCase);
+            unaffectedBoneNames.ExceptWith(sourceNamesInScene);
+
+            foreach (var rename in nodeRenames)
+            {
+                if (unaffectedBoneNames.Contains(rename.Value))
+                {
+                    throw new InvalidOperationException(
+                        $"Cannot rename bone '{rename.Key}' to '{rename.Value}' because that bone already exists in the scene.");
+                }
+            }
+
+            var renamedBones = new List<(Bone Bone, string FinalName)>();
+            int renameIndex = 0;
+
+            foreach (var bone in allBones)
+            {
+                if (!boneRenames.TryGetValue(bone.Name, out var finalName))
+                {
+                    continue;
+                }
+
+                renamedBones.Add((bone, finalName));
+                bone.Name = $"__ygg_tmp_bone_rename_{renameIndex++}_{Guid.NewGuid():N}";
+            }
+
+            foreach (var renamedBone in renamedBones)
+            {
+                renamedBone.Bone.Name = renamedBone.FinalName;
+            }
+        }
+
+        private void RenameMeshBoneWeights(IReadOnlyDictionary<string, string> boneRenames)
+        {
+            foreach (var meshGroup in MeshGroups)
+            {
+                foreach (var mesh in meshGroup.Meshes)
+                {
+                    for (int i = 0; i < mesh.BoneWeights.Count; i++)
+                    {
+                        var originalWeights = mesh.BoneWeights[i];
+                        var renamedWeights = new List<Tuple<string, float>>(originalWeights.Count);
+                        var changed = false;
+
+                        foreach (var weight in originalWeights)
+                        {
+                            if (boneRenames.TryGetValue(weight.Item1, out var renamedBone))
+                            {
+                                renamedWeights.Add(Tuple.Create(renamedBone, weight.Item2));
+                                changed = true;
+                            }
+                            else
+                            {
+                                renamedWeights.Add(weight);
+                            }
+                        }
+
+                        if (changed)
+                        {
+                            mesh.BoneWeights[i] = renamedWeights;
+                        }
+                    }
+                }
+            }
+        }
     }
 }

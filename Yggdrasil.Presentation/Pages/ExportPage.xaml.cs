@@ -70,9 +70,6 @@ namespace Yggdrasil.Presentation.Pages
             ExportMeshesAndAnimationsCheckBox.IsEnabled = Host.Shell.CanExportModel;
             ExportMeshesAndAnimationsCheckBox.IsChecked = Host.Shell.CanExportModel;
 
-            ExportMaterialsCheckBox.IsEnabled = false;
-            ExportMaterialsCheckBox.IsChecked = false;
-
             ExportActionHintTextBlock.Text = Host.Shell.CanExportModel
                 ? "Configure the destination and export options here. The export action itself is still not implemented."
                 : "QC export can be configured now. Mesh and animation export will unlock after a model is imported.";
@@ -90,7 +87,6 @@ namespace Yggdrasil.Presentation.Pages
             ExportQcCheckBox.IsEnabled = false;
             ExportMeshesAndAnimationsCheckBox.IsChecked = false;
             ExportMeshesAndAnimationsCheckBox.IsEnabled = false;
-            ExportMaterialsCheckBox.IsChecked = false;
             ExportActionHintTextBlock.Text = string.Empty;
             ExportButton.IsEnabled = false;
             ExportProgressRing.IsActive = false;

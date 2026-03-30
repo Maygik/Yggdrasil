@@ -80,59 +80,90 @@
                     <ColumnDefinition Width="2*" />
                 </Grid.ColumnDefinitions>
 
-                <Border
-                    x:Name="MaterialListPanel"
-                    Grid.Column="0"
-                    Style="{StaticResource PanelBorderStyle}"
-                    Padding="20">
-                    <Grid RowSpacing="4">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
+                <Grid Grid.Column="0" RowSpacing="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Style="{StaticResource SectionTitleTextStyle}" Text="Material List" />
+                    <Border
+                        x:Name="MaterialListPanel"
+                        Grid.Row="0"
+                        Style="{StaticResource PanelBorderStyle}"
+                        Padding="20">
+                        <Grid RowSpacing="4">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
 
-                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                            <StackPanel MinHeight="600" Spacing="12">
-                                <Border
-                                    x:Name="NoMaterialsPanel"
-                                    Style="{StaticResource SubtlePanelBorderStyle}"
-                                    Padding="16">
-                                    <TextBlock
-                                        Style="{StaticResource CaptionTextStyle}"
-                                        Text="No imported materials are available yet. Import a model to populate the list."
-                                        TextWrapping="WrapWholeWords" />
-                                </Border>
+                            <TextBlock Grid.Row="0" Style="{StaticResource SectionTitleTextStyle}" Text="Material List" />
 
-                                <ItemsControl
-                                    x:Name="MaterialListItemsControl"
-                                    ItemsSource="{x:Bind MaterialItems, Mode=OneWay}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="models:MaterialListItem">
-                                            <Border
-                                                Margin="0,0,0,8"
-                                                Padding="12"
-                                                Background="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource SelectedMaterialBackgroundConverter}}"
-                                                BorderBrush="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource SelectedMaterialBorderConverter}}"
-                                                BorderThickness="1"
-                                                CornerRadius="8"
-                                                Tag="{x:Bind}"
-                                                Tapped="MaterialRow_Tapped"
-                                                PointerEntered="MaterialRow_PointerEntered"
-                                                PointerExited="MaterialRow_PointerExited"
-                                                ToolTipService.ToolTip="{x:Bind Name}">
-                                                <TextBlock
-                                                    Style="{StaticResource BodyStrongTextStyle}"
-                                                    Text="{x:Bind Name}" />
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </Grid>
-                </Border>
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                <StackPanel MinHeight="600" Spacing="12">
+                                    <Border
+                                        x:Name="NoMaterialsPanel"
+                                        Style="{StaticResource SubtlePanelBorderStyle}"
+                                        Padding="16">
+                                        <TextBlock
+                                            Style="{StaticResource CaptionTextStyle}"
+                                            Text="No imported materials are available yet. Import a model to populate the list."
+                                            TextWrapping="WrapWholeWords" />
+                                    </Border>
+
+                                    <ItemsControl
+                                        x:Name="MaterialListItemsControl"
+                                        ItemsSource="{x:Bind MaterialItems, Mode=OneWay}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="models:MaterialListItem">
+                                                <Border
+                                                    Margin="0,0,0,8"
+                                                    Padding="12"
+                                                    Background="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource SelectedMaterialBackgroundConverter}}"
+                                                    BorderBrush="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource SelectedMaterialBorderConverter}}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    Tag="{x:Bind}"
+                                                    Tapped="MaterialRow_Tapped"
+                                                    PointerEntered="MaterialRow_PointerEntered"
+                                                    PointerExited="MaterialRow_PointerExited"
+                                                    ToolTipService.ToolTip="{x:Bind Name}">
+                                                    <TextBlock
+                                                        Style="{StaticResource BodyStrongTextStyle}"
+                                                        Text="{x:Bind Name}" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+
+                    <Border
+                        x:Name="MaterialExportPanel"
+                        Grid.Row="1"
+                        Style="{StaticResource PanelBorderStyle}"
+                        Padding="20">
+                        <StackPanel Spacing="12">
+                            <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Material Export" />
+                            <TextBlock
+                                x:Name="MaterialExportHintTextBlock"
+                                Style="{StaticResource CaptionTextStyle}"
+                                TextWrapping="WrapWholeWords" />
+                            <Button
+                                x:Name="ExportSelectedMaterialButton"
+                                HorizontalAlignment="Stretch"
+                                Content="Export Selected Material"
+                                Click="ExportSelectedMaterialButton_Click" />
+                            <Button
+                                x:Name="ExportAllMaterialsButton"
+                                HorizontalAlignment="Stretch"
+                                Content="Export All Materials"
+                                Click="ExportAllMaterialsButton_Click" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
 
                 <Border
                     x:Name="MaterialEditorPanelHost"

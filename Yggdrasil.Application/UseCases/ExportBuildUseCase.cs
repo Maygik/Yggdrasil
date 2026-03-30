@@ -3,6 +3,7 @@ using Yggdrasil.Domain.Project;
 using Yggdrasil.Domain.QC;
 using Yggdrasil.Domain.Scene;
 using Yggdrasil.Domain.Rigging;
+using System.Collections.Generic;
 
 namespace Yggdrasil.Application.UseCases
 {
@@ -47,6 +48,10 @@ namespace Yggdrasil.Application.UseCases
             {
                 var preparedScene = request.Project.Scene.DeepClone();
                 var sceneToExport = preparedScene;
+                var proportionTrickNamingConvention = ExportBoneNamingConventions.ValveBiped;
+                var exportBoneNamingConvention = ExportBoneNamingConventions.ValveBiped;
+
+                ApplyAssignedBoneRenames(preparedScene, request.Project.RigMapping, proportionTrickNamingConvention);
 
                 // Export the animations (Do here just to get proportions)
 
@@ -80,7 +85,14 @@ namespace Yggdrasil.Application.UseCases
                             Qc = request.Project.Qc
                         };
 
+                        // Build the proportion trick animations
                         proportions = _proportionTrickService.Build(tempProject);
+
+                        // Fix up bone names in the proportion trick animations to match the export convention
+                        ApplyLogicalBoneRenames(proportions.Proportions, request.Project.RigMapping, exportBoneNamingConvention);
+                        ApplyLogicalBoneRenames(proportions.ReferenceMale, request.Project.RigMapping, exportBoneNamingConvention);
+                        ApplyLogicalBoneRenames(proportions.ReferenceFemale, request.Project.RigMapping, exportBoneNamingConvention);
+
                         result.Messages.Add($"Built proportion-trick animations for profile '{request.Project.Qc.AnimationProfile}'.");
 
                         // Export animations to /anims
@@ -92,7 +104,9 @@ namespace Yggdrasil.Application.UseCases
                     else
                     {
                         // Just export a normal skeleton with the bind pose as the only frame
-                        exporter.ExportAnimationAsync(animOutputDir, "ragdoll", preparedScene);
+                        var ragdollScene = preparedScene.DeepClone();
+                        ApplyLogicalBoneRenames(ragdollScene, request.Project.RigMapping, exportBoneNamingConvention);
+                        exporter.ExportAnimationAsync(animOutputDir, "ragdoll", ragdollScene);
                         result.Messages.Add($"Wrote ragdoll animation to '{animOutputDir}'.");
                     }
 
@@ -102,13 +116,16 @@ namespace Yggdrasil.Application.UseCases
                     result.Warnings.Add("Scene has no root bone. Exporting meshes without skeleton animations.");
                 }
 
-
+                // If we built proportion trick animations, we need to swap over the proportions armature to the scene
                 if (proportions != null)
                 {
                     sceneToExport = preparedScene.DeepClone();
-                    sceneToExport.RootBone = proportions.Proportions.RootBone;
-                    RemapMeshBoneWeightsToRigSlots(sceneToExport, request.Project.RigMapping);
+                    sceneToExport.RootBone = proportions.Proportions.RootBone?.DeepClone();
+
+                    // Maybe clean up fingers if unused here? 
                 }
+
+                ApplyLogicalBoneRenames(sceneToExport, request.Project.RigMapping, exportBoneNamingConvention);
 
 
                 if (sceneToExport.MeshGroups.Count == 0)
@@ -139,59 +156,40 @@ namespace Yggdrasil.Application.UseCases
             return result;
         }
 
-        private static void RemapMeshBoneWeightsToRigSlots(SceneModel scene, SourceBoneMapping rigMapping)
+        private static void ApplyAssignedBoneRenames(
+            SceneModel scene,
+            SourceBoneMapping rigMapping,
+            IExportBoneNamingConvention namingConvention)
         {
-            if (scene.RootBone == null)
+            ArgumentNullException.ThrowIfNull(scene);
+            ArgumentNullException.ThrowIfNull(rigMapping);
+            ArgumentNullException.ThrowIfNull(namingConvention);
+
+            var renameMap = rigMapping.CreateAssignedBoneRenameMap(namingConvention);
+            if (renameMap.Count == 0)
             {
                 return;
             }
 
-            var exportBoneNames = new HashSet<string>(
-                scene.RootBone.GetAllDescendantsAndSelf().Select(b => b.Name),
-                StringComparer.OrdinalIgnoreCase);
+            scene.RenameBones(renameMap);
+        }
 
-            var rigSlots = Enumerable.Range(0, rigMapping.Count)
-                .Select(index => rigMapping[index]);
+        private static void ApplyLogicalBoneRenames(
+            SceneModel scene,
+            SourceBoneMapping rigMapping,
+            IExportBoneNamingConvention namingConvention)
+        {
+            ArgumentNullException.ThrowIfNull(scene);
+            ArgumentNullException.ThrowIfNull(rigMapping);
+            ArgumentNullException.ThrowIfNull(namingConvention);
 
-            var assignedToLogical = rigSlots
-                .Where(slot =>
-                    !string.IsNullOrWhiteSpace(slot.AssignedBone) &&
-                    !string.IsNullOrWhiteSpace(slot.LogicalBone) &&
-                    exportBoneNames.Contains(slot.LogicalBone))
-                .GroupBy(slot => slot.AssignedBone!, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(
-                    group => group.Key,
-                    group => group.First().LogicalBone,
-                    StringComparer.OrdinalIgnoreCase);
-
-            if (assignedToLogical.Count == 0)
+            var renameMap = rigMapping.CreateLogicalBoneRenameMap(namingConvention);
+            if (renameMap.Count == 0)
             {
                 return;
             }
 
-            foreach (var meshGroup in scene.MeshGroups)
-            {
-                foreach (var mesh in meshGroup.Meshes)
-                {
-                    for (int i = 0; i < mesh.BoneWeights.Count; i++)
-                    {
-                        var remappedWeights = new List<Tuple<string, float>>(mesh.BoneWeights[i].Count);
-                        foreach (var weight in mesh.BoneWeights[i])
-                        {
-                            if (assignedToLogical.TryGetValue(weight.Item1, out var logicalBone))
-                            {
-                                remappedWeights.Add(Tuple.Create(logicalBone, weight.Item2));
-                            }
-                            else
-                            {
-                                remappedWeights.Add(weight);
-                            }
-                        }
-
-                        mesh.BoneWeights[i] = remappedWeights;
-                    }
-                }
-            }
+            scene.RenameBones(renameMap);
         }
     }
 

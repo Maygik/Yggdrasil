@@ -15,7 +15,7 @@
   <mp:PhoneIdentity PhoneProductId="7c786d02-cdf5-4c9b-941c-4990b8fb0423" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>Yggdrasil.Presentation</DisplayName>
+    <DisplayName>Yggdrasil</DisplayName>
     <PublisherDisplayName>xande</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -34,8 +34,8 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="Yggdrasil.Presentation"
-        Description="Yggdrasil.Presentation"
+        DisplayName="Yggdrasil"
+        Description="Yggdrasil"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">

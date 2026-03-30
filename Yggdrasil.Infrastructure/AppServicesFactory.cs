@@ -9,6 +9,7 @@ using Yggdrasil.Application.UseCases;
 using Yggdrasil.Infrastructure.Export;
 using Yggdrasil.Infrastructure.Import;
 using Yggdrasil.Infrastructure.IO;
+using Yggdrasil.Infrastructure.Images;
 using Yggdrasil.Infrastructure.QC;
 
 namespace Yggdrasil.Infrastructure
@@ -28,6 +29,9 @@ namespace Yggdrasil.Infrastructure
             var assembler = new QcAssembler(templateStore);
             var proportionTrick = new ProportionTrickService();
             var projectEditor = new ProjectEditorService();
+            var vtfWriter = new VtfCmdWriter();
+            var materialBaker = new MaterialBaker(vtfWriter);
+            var materialExporter = new MaterialExporter();
 
             return new AppServices
             {
@@ -44,6 +48,7 @@ namespace Yggdrasil.Infrastructure
                 SaveProject = new SaveProjectUseCase(projectStore),
                 ImportModel = new ImportModelUseCase(importer),
                 ExportBuild = new ExportBuildUseCase(exporter, assembler, proportionTrick),
+                ExportMaterials = new ExportMaterialsUseCase(materialExporter, materialBaker),
                 ProjectEditor = projectEditor
             };
         }

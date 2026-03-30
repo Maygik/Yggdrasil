@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.Windows.Storage.Pickers;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -104,6 +105,51 @@ namespace Yggdrasil.Presentation.Pages
                 return;
 
             Host.Shell.CurrentSession.Project.Qc.ModelPath = ModelPathTextBox.Text;
+        }
+
+        private void AddonPathTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_isRefreshing || Host.Shell.CurrentSession?.Project is null)
+                return;
+
+            var project = Host.Shell.CurrentSession.Project;
+            var normalizedPath = Host.Backend.ProjectEditor.NormalizeProjectRelativePath(project, AddonPathTextBox.Text);
+            project.Build.AddonDirectory = normalizedPath;
+
+            if (!string.Equals(AddonPathTextBox.Text, normalizedPath, StringComparison.Ordinal))
+            {
+                _isRefreshing = true;
+                AddonPathTextBox.Text = normalizedPath;
+                AddonPathTextBox.SelectionStart = normalizedPath.Length;
+                _isRefreshing = false;
+            }
+        }
+
+        private async void BrowseAddonPathButton_Click(object sender, RoutedEventArgs e)
+        {
+            var project = Host.Shell.CurrentSession?.Project;
+            if (project is null || string.IsNullOrWhiteSpace(project.Directory) || App.Instance.MainWindow is null)
+                return;
+
+            var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(App.Instance.MainWindow);
+            var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
+            var picker = new FolderPicker(windowId)
+            {
+                SuggestedStartLocation = PickerLocationId.DocumentsLibrary
+            };
+
+            var folder = await picker.PickSingleFolderAsync();
+            if (folder is null)
+                return;
+
+            var relativePath = Host.Backend.ProjectEditor.NormalizeProjectRelativePath(project, folder.Path);
+
+            _isRefreshing = true;
+            AddonPathTextBox.Text = relativePath;
+            AddonPathTextBox.SelectionStart = relativePath.Length;
+            _isRefreshing = false;
+
+            project.Build.AddonDirectory = relativePath;
         }
 
         private void AddMaterialPathButton_Click(object sender, RoutedEventArgs e)
@@ -264,6 +310,7 @@ namespace Yggdrasil.Presentation.Pages
             ProjectNameTextBox.Text = string.Empty;
             SurfacePropComboBox.Text = string.Empty;
             ModelPathTextBox.Text = string.Empty;
+            AddonPathTextBox.Text = string.Empty;
             AnimationProfileComboBox.SelectedItem = AnimationProfile.None;
 
             MaterialPathItems.Clear();
@@ -278,6 +325,7 @@ namespace Yggdrasil.Presentation.Pages
             SurfacePropComboBox.Text = project.Qc.SurfaceProp ?? string.Empty;
             SurfacePropComboBox.SelectedItem = project.Qc.SurfaceProp;
             ModelPathTextBox.Text = project.Qc.ModelPath ?? string.Empty;
+            AddonPathTextBox.Text = project.Build.AddonDirectory ?? string.Empty;
             AnimationProfileComboBox.SelectedItem = project.Qc.AnimationProfile;
 
             MaterialPathItems.Clear();

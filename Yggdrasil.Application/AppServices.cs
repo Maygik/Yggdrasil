@@ -25,6 +25,7 @@ namespace Yggdrasil.Application
         public required SaveProjectUseCase SaveProject { get; init; }
         public required ImportModelUseCase ImportModel { get; init; }
         public required ExportBuildUseCase ExportBuild { get; init; }
+        public required ExportMaterialsUseCase ExportMaterials { get; init; }
         public required ProjectEditorService ProjectEditor { get; init; }
 
     }

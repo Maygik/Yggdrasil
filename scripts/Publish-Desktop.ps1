@@ -1,6 +1,6 @@
 param(
     [string]$Configuration = "Release",
-    [string]$Version = "",
+    [string]$Runtime = "win-x64",
     [string]$OutputDir = "",
     [switch]$SmokeTest
 )
@@ -10,27 +10,45 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $projectPath = Join-Path $repoRoot "Yggdrasil.Presentation\Yggdrasil.Presentation.csproj"
-$runtime = "win-x64"
-$platform = "x64"
-$packageFolderName = "Yggdrasil-win-x64"
+
+if (-not (Test-Path -LiteralPath $projectPath)) {
+    throw "The desktop project was not found at '$projectPath'."
+}
+
+$platform = switch ($Runtime) {
+    "win-x64" { "x64" }
+    "win-x86" { "x86" }
+    "win-arm64" { "ARM64" }
+    default { throw "Unsupported runtime '$Runtime'. Expected win-x64, win-x86, or win-arm64." }
+}
 
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
-    $OutputDir = Join-Path $repoRoot "artifacts\release\desktop"
+    $OutputDir = Join-Path $repoRoot "artifacts\portable\desktop"
 }
 
-$publishDir = Join-Path $OutputDir "publish-temp"
+[xml]$projectXml = Get-Content -LiteralPath $projectPath
+$assemblyName = @(
+    $projectXml.Project.PropertyGroup |
+        ForEach-Object {
+            $assemblyNameProperty = $_.PSObject.Properties["AssemblyName"]
+            if ($null -ne $assemblyNameProperty -and -not [string]::IsNullOrWhiteSpace($assemblyNameProperty.Value)) {
+                $assemblyNameProperty.Value
+            }
+        }
+) | Select-Object -First 1
+
+if ([string]::IsNullOrWhiteSpace($assemblyName)) {
+    $assemblyName = [System.IO.Path]::GetFileNameWithoutExtension($projectPath)
+}
+
+$packageFolderName = "$assemblyName-$Runtime"
 $packageDir = Join-Path $OutputDir $packageFolderName
-$zipName = if ([string]::IsNullOrWhiteSpace($Version)) {
-    "$packageFolderName.zip"
-} else {
-    "$packageFolderName-v$Version.zip"
-}
-$zipPath = Join-Path $OutputDir $zipName
 $smokeTestDir = Join-Path $OutputDir "smoke-test"
+$publishReadyToRun = if ($Configuration -ieq "Debug") { "false" } else { "true" }
 
-foreach ($path in @($publishDir, $packageDir, $zipPath, $smokeTestDir)) {
-    if (Test-Path $path) {
-        Remove-Item -Path $path -Recurse -Force
+foreach ($path in @($packageDir, $smokeTestDir)) {
+    if (Test-Path -LiteralPath $path) {
+        Remove-Item -LiteralPath $path -Recurse -Force
     }
 }
 
@@ -39,21 +57,21 @@ New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 $publishArgs = @(
     "publish", $projectPath,
     "-c", $Configuration,
-    "-r", $runtime,
+    "-r", $Runtime,
     "--self-contained", "true",
     "-p:Platform=$platform",
     "-p:WindowsPackageType=None",
     "-p:WindowsAppSDKSelfContained=true",
     "-p:PublishSingleFile=false",
     "-p:PublishTrimmed=false",
-    "-p:PublishReadyToRun=true",
-    "-o", $publishDir
+    "-p:PublishReadyToRun=$publishReadyToRun",
+    "-o", $packageDir
 )
 
 Write-Host "Publishing Yggdrasil desktop app..."
 Write-Host "  Project: $projectPath"
 Write-Host "  Config:  $Configuration"
-Write-Host "  Runtime: $runtime"
+Write-Host "  Runtime: $Runtime"
 Write-Host "  Output:  $OutputDir"
 Write-Host ""
 
@@ -63,24 +81,18 @@ if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE."
 }
 
-$exePath = Join-Path $publishDir "Yggdrasil.Presentation.exe"
-if (-not (Test-Path $exePath)) {
+$exePath = Join-Path $packageDir "$assemblyName.exe"
+if (-not (Test-Path -LiteralPath $exePath)) {
     throw "Publish completed, but the expected executable was not found at '$exePath'."
 }
 
-New-Item -ItemType Directory -Path $packageDir -Force | Out-Null
-Copy-Item -Path (Join-Path $publishDir "*") -Destination $packageDir -Recurse -Force
-
-Compress-Archive -Path $packageDir -DestinationPath $zipPath -CompressionLevel Optimal
-
 if ($SmokeTest) {
-    Expand-Archive -Path $zipPath -DestinationPath $smokeTestDir -Force
+    New-Item -ItemType Directory -Path $smokeTestDir -Force | Out-Null
+    Get-ChildItem -LiteralPath $packageDir -Force | Copy-Item -Destination $smokeTestDir -Recurse -Force
 
-    $smokeTestExe = Join-Path $smokeTestDir $packageFolderName
-    $smokeTestExe = Join-Path $smokeTestExe "Yggdrasil.Presentation.exe"
-
-    if (-not (Test-Path $smokeTestExe)) {
-        throw "Smoke test failed because '$smokeTestExe' was not found after extracting the zip."
+    $smokeTestExe = Join-Path $smokeTestDir "$assemblyName.exe"
+    if (-not (Test-Path -LiteralPath $smokeTestExe)) {
+        throw "Smoke test failed because '$smokeTestExe' was not found in the portable output."
     }
 
     $process = Start-Process -FilePath $smokeTestExe -PassThru
@@ -92,6 +104,10 @@ if ($SmokeTest) {
         if ($process.HasExited) {
             throw "Smoke test failed because the desktop app exited immediately with code $($process.ExitCode)."
         }
+
+        if ($process.MainWindowHandle -eq 0) {
+            throw "Smoke test failed because no main window was detected."
+        }
     }
     finally {
         if ($null -ne $process -and -not $process.HasExited) {
@@ -102,5 +118,5 @@ if ($SmokeTest) {
 
 Write-Host ""
 Write-Host "Desktop publish complete."
-Write-Host "Package folder: $packageDir"
-Write-Host "Zip package:    $zipPath"
+Write-Host "Portable folder: $packageDir"
+Write-Host "Launch this file: $exePath"

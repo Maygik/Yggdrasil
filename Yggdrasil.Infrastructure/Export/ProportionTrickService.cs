@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Yggdrasil.Application.Abstractions;
 using Yggdrasil.Domain.Project;
+using Yggdrasil.Domain.Rigging;
 using Yggdrasil.Domain.Scene;
 using Yggdrasil.Infrastructure.Import;
 
@@ -66,14 +67,14 @@ namespace Yggdrasil.Infrastructure.Export
             var rigSlot = project.RigMapping.TryGetRigSlotFromName(result.Proportions.RootBone.Name);
             if (rigSlot != null)
             {
-                var rigBone = rigSlot.AssignedBone;
+                var rigBone = ResolveRigBoneName(rigSlot, rigBoneMap);
                 if (rigBone == null)
                 {
                     throw new Exception($"Root bone \"{result.Proportions.RootBone.Name}\" of proportions model must be mapped to a rig slot in the project for proportion trick to work");
                 }
-                result.Proportions.RootBone.WorldPosition = rigBoneMap[rigSlot.AssignedBone!].WorldPosition;
+                result.Proportions.RootBone.WorldPosition = rigBoneMap[rigBone].WorldPosition;
                 Console.WriteLine($"Set world position of proportions root bone \"{result.Proportions.RootBone.Name}\" to rig bone \"{rigBone}\"");
-                Console.WriteLine($"Proportions root bone \"{result.Proportions.RootBone.Name}\" world position: {result.Proportions.RootBone.WorldPosition}, rig bone \"{rigBone}\" world position: {rigBoneMap[rigSlot.AssignedBone!].WorldPosition}");
+                Console.WriteLine($"Proportions root bone \"{result.Proportions.RootBone.Name}\" world position: {result.Proportions.RootBone.WorldPosition}, rig bone \"{rigBone}\" world position: {rigBoneMap[rigBone].WorldPosition}");
             }
             else
             {
@@ -707,7 +708,8 @@ namespace Yggdrasil.Infrastructure.Export
             if (result.ReferenceFemale.RootBone == null)
                 throw new Exception("Reference female model must have a root bone");
 
-            // Copy the rotations of the proportions bones to the reference bones
+            // Copy the solved proportions rotations to the reference bones.
+            // The reference animations stay in their baked base pose and are used as the subtract baseline.
             var proportionsBoneDict = result.Proportions.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
             var referenceMaleBoneDict = result.ReferenceMale.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
             var referenceFemaleBoneDict = result.ReferenceFemale.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
@@ -716,8 +718,6 @@ namespace Yggdrasil.Infrastructure.Export
 
             foreach (var boneName in proportionsBoneDict.Keys)
             {
-                // We pray that LocalRotation setter works correctly until we can test this
-
                 if (referenceMaleBoneDict.ContainsKey(boneName))
                 {
                     referenceMaleBoneDict[boneName].WorldRotation = proportionsBoneDict[boneName].WorldRotation;
@@ -747,9 +747,14 @@ namespace Yggdrasil.Infrastructure.Export
                 return;
             }
             var rigBoneName = rigSlot.AssignedBone;
+            if (rigBoneName == null || !rigBoneMap.ContainsKey(rigBoneName))
+            {
+                rigBoneName = ResolveRigBoneName(rigSlot, rigBoneMap);
+            }
+
             if (rigBoneName == null)
             {
-                // Proportions bone is mapped to a rig slot, but that rig slot doesn't have an assigned bone
+                // Proportions bone is mapped to a rig slot, but that rig slot doesn't resolve to a rig bone
                 // Collapse this proportions bone into its first mapped descendant bone, if it has one, otherwise just skip it
                 Bone? firstMappedDescendant = FindFirstMappedDescendant(proportionsBone, project);
                 if (firstMappedDescendant != null)
@@ -876,6 +881,24 @@ namespace Yggdrasil.Infrastructure.Export
                     CollectDescendantTransforms(childBone, transforms, ignore);
                 }
             }
+        }
+
+        private static string? ResolveRigBoneName(RigSlot slot, IReadOnlyDictionary<string, Bone> rigBoneMap)
+        {
+            ArgumentNullException.ThrowIfNull(slot);
+            ArgumentNullException.ThrowIfNull(rigBoneMap);
+
+            if (!string.IsNullOrWhiteSpace(slot.AssignedBone) && rigBoneMap.ContainsKey(slot.AssignedBone))
+            {
+                return slot.AssignedBone;
+            }
+
+            if (!string.IsNullOrWhiteSpace(slot.LogicalBone) && rigBoneMap.ContainsKey(slot.LogicalBone))
+            {
+                return slot.LogicalBone;
+            }
+
+            return null;
         }
     }
 }

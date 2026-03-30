@@ -54,11 +54,15 @@ namespace Yggdrasil.Domain.Project
     public sealed class BuildSettings
     {
         public string OutputDirectory { get; set; } = "out/";
+        public string AddonDirectory { get; set; } = string.Empty;
+        public MaterialExportSettings MaterialExport { get; set; } = new();
 
         public override string ToString()
         {
             var sb = new StringBuilder();
             sb.AppendLine($"Output Directory: {OutputDirectory}");
+            sb.AppendLine($"Addon Directory: {AddonDirectory}");
+            sb.AppendLine(MaterialExport.ToString());
             return sb.ToString();
         }
     }

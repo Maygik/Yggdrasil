@@ -50,6 +50,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Project Name" />
@@ -72,7 +73,7 @@
                         <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Paths" />
                         <TextBlock
                             Style="{StaticResource CaptionTextStyle}"
-                            Text="$modelname controls the compiled .mdl path inside QC." />
+                            Text="$modelname, the addon root, and $cdmaterials define where compiled models and exported materials will be addressed." />
 
                         <Grid ColumnSpacing="16" RowSpacing="12">
                             <Grid.ColumnDefinitions>
@@ -80,6 +81,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
@@ -98,64 +100,83 @@
 
                             <TextBlock
                                 Grid.Row="1"
+                                Grid.Column="0"
+                                VerticalAlignment="Center"
+                                Text="Addon Root" />
+                            <Grid Grid.Row="1" Grid.Column="1" ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox
+                                    x:Name="AddonPathTextBox"
+                                    Grid.Column="0"
+                                    TextChanged="AddonPathTextBox_TextChanged" />
+                                <Button
+                                    Grid.Column="1"
+                                    Content="Browse"
+                                    Click="BrowseAddonPathButton_Click" />
+                            </Grid>
+
+                            <TextBlock
+                                Grid.Row="2"
                                 Grid.Column="1"
                                 Style="{StaticResource CaptionTextStyle}"
-                                Text="Relative to the Source models folder."
+                                Text="$modelname is relative to Source models. The addon root is used for material export and stored relative to the project root when possible. Material export uses the app's bundled VTFCmd tool automatically."
                                 TextWrapping="WrapWholeWords" />
                         </Grid>
-                    </StackPanel>
-                </Border>
 
-                
-                <!--Materials
-                -->
-                <Border Style="{StaticResource PanelBorderStyle}" Padding="20">
-                    <StackPanel Spacing="16">
-                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Material Paths" />
+                        <StackPanel Spacing="12">
+                            <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="Material Paths" />
+                            <TextBlock
+                                Style="{StaticResource CaptionTextStyle}"
+                                Text="$cdmaterials entries are relative to the addon's materials folder and are also used to derive material export destinations."
+                                TextWrapping="WrapWholeWords" />
 
-                        <Grid ColumnSpacing="12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
 
-                            <TextBox
-                        x:Name="NewMaterialPathTextBox"
-                        Grid.Column="0"
-                        PlaceholderText="Add a material path" />
-                            <Button
-                        Grid.Column="1"
-                        Content="Add"
-                        Click="AddMaterialPathButton_Click" />
-                        </Grid>
+                                <TextBox
+                                    x:Name="NewMaterialPathTextBox"
+                                    Grid.Column="0"
+                                    PlaceholderText="Add a material path" />
+                                <Button
+                                    Grid.Column="1"
+                                    Content="Add"
+                                    Click="AddMaterialPathButton_Click" />
+                            </Grid>
 
-                        <ItemsControl x:Name="MaterialPathsListView" ItemsSource="{x:Bind MaterialPathItems, Mode=OneWay}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="models:MaterialPathEditorItem">
-                                    <Grid Margin="0,0,0,8" ColumnSpacing="12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
+                            <ItemsControl x:Name="MaterialPathsListView" ItemsSource="{x:Bind MaterialPathItems, Mode=OneWay}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:MaterialPathEditorItem">
+                                        <Grid Margin="0,0,0,8" ColumnSpacing="12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
 
-                                        <TextBox
-                                            Grid.Column="0"
-                                            IsReadOnly="True"
-                                            Text="{x:Bind Path, Mode=OneWay}" />
+                                            <TextBox
+                                                Grid.Column="0"
+                                                IsReadOnly="True"
+                                                Text="{x:Bind Path, Mode=OneWay}" />
 
-                                        <Button
-                                            Grid.Column="1"
-                                            VerticalAlignment="Center"
-                                            MinWidth="32"
-                                            MinHeight="32"
-                                            Padding="0"
-                                            Content="-"
-                                            Click="RemoveMaterialPathButton_Click"
-                                            Tag="{x:Bind}" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                                            <Button
+                                                Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                MinWidth="32"
+                                                MinHeight="32"
+                                                Padding="0"
+                                                Content="-"
+                                                Click="RemoveMaterialPathButton_Click"
+                                                Tag="{x:Bind}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 

@@ -1,9 +1,9 @@
 {
   "profiles": {
-    "Yggdrasil.Presentation (Package)": {
+    "Yggdrasil (Package)": {
       "commandName": "MsixPackage"
     },
-    "Yggdrasil.Presentation (Unpackaged)": {
+    "Yggdrasil (Unpackaged)": {
       "commandName": "Project"
     }
   }

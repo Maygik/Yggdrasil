@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using Yggdrasil.Application.Abstractions;
 using Yggdrasil.Domain.Scene;
 
 namespace Yggdrasil.Infrastructure.Export
 {
-    public class MaterialExporter
+    public class MaterialExporter : IMaterialExporter
     {
         public MaterialExporter() { }
 
@@ -32,12 +32,12 @@ namespace Yggdrasil.Infrastructure.Export
             if (!string.IsNullOrEmpty(materialSettings.BaseTexture))
             {
                 var baseTexturePath = uniqueTextureNames[materialSettings.BaseTexture];
-                sb.AppendLine($"\t\"$basetexture\" \"{relativePath}/{baseTexturePath}\"");
+                sb.AppendLine($"\t\"$basetexture\" \"{BuildMaterialReferencePath(relativePath, baseTexturePath)}\"");
             }
             else
             {
                 // Fallback to internal "white"
-                sb.AppendLine($"\t\"$basetexture\" \"{relativePath}/white\"");
+                sb.AppendLine($"\t\"$basetexture\" \"{BuildMaterialReferencePath(relativePath, "white")}\"");
                 internalsUsed.Add("white");
             }
 
@@ -90,13 +90,13 @@ namespace Yggdrasil.Infrastructure.Export
             if (materialSettings.BumpMap != null)
             {
                 var bumpMapPath = uniqueTextureNames[materialSettings.BumpMap];
-                sb.AppendLine($"\t\"$bumpmap\" \"{relativePath}/{bumpMapPath}\"");
+                sb.AppendLine($"\t\"$bumpmap\" \"{BuildMaterialReferencePath(relativePath, bumpMapPath)}\"");
             }
 
             if (materialSettings.LightWarpTexture != null)
             {
                 var lightWarpTexturePath = uniqueTextureNames[materialSettings.LightWarpTexture];
-                sb.AppendLine($"\t\"$lightwarptexture\" \"{relativePath}/{lightWarpTexturePath}\"");
+                sb.AppendLine($"\t\"$lightwarptexture\" \"{BuildMaterialReferencePath(relativePath, lightWarpTexturePath)}\"");
             }
 
             if (materialSettings.HalfLambert.HasValue && materialSettings.HalfLambert.Value)
@@ -113,13 +113,13 @@ namespace Yggdrasil.Infrastructure.Export
                 if (materialSettings.EmissiveTexture != null)
                 {
                     var emissiveTexturePath = uniqueTextureNames[materialSettings.EmissiveTexture];
-                    sb.AppendLine($"\t\"$selfillumtexture\" \"{relativePath}/{emissiveTexturePath}\"");
+                    sb.AppendLine($"\t\"$selfillumtexture\" \"{BuildMaterialReferencePath(relativePath, emissiveTexturePath)}\"");
                 }
             }
             else if (!string.IsNullOrEmpty(materialSettings.EmissiveTexture))
             {
                 var emissiveTexturePath = uniqueTextureNames[materialSettings.EmissiveTexture];
-                sb.AppendLine($"\t\"$emissiveblendtexture\" \"{relativePath}/{emissiveTexturePath}\"");
+                sb.AppendLine($"\t\"$emissiveblendtexture\" \"{BuildMaterialReferencePath(relativePath, emissiveTexturePath)}\"");
                 if (materialSettings.EmissiveBlendStrength.HasValue)
                 {
                     sb.AppendLine($"\t\"$emissiveblendstrength\" \"{materialSettings.EmissiveBlendStrength.Value}\"");
@@ -129,9 +129,9 @@ namespace Yggdrasil.Infrastructure.Export
                 // 	$emissiveblendflowtexture "dev/null"
 	            //  $emissiveblendscrollvector "[0 0]"
 	            // $emissiveblendtexture "models/callybon/null" <-- Should be internal white
-                sb.AppendLine($"\t\"$emissiveblendflowtexture\" \"{relativePath}/white\"");
+                sb.AppendLine($"\t\"$emissiveblendflowtexture\" \"{BuildMaterialReferencePath(relativePath, "white")}\"");
                 sb.AppendLine($"\t\"$emissiveblendscrollvector\" \"[0 0]\"");
-                sb.AppendLine($"\t\"$emissiveblendtexture\" \"{relativePath}/white\"");
+                sb.AppendLine($"\t\"$emissiveblendtexture\" \"{BuildMaterialReferencePath(relativePath, "white")}\"");
                 internalsUsed.Add("white");
             }
 
@@ -145,12 +145,12 @@ namespace Yggdrasil.Infrastructure.Export
             else if (!string.IsNullOrEmpty(materialSettings.EnvMap))
             {
                 var envMapPath = uniqueTextureNames[materialSettings.EnvMap];
-                sb.AppendLine($"\t\"$envmap\" \"{relativePath}/{envMapPath}\"");
+                sb.AppendLine($"\t\"$envmap\" \"{BuildMaterialReferencePath(relativePath, envMapPath)}\"");
 
                 if (!string.IsNullOrEmpty(materialSettings.EnvMapMask))
                 {
                     var envMapMaskPath = uniqueTextureNames[materialSettings.EnvMapMask];
-                    sb.AppendLine($"\t\"$envmapmask\" \"{relativePath}/{envMapMaskPath}\"");
+                    sb.AppendLine($"\t\"$envmapmask\" \"{BuildMaterialReferencePath(relativePath, envMapMaskPath)}\"");
                 }
                 if (materialSettings.EnvMapTint.HasValue)
                 {
@@ -182,7 +182,7 @@ namespace Yggdrasil.Infrastructure.Export
                 if (!string.IsNullOrEmpty(materialSettings.PhongExponentTexture))
                 {
                     var phongExponentTexturePath = uniqueTextureNames[materialSettings.PhongExponentTexture];
-                    sb.AppendLine($"\t\"$phongexponenttexture\" \"{relativePath}/{phongExponentTexturePath}\"");
+                    sb.AppendLine($"\t\"$phongexponenttexture\" \"{BuildMaterialReferencePath(relativePath, phongExponentTexturePath)}\"");
                 }
                 else if (materialSettings.PhongExponent.HasValue)
                 {
@@ -224,6 +224,14 @@ namespace Yggdrasil.Infrastructure.Export
             usedInternalTextures = internalsUsed.Count > 0 ? internalsUsed : null;
 
             return sb.ToString();
+        }
+
+        private static string BuildMaterialReferencePath(string relativePath, string textureName)
+        {
+            var normalizedRelativePath = (relativePath ?? string.Empty).Trim().Replace('\\', '/').Trim('/');
+            return string.IsNullOrWhiteSpace(normalizedRelativePath)
+                ? textureName
+                : $"{normalizedRelativePath}/{textureName}";
         }
     }
 }

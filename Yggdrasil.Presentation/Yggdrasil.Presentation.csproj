@@ -1,8 +1,12 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <AssemblyName>Yggdrasil</AssemblyName>
+    <AssemblyTitle>Yggdrasil</AssemblyTitle>
+    <Product>Yggdrasil</Product>
+    <ApplicationIcon>Assets\Yggdrasil.ico</ApplicationIcon>
     <RootNamespace>Yggdrasil.Presentation</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x86;x64;ARM64</Platforms>
@@ -20,6 +24,7 @@
     <PublishProfile>win-$(ResolvedBuildPlatform).pubxml</PublishProfile>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="Assets\Yggdrasil.ico" />
     <None Remove="Dialogs\CreateProjectDialog.xaml" />
     <None Remove="Pages\MaterialsPage.xaml" />
     <None Remove="Pages\ModelPage.xaml" />
@@ -28,6 +33,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Assets\Yggdrasil.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
     <Content Include="Assets\SplashScreen.scale-200.png" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
     <Content Include="Assets\Square150x150Logo.scale-200.png" />
@@ -35,6 +44,14 @@
     <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
     <Content Include="Assets\StoreLogo.png" />
     <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(ResolvedBuildPlatform)' == 'x64' and Exists('Tools\\win-x64')">
+    <None Include="Tools\win-x64\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>Tools\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
