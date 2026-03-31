@@ -39,7 +39,7 @@ namespace Yggdrasil.Presentation.ViewModels
             {
                 if (_currentSession == value) return;
 
-                ResetViewportMaterialState();
+                ResetViewportSelectionState();
                 _currentSession = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(WindowTitle));
@@ -96,6 +96,19 @@ namespace Yggdrasil.Presentation.ViewModels
                 if (_hoveredMaterialName == value) return;
 
                 _hoveredMaterialName = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private string? _selectedBoneName;
+        public string? SelectedBoneName
+        {
+            get => _selectedBoneName;
+            set
+            {
+                if (_selectedBoneName == value) return;
+
+                _selectedBoneName = value;
                 OnPropertyChanged();
             }
         }
@@ -166,6 +179,7 @@ namespace Yggdrasil.Presentation.ViewModels
 
         public async Task OpenprojectFromPathAsync(string projectPath)
         {
+            // Try and open the project
             var request = new OpenProjectRequest { ProjectFilePath = projectPath };
             var result = _backend.OpenProject.Execute(request);
             if (!result.Success)
@@ -173,12 +187,14 @@ namespace Yggdrasil.Presentation.ViewModels
                 StatusMessage = $"Failed to open project: {result.ErrorMessage ?? "Unknown error."}";
                 return;
             }
+            // Check if a project was actually returned
             else if (result.OpenedProject is null)
             {
                 StatusMessage = "Project opening succeeded but no project was returned.";
                 return;
             }
 
+            // Create a session for the opened project and add it to the recent projects list (or update it if it's already there)
             CurrentSession = new ProjectSessionViewModel(result.OpenedProject, projectPath);
             RecentProjects = await _recentProjects.AddOrUpdateAsync(new RecentProjectEntry
             {
@@ -200,6 +216,7 @@ namespace Yggdrasil.Presentation.ViewModels
             }
             await OpenprojectFromPathAsync(entry.FilePath);
         }
+
 
         public void SaveProject()
         {
@@ -239,6 +256,8 @@ namespace Yggdrasil.Presentation.ViewModels
                 return;
             }
 
+            // The project session object stays the same, but several UI surfaces depend on the scene/imported-model state changing underneath it,
+            // so we don't want to execute this as a separate use case that returns a new project instance. Instead, the use case will directly modify the project instance
             var request = new ImportModelRequest(modelPath, CurrentSession.Project, autoMap);
             var result = _backend.ImportModel.Execute(request);
 
@@ -249,7 +268,7 @@ namespace Yggdrasil.Presentation.ViewModels
             }
 
             StatusMessage = result.Messages.FirstOrDefault() ?? $"Imported model '{modelPath}'.";
-            ResetViewportMaterialState();
+            ResetViewportSelectionState();
 
             // The project session object stays the same, but several UI surfaces depend on
             // the scene/imported-model state changing underneath it.
@@ -273,10 +292,11 @@ namespace Yggdrasil.Presentation.ViewModels
             PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
         }
 
-        private void ResetViewportMaterialState()
+        private void ResetViewportSelectionState()
         {
             SelectedMaterialName = null;
             HoveredMaterialName = null;
+            SelectedBoneName = null;
         }
     }
 }

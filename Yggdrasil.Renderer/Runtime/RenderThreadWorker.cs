@@ -15,6 +15,11 @@ using Yggdrasil.Types;
 
 namespace Yggdrasil.Renderer.Runtime;
 
+/// <summary>
+/// The RenderThreadWorker is responsible for processing renderer commands, managing rendering state, and executing the render loop on a dedicated thread.
+/// It interacts with the renderer host through a mailbox system to receive commands and updates, and it manages Direct3D resources for rendering the scene.
+/// The worker ensures that rendering operations are performed efficiently and that resources are properly cleaned up when no longer needed.
+/// </summary>
 internal sealed class RenderThreadWorker
 {
     private readonly RendererMailbox _mailbox;
@@ -252,6 +257,7 @@ internal sealed class RenderThreadWorker
         _shaderLibrary.GetPreviewShaderFamily().Dispose();
     }
 
+    // Renders a frame if all necessary resources and state are available. This includes setting render targets, clearing views, and drawing the scene using the preview shader.
     private void RenderFrameIfPossible()
     {
         var deviceContext = _deviceResources.DeviceContext;
@@ -343,9 +349,13 @@ internal sealed class RenderThreadWorker
 
                 if (_state.ViewportOptions.ShowBones)
                 {
+                    var selectedBoneIndex = ResolveSelectedBoneIndex(
+                        _state.Scene?.Skeleton,
+                        _state.Selection.SelectedBoneName);
                     var boneAxisResources = _sceneGpuCache.GetBoneAxisResources(
                         _deviceResources,
-                        _state.ViewportOptions.BoneAxisLength);
+                        _state.ViewportOptions.BoneAxisLength,
+                        selectedBoneIndex);
 
                     if (boneAxisResources != null)
                     {
@@ -369,5 +379,18 @@ internal sealed class RenderThreadWorker
         }
 
         swapChain.Present(_state.IsInteracting ? 0u : 1u, PresentFlags.None);
+    }
+
+    // Resolves the selected bone index based on the current skeleton and the name of the selected bone. Returns -1 if no valid selection is found.
+    private static int ResolveSelectedBoneIndex(RenderSkeletonSnapshot? skeleton, string? selectedBoneName)
+    {
+        if (skeleton == null || string.IsNullOrWhiteSpace(selectedBoneName))
+        {
+            return -1;
+        }
+
+        return skeleton.BoneIndicesByName.TryGetValue(selectedBoneName, out var boneIndex)
+            ? boneIndex
+            : -1;
     }
 }

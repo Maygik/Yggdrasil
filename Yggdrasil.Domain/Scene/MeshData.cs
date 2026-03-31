@@ -182,6 +182,24 @@ namespace Yggdrasil.Domain.Scene
             }
             return sb.ToString();
         }
+
+        public void GetBoundingBox(out Vector3 min, out Vector3 max)
+        {
+            min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+            max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+            foreach (var mesh in Meshes)
+            {
+                foreach (var vertex in mesh.Vertices)
+                {
+                    min.X = Math.Min(min.X, vertex.X);
+                    min.Y = Math.Min(min.Y, vertex.Y);
+                    min.Z = Math.Min(min.Z, vertex.Z);
+                    max.X = Math.Max(max.X, vertex.X);
+                    max.Y = Math.Max(max.Y, vertex.Y);
+                    max.Z = Math.Max(max.Z, vertex.Z);
+                }
+            }
+        }
     }
 
 

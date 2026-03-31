@@ -13,6 +13,9 @@ using Vector3 = Yggdrasil.Types.Vector3;
 
 namespace Yggdrasil.Application.Services
 {
+    /// <summary>
+    /// Handles editing of project properties and settings such as project name, output directory, model scale/rotation/translation, QC config settings, rig bindings, etc.r
+    /// </summary>
     public class ProjectEditorService
     {
         public ProjectEditorService() { }

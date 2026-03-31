@@ -4,6 +4,7 @@ public static class SceneAlignmentMath
 {
     private const float DegreesToRadians = MathF.PI / 180.0f;
 
+    // Creates a transformation matrix that combines scaling, rotation, and translation for aligning objects in a scene.
     public static Matrix4x4 CreateAlignmentMatrix(float scale, Vector3 rotationDegrees, Vector3 position)
     {
         var clampedScale = MathF.Max(scale, 0.01f);

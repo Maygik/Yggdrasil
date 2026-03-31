@@ -5,6 +5,10 @@ using System;
 
 namespace Yggdrasil.Presentation.Converters
 {
+    /// <summary>
+    /// Used to convert a boolean value to a Brush for UI elements. You can specify the brush to use for true and false values via the TrueBrush and FalseBrush properties.
+    /// e.g. making duplicate bone slots assignments red
+    /// </summary>
     public sealed class BooleanToBrushConverter : DependencyObject, IValueConverter
     {
         public Brush? TrueBrush

@@ -39,9 +39,10 @@ namespace Yggdrasil.Infrastructure.Import
 
             Console.WriteLine($"Processing scene data...");
             Dictionary<string, List<int>> nodeMeshMapping = BuildNodeMeshMapping(assimpScene);
+            Dictionary<int, string> materialKeyMap = BuildMaterialKeyMap(assimpScene);
 
             Console.WriteLine($"Processing {assimpScene.MeshCount} meshes...");
-            List<MeshData> meshes = ProcessMeshes(assimpScene);
+            List<MeshData> meshes = ProcessMeshes(assimpScene, materialKeyMap);
 
             Console.WriteLine($"Building skeleton hierarchy...");
             Bone? rootBone = BuildSkeletonHierarchy(assimpScene);
@@ -50,7 +51,7 @@ namespace Yggdrasil.Infrastructure.Import
             SceneModel sceneModel = CreateSceneModel(filePath, nodeMeshMapping, meshes, rootBone, assimpScene);
             
             Console.WriteLine($"Initialising materials...");
-            InitialiseMaterials(sceneModel, assimpScene);
+            InitialiseMaterials(sceneModel, assimpScene, materialKeyMap);
 
             return sceneModel;
         }
@@ -98,13 +99,13 @@ namespace Yggdrasil.Infrastructure.Import
         }
 
         // Processes all meshes in the assimp scene converting them to the internal structure
-        private List<MeshData> ProcessMeshes(Assimp.Scene assimpScene)
+        private List<MeshData> ProcessMeshes(Assimp.Scene assimpScene, IReadOnlyDictionary<int, string> materialKeyMap)
         {
             List<MeshData> meshes = new List<MeshData>();
             
             foreach (var mesh in assimpScene.Meshes)
             {
-                MeshData meshData = ProcessSingleMesh(mesh, assimpScene);
+                MeshData meshData = ProcessSingleMesh(mesh, assimpScene, materialKeyMap);
                 meshes.Add(meshData);
             }
             
@@ -113,7 +114,7 @@ namespace Yggdrasil.Infrastructure.Import
         }
 
         // Converts a single assimp mesh into the internal meshdata structure
-        private MeshData ProcessSingleMesh(Assimp.Mesh mesh, Assimp.Scene assimpScene)
+        private MeshData ProcessSingleMesh(Assimp.Mesh mesh, Assimp.Scene assimpScene, IReadOnlyDictionary<int, string> materialKeyMap)
         {
             MeshData meshData = new();
             meshData.Name = mesh.Name;
@@ -121,7 +122,7 @@ namespace Yggdrasil.Infrastructure.Import
             try
             {
                 ProcessVertexData(mesh, meshData);
-                ProcessFaceData(mesh, meshData, assimpScene);
+                ProcessFaceData(mesh, meshData, materialKeyMap);
                 ProcessUVData(mesh, meshData);
                 ProcessBoneWeights(mesh, meshData);
             }
@@ -155,7 +156,10 @@ namespace Yggdrasil.Infrastructure.Import
 
         // Converts face indices and material assignments from the assimp mesh to the internal meshdata structure.
         // Ensures triangles, even though assimp should have already triangulated them.
-        private void ProcessFaceData(Assimp.Mesh mesh, MeshData meshData, Assimp.Scene assimpScene)
+        private void ProcessFaceData(
+            Assimp.Mesh mesh,
+            MeshData meshData,
+            IReadOnlyDictionary<int, string> materialKeyMap)
         {
             meshData.Faces = new List<Face>(mesh.FaceCount);
             
@@ -169,7 +173,12 @@ namespace Yggdrasil.Infrastructure.Import
                 meshData.Faces.Add(new Face(face.Indices[0], face.Indices[1], face.Indices[2]));
             }
             
-            meshData.Material = assimpScene.Materials[mesh.MaterialIndex].Name;
+            if (!materialKeyMap.TryGetValue(mesh.MaterialIndex, out string? materialKey))
+            {
+                throw new Exception($"Mesh {mesh.Name} references unknown material index {mesh.MaterialIndex}.");
+            }
+
+            meshData.Material = materialKey;
         }
 
         // Converts UV coords from assimp to internal
@@ -517,6 +526,43 @@ namespace Yggdrasil.Infrastructure.Import
             return sceneModel;
         }
 
+        // Creates a stable unique key for every imported material slot.
+        // Assimp material names are not guaranteed to be unique or even present, so we cannot use them as identifiers directly.
+        private static Dictionary<int, string> BuildMaterialKeyMap(Assimp.Scene assimpScene)
+        {
+            Dictionary<int, string> materialKeyMap = new();
+            HashSet<string> usedKeys = new(StringComparer.OrdinalIgnoreCase);
+
+            for (int materialIndex = 0; materialIndex < assimpScene.MaterialCount; materialIndex++)
+            {
+                string rawName = assimpScene.Materials[materialIndex].Name?.Trim() ?? string.Empty;
+                string baseName = string.IsNullOrWhiteSpace(rawName)
+                    ? $"Material_{materialIndex}"
+                    : rawName;
+
+                string materialKey = baseName;
+                if (!usedKeys.Add(materialKey))
+                {
+                    materialKey = $"{baseName}_{materialIndex}";
+                    int suffix = 1;
+                    while (!usedKeys.Add(materialKey))
+                    {
+                        materialKey = $"{baseName}_{materialIndex}_{suffix++}";
+                    }
+                }
+
+                materialKeyMap[materialIndex] = materialKey;
+
+                if (!string.Equals(materialKey, rawName, StringComparison.Ordinal))
+                {
+                    Console.WriteLine(
+                        $"Normalizing imported material slot {materialIndex}: '{rawName}' -> '{materialKey}'");
+                }
+            }
+
+            return materialKeyMap;
+        }
+
         private Assimp.Scene ImportAssimp(string filePath)
         {
 
@@ -530,13 +576,14 @@ namespace Yggdrasil.Infrastructure.Import
                 Assimp.ExcludeComponent.Colors          // Colors unusable in source
                 ));
 
-            // Actually import the model
+            // Actually import the model.
+            // We intentionally avoid RemoveRedundantMaterials here because the app needs to preserve source material-slot identity,
+            // even when multiple slots currently resolve to identical material properties.
 
             Assimp.Scene assimpScene = context.ImportFile(filePath,
                     PostProcessSteps.GenerateNormals |          // Generate normals if they are missing
                     PostProcessSteps.Triangulate |              // Triangulaate all faces.
-                    PostProcessSteps.CalculateTangentSpace |     // Calculate tangent and bitangent vectors. Makes normal mapping and phong work properly."
-                    PostProcessSteps.RemoveRedundantMaterials
+                    PostProcessSteps.CalculateTangentSpace      // Calculate tangent and bitangent vectors. Makes normal mapping and phong work properly."
                     );
 
             // Apply scale to the scene
@@ -660,28 +707,34 @@ namespace Yggdrasil.Infrastructure.Import
         // Initialises the material settings in the scene model based on the materials actually used by the meshes in the assimp scene.
         // Sometimes assimp imports materials that aren't actually used by any meshes, so we filter those out to avoid confusion.
         // I loveeee models with 7000 materials so my scripts don't work
-        private void InitialiseMaterials(SceneModel sceneModel, Scene assimpScene)
+        private void InitialiseMaterials(
+            SceneModel sceneModel,
+            Scene assimpScene,
+            IReadOnlyDictionary<int, string> materialKeyMap)
         {
-            // Collect all material names actually used by meshes
-            HashSet<string> usedMaterialNames = new HashSet<string>();
+            // Collect all material keys actually used by meshes
+            HashSet<string> usedMaterialKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var meshGroup in sceneModel.MeshGroups)
             {
                 foreach (var mesh in meshGroup.Meshes)
                 {
-                    usedMaterialNames.Add(mesh.Material);
+                    usedMaterialKeys.Add(mesh.Material);
                 }
             }
 
-            // Only add materials that are actually used
-            foreach (var assimpMaterial in assimpScene.Materials)
+            // Only add materials that are actually used.
+            for (int materialIndex = 0; materialIndex < assimpScene.MaterialCount; materialIndex++)
             {
-                if (usedMaterialNames.Contains(assimpMaterial.Name))
+                if (!materialKeyMap.TryGetValue(materialIndex, out string? materialKey)
+                    || !usedMaterialKeys.Contains(materialKey))
                 {
-                    SourceMaterialSettings materialSettings = new SourceMaterialSettings();
-                    materialSettings.Name = assimpMaterial.Name;
-                    sceneModel.MaterialSettings.TryAdd(assimpMaterial.Name, materialSettings);
+                    continue;
                 }
+
+                SourceMaterialSettings materialSettings = new SourceMaterialSettings();
+                materialSettings.Name = materialKey;
+                sceneModel.MaterialSettings[materialKey] = materialSettings;
             }
         }
     }

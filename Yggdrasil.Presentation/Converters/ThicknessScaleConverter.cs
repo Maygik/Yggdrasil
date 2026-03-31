@@ -4,6 +4,11 @@ using Microsoft.UI.Xaml.Data;
 
 namespace Yggdrasil.Presentation.Converters;
 
+/// <summary>
+/// Handles scaling of Thickness values in XAML bindings.
+/// Used for building the bone hierarchy in the rigging UI.
+/// This makes it easy to adjust the spacing
+/// </summary>
 public sealed class ThicknessScaleConverter : IValueConverter
 {
     public double Scale { get; set; } = 1.0;

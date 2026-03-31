@@ -12,9 +12,11 @@ internal sealed class DeviceResources
 
     public IDXGIFactory2? Factory { get; private set; }
 
+    // Initializes the D3D11 device, device context, and DXGI factory.
     public void Initialize()
     {
         var creationFlags = DeviceCreationFlags.BgraSupport;
+        // Enable debug layer in debug mode
 #if DEBUG
         creationFlags |= DeviceCreationFlags.Debug;
 #endif

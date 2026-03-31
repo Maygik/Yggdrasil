@@ -90,7 +90,8 @@ namespace Yggdrasil.Presentation
             }
 
             if (e.PropertyName == nameof(ShellViewModel.SelectedMaterialName)
-                || e.PropertyName == nameof(ShellViewModel.HoveredMaterialName))
+                || e.PropertyName == nameof(ShellViewModel.HoveredMaterialName)
+                || e.PropertyName == nameof(ShellViewModel.SelectedBoneName))
             {
                 SyncViewportSelection();
             }
@@ -199,7 +200,8 @@ namespace Yggdrasil.Presentation
             Host.Viewport.UpdateSelection(new RenderSelectionState
             {
                 SelectedMaterialName = Host.Shell.SelectedMaterialName,
-                HoveredMaterialName = Host.Shell.HoveredMaterialName
+                HoveredMaterialName = Host.Shell.HoveredMaterialName,
+                SelectedBoneName = Host.Shell.SelectedBoneName
             });
         }
     }

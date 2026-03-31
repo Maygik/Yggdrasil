@@ -5,6 +5,11 @@ using Yggdrasil.Domain.Project;
 
 namespace Yggdrasil.Infrastructure.Images
 {
+    /// <summary>
+    /// Handles writing VTF files to disk by invoking the VTFCmd command-line tool.
+    /// This class is responsible for constructing the appropriate command-line arguments based on the VtfWriteRequest, running the process, and handling any errors that may occur during execution.
+    /// It ensures that the output file is created successfully and provides detailed error messages if something goes wrong.
+    /// </summary>
     internal sealed class VtfCmdWriter : IVTFWriter
     {
         public ServiceResult WriteVtf(VtfWriteRequest request)

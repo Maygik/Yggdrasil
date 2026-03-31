@@ -5,7 +5,6 @@ using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
-using Microsoft.Windows.Storage.Pickers;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,7 +13,6 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
-using WinRT.Interop;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -49,23 +47,14 @@ namespace Yggdrasil.Presentation.Dialogs
 
         public async void BrowseFolderButton_Click(object sender, RoutedEventArgs e)
         {
-            if (App.Instance.MainWindow is null)
-                return;
+            var folder = await App.Instance.Host.FileDialogs.ShowFolderDialogAsync(
+                title: "Choose Project Location",
+                historyKey: Yggdrasil.Presentation.Services.PickerSettingsIds.CreateProjectLocation,
+                fallbackDirectory: ProjectDirectoryTextBox.Text);
 
-            var hWnd = WindowNative.GetWindowHandle(App.Instance.MainWindow);
-            var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
-
-            // Make the picker
-            // Have it start in the last used directory, or the documents folder if we don't have one
-            var picker = new FolderPicker(windowId)
+            if (!string.IsNullOrWhiteSpace(folder))
             {
-                SuggestedStartLocation = PickerLocationId.DocumentsLibrary
-            };
-
-            var folder = await picker.PickSingleFolderAsync();
-            if (folder is not null)
-            {
-                ProjectDirectoryTextBox.Text = folder.Path;
+                ProjectDirectoryTextBox.Text = folder;
             }
         }
 

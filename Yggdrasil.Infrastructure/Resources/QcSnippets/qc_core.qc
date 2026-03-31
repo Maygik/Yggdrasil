@@ -13,10 +13,6 @@ $modelname "@MODEL_PATH@.mdl"
 $surfaceprop "@SURFACE_PROP@"
 
 
-// Calculate lighting a little above the pelvis. Roughly in the middle.
-$illumposition 0 0 10 "@ILLUM_POSITION@"
-
-
 // Renders transparency in a separate pass. Can generally be left as-is
 $mostlyopaque
 

@@ -7,4 +7,6 @@ public sealed class RenderSelectionState
     public string? SelectedMaterialName { get; init; }
 
     public string? HoveredMaterialName { get; init; }
+
+    public string? SelectedBoneName { get; init; }
 }

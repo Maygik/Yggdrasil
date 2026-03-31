@@ -1,9 +1,9 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.Windows.Storage.Pickers;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using Yggdrasil.Domain.Project;
 using Yggdrasil.Domain.QC;
@@ -128,21 +128,18 @@ namespace Yggdrasil.Presentation.Pages
         private async void BrowseAddonPathButton_Click(object sender, RoutedEventArgs e)
         {
             var project = Host.Shell.CurrentSession?.Project;
-            if (project is null || string.IsNullOrWhiteSpace(project.Directory) || App.Instance.MainWindow is null)
+            if (project is null)
                 return;
 
-            var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(App.Instance.MainWindow);
-            var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
-            var picker = new FolderPicker(windowId)
-            {
-                SuggestedStartLocation = PickerLocationId.DocumentsLibrary
-            };
+            var folder = await Host.FileDialogs.ShowFolderDialogAsync(
+                title: "Choose Addon Root",
+                historyKey: PickerSettingsIds.ProjectAddonRoot,
+                fallbackDirectory: ResolveProjectDirectory(project, project.Build.AddonDirectory));
 
-            var folder = await picker.PickSingleFolderAsync();
-            if (folder is null)
+            if (string.IsNullOrWhiteSpace(folder))
                 return;
 
-            var relativePath = Host.Backend.ProjectEditor.NormalizeProjectRelativePath(project, folder.Path);
+            var relativePath = Host.Backend.ProjectEditor.NormalizeProjectRelativePath(project, folder);
 
             _isRefreshing = true;
             AddonPathTextBox.Text = relativePath;
@@ -150,6 +147,21 @@ namespace Yggdrasil.Presentation.Pages
             _isRefreshing = false;
 
             project.Build.AddonDirectory = relativePath;
+        }
+
+        private static string? ResolveProjectDirectory(Project project, string? configuredPath)
+        {
+            if (string.IsNullOrWhiteSpace(configuredPath))
+            {
+                return project.Directory;
+            }
+
+            if (Path.IsPathRooted(configuredPath) || string.IsNullOrWhiteSpace(project.Directory))
+            {
+                return configuredPath;
+            }
+
+            return Path.Combine(project.Directory, configuredPath);
         }
 
         private void AddMaterialPathButton_Click(object sender, RoutedEventArgs e)

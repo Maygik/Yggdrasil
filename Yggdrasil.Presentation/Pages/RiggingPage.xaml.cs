@@ -21,6 +21,7 @@ namespace Yggdrasil.Presentation.Pages
         private readonly RigSlotSectionItem _leftHandSlotSection = new() { Title = "Left Hand" };
         private readonly RigSlotSectionItem _rightHandSlotSection = new() { Title = "Right Hand" };
         private readonly Dictionary<TreeViewNode, BoneHierarchyItem> _boneLookupByNode = new();
+        private readonly Dictionary<string, BoneHierarchyItem> _boneLookupByName = new(StringComparer.Ordinal);
         private BoneHierarchyItem? _selectedBone;
         private RigSlotEditorItem? _selectedSlot;
 
@@ -72,14 +73,16 @@ namespace Yggdrasil.Presentation.Pages
         private void PopulateBoneHierarchy(Bone rootBone)
         {
             _boneLookupByNode.Clear();
+            _boneLookupByName.Clear();
             BoneHierarchyTreeView.RootNodes.Clear();
             BoneHierarchyTreeView.RootNodes.Add(CreateBoneTreeNode(rootBone, true));
-            SetSelectedBone(null);
+            SetSelectedBone(ResolveSelectedBone(Host.Shell.SelectedBoneName));
         }
 
         private void ClearBoneHierarchy()
         {
             _boneLookupByNode.Clear();
+            _boneLookupByName.Clear();
             BoneHierarchyTreeView.RootNodes.Clear();
             SetSelectedBone(null);
         }
@@ -98,6 +101,7 @@ namespace Yggdrasil.Presentation.Pages
                 IsExpanded = isExpanded
             };
             _boneLookupByNode[node] = boneItem;
+            _boneLookupByName.TryAdd(bone.Name, boneItem);
 
             foreach (var child in bone.Children)
             {
@@ -175,6 +179,7 @@ namespace Yggdrasil.Presentation.Pages
                 ? selectedItem
                 : null;
             SetSelectedBone(selectedBone);
+            Host.Shell.SelectedBoneName = selectedBone?.Name;
         }
 
         private void RigSlotRow_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
@@ -350,6 +355,18 @@ namespace Yggdrasil.Presentation.Pages
             SelectedBoneTextBlock.Text = boneItem is null
                 ? "Selected bone: None"
                 : $"Selected bone: {boneItem.Name}";
+        }
+
+        private BoneHierarchyItem? ResolveSelectedBone(string? boneName)
+        {
+            if (string.IsNullOrWhiteSpace(boneName))
+            {
+                return null;
+            }
+
+            return _boneLookupByName.TryGetValue(boneName, out var boneItem)
+                ? boneItem
+                : null;
         }
 
         private void RiggingPage_Unloaded(object sender, RoutedEventArgs e)

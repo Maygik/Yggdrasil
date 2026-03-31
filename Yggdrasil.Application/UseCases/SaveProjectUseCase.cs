@@ -3,7 +3,11 @@ using Yggdrasil.Domain.Project;
 
 namespace Yggdrasil.Application.UseCases
 {
-    public  class SaveProjectUseCase
+    /// <summary>
+    /// Handles saving the current project state to disk. This includes validating the project data, serializing it to a file format, and writing it to the specified location.
+    /// The use case returns a result indicating success or failure, along with any relevant messages or error details.
+    /// </summary>
+    public class SaveProjectUseCase
     {
         private readonly IProjectStore _projectStore;
 

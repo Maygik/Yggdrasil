@@ -4,6 +4,10 @@ using Yggdrasil.Domain.Scene;
 
 namespace Yggdrasil.Application.UseCases
 {
+    /// <summary>
+    /// Handles exporting materials from the project to VMT and VTF files.
+    /// This includes generating VMT content based on material settings, baking textures using the specified formats, and writing the output files to the appropriate directory structure for use in Source engine addons.
+    /// </summary>
     public sealed class ExportMaterialsUseCase
     {
         private readonly IMaterialExporter _materialExporter;
@@ -35,6 +39,7 @@ namespace Yggdrasil.Application.UseCases
                 return new ExportMaterialsResult(false, "Set an addon root on the Project page before exporting materials.");
             }
 
+            // We need VTFCmd, make sure we have it
             var bundledVtfCmdPath = PackagedToolPaths.GetVtfCmdPath();
             if (!File.Exists(bundledVtfCmdPath))
             {
@@ -43,6 +48,7 @@ namespace Yggdrasil.Application.UseCases
                     $"This build does not include the bundled VTFCmd tool. Expected it at '{bundledVtfCmdPath}'.");
             }
 
+            // Find the output directory for the materials
             var addonDirectory = ResolveAddonDirectory(request.Project);
             var relativeMaterialDirectory = NormalizeRelativeMaterialDirectory(
                 request.Project.Qc.CdMaterialsPaths.FirstOrDefault());
@@ -50,6 +56,7 @@ namespace Yggdrasil.Application.UseCases
 
             Directory.CreateDirectory(outputDirectory);
 
+            // Build lookup tables for material export
             var allMaterials = scene.MaterialSettings.Values
                 .OrderBy(material => material.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
@@ -64,14 +71,17 @@ namespace Yggdrasil.Application.UseCases
             var materialFileNames = BuildUniqueMaterialFileNames(allMaterials);
             var usedInternalTextures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+            // Foreach material
             foreach (var material in selectedMaterials)
             {
+                // Make the content, getting a list of used textures
                 var vmtContents = _materialExporter.GenerateVMT(
                     material,
                     relativeMaterialDirectory,
                     textureNames,
                     out var internalTextures);
 
+                // Add any internal textures to the used list for baking
                 if (internalTextures is not null)
                 {
                     foreach (var internalTexture in internalTextures)
@@ -80,11 +90,13 @@ namespace Yggdrasil.Application.UseCases
                     }
                 }
 
+                // Write the VMT to the output directory with a unique name
                 var fileName = materialFileNames[material.Name];
                 var outputPath = Path.Combine(outputDirectory, $"{fileName}.vmt");
                 File.WriteAllText(outputPath, vmtContents);
             }
 
+            // Convert and write all used textures to the output directory with unique names
             var bakeResult = _materialBaker.BakeTextures(new MaterialBakeRequest
             {
                 Materials = selectedMaterials,
@@ -103,6 +115,7 @@ namespace Yggdrasil.Application.UseCases
                 return new ExportMaterialsResult(false, bakeResult.ErrorMessage ?? "Material texture export failed.");
             }
 
+            // Return success with a message about how many materials were exported, and any messages/warnings from the bake step
             var result = new ExportMaterialsResult(true);
             result.Messages.Add(
                 $"Wrote {selectedMaterials.Count} VMT file{(selectedMaterials.Count == 1 ? string.Empty : "s")} to '{outputDirectory}'.");
@@ -120,6 +133,7 @@ namespace Yggdrasil.Application.UseCases
             return result;
         }
 
+        // Resolves the addon directory, making it absolute if it's relative to the project directory
         private static string ResolveAddonDirectory(Project project)
         {
             var addonDirectory = project.Build.AddonDirectory;
@@ -131,6 +145,7 @@ namespace Yggdrasil.Application.UseCases
             return addonDirectory;
         }
 
+        // Resolves the target materials based on the requested material names. If no names are provided, all materials are returned.
         private static List<SourceMaterialSettings> ResolveTargetMaterials(
             SceneModel scene,
             IReadOnlyCollection<string>? requestedMaterialNames)
@@ -151,6 +166,7 @@ namespace Yggdrasil.Application.UseCases
                 .ToList();
         }
 
+        // Make sure all textures properly convert, even if materials use textures that share a name, but are in different places
         private static Dictionary<string, string> BuildUniqueTextureNames(
             IEnumerable<SourceMaterialSettings> materials)
         {
@@ -163,6 +179,7 @@ namespace Yggdrasil.Application.UseCases
             return BuildUniqueNameMap(texturePaths);
         }
 
+        // Make sure materials get unique file names, even if they share the same name in the source data
         private static Dictionary<string, string> BuildUniqueMaterialFileNames(
             IEnumerable<SourceMaterialSettings> materials)
         {
@@ -175,6 +192,7 @@ namespace Yggdrasil.Application.UseCases
             return BuildUniqueNameMap(materialNames);
         }
 
+        // Builds a map from source values to unique, sanitized file stem candidates. If there are duplicates after sanitization, suffixes are added to ensure uniqueness.
         private static Dictionary<string, string> BuildUniqueNameMap(IEnumerable<string> sourceValues)
         {
             var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -208,6 +226,7 @@ namespace Yggdrasil.Application.UseCases
             return result;
         }
 
+        // Gets all texture paths referenced by a material, ignoring null or whitespace entries
         private static IEnumerable<string> GetReferencedTexturePaths(SourceMaterialSettings material)
         {
             if (!string.IsNullOrWhiteSpace(material.BaseTexture))
@@ -246,6 +265,7 @@ namespace Yggdrasil.Application.UseCases
             }
         }
 
+        // Sanitizes a string to be used as a file stem by removing invalid characters and replacing them with underscores. If the result is empty, "material" is returned as a default.
         private static string SanitizeFileStem(string input)
         {
             var fileStem = Path.GetFileNameWithoutExtension(input?.Trim());
@@ -263,6 +283,7 @@ namespace Yggdrasil.Application.UseCases
             return string.IsNullOrWhiteSpace(fileStem) ? "material" : fileStem;
         }
 
+        // Normalizes relative material paths by trimming whitespace, replacing backslashes with forward slashes, and removing leading/trailing slashes. If the input is null, it is treated as an empty string.
         private static string NormalizeRelativeMaterialDirectory(string? relativeMaterialDirectory)
         {
             return (relativeMaterialDirectory ?? string.Empty)
@@ -271,6 +292,7 @@ namespace Yggdrasil.Application.UseCases
                 .Trim('/');
         }
 
+        // Builds the output directory by combining addon (C:/program files/steam/... .../addons/myaddon) and relative material directory (e.g. "materials/models/jeff")
         private static string BuildMaterialOutputDirectory(string addonDirectory, string relativeMaterialDirectory)
         {
             var outputDirectory = Path.Combine(addonDirectory, "materials");

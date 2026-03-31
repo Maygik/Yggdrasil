@@ -33,6 +33,7 @@ namespace Yggdrasil.Presentation.Models
                 ? $"{AssignedBoneDisplay} is assigned to multiple rig slots."
                 : AssignedBoneDisplay;
 
+        // Updates the assigned bone name
         public void UpdateAssignment(string? assignedBoneName)
         {
             if (string.Equals(_assignedBoneName, assignedBoneName, StringComparison.Ordinal))
@@ -44,6 +45,7 @@ namespace Yggdrasil.Presentation.Models
             OnPropertyChanged(nameof(AssignmentToolTip));
         }
 
+        // Updates whether this slot has a duplicate assignment, so that we can highlight it in the UI
         public void UpdateDuplicateAssignment(bool hasDuplicateAssignment)
         {
             if (_hasDuplicateAssignment == hasDuplicateAssignment)
@@ -54,6 +56,7 @@ namespace Yggdrasil.Presentation.Models
             OnPropertyChanged(nameof(AssignmentToolTip));
         }
 
+        // Updates the selection state of this item
         public void UpdateSelection(bool isSelected)
         {
             if (_isSelected == isSelected)

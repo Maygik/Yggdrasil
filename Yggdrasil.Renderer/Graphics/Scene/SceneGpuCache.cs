@@ -17,6 +17,7 @@ internal sealed class SceneGpuCache : IDisposable
     private BoneDebugPose[] _boneDebugPoses = [];
     private LineListResources? _boneAxisResources;
     private float _cachedBoneAxisLength = float.NaN;
+    private int _cachedSelectedBoneIndex = -1;
 
     public IReadOnlyList<RenderDrawItem> DrawItems { get; private set; } = [];
 
@@ -105,7 +106,7 @@ internal sealed class SceneGpuCache : IDisposable
         DrawItems = updatedDrawItems;
     }
 
-    public LineListResources? GetBoneAxisResources(DeviceResources deviceResources, float axisLength)
+    public LineListResources? GetBoneAxisResources(DeviceResources deviceResources, float axisLength, int selectedBoneIndex = -1)
     {
         ArgumentNullException.ThrowIfNull(deviceResources);
 
@@ -115,15 +116,24 @@ internal sealed class SceneGpuCache : IDisposable
         }
 
         var clampedAxisLength = MathF.Max(0.01f, axisLength);
+        var normalizedSelectedBoneIndex = selectedBoneIndex >= 0 && selectedBoneIndex < _boneDebugPoses.Length
+            ? selectedBoneIndex
+            : -1;
         if (_boneAxisResources != null
-            && MathF.Abs(_cachedBoneAxisLength - clampedAxisLength) <= 0.001f)
+            && MathF.Abs(_cachedBoneAxisLength - clampedAxisLength) <= 0.001f
+            && _cachedSelectedBoneIndex == normalizedSelectedBoneIndex)
         {
             return _boneAxisResources;
         }
 
         _boneAxisResources?.Dispose();
-        _boneAxisResources = CreateBoneAxisResources(deviceResources, _boneDebugPoses, clampedAxisLength);
+        _boneAxisResources = CreateBoneAxisResources(
+            deviceResources,
+            _boneDebugPoses,
+            clampedAxisLength,
+            normalizedSelectedBoneIndex);
         _cachedBoneAxisLength = clampedAxisLength;
+        _cachedSelectedBoneIndex = normalizedSelectedBoneIndex;
         return _boneAxisResources;
     }
 
@@ -158,6 +168,7 @@ internal sealed class SceneGpuCache : IDisposable
         _boneAxisResources = null;
         _boneDebugPoses = [];
         _cachedBoneAxisLength = float.NaN;
+        _cachedSelectedBoneIndex = -1;
         DrawItems = [];
     }
 
@@ -244,6 +255,7 @@ internal sealed class SceneGpuCache : IDisposable
         _boneAxisResources?.Dispose();
         _boneAxisResources = null;
         _cachedBoneAxisLength = float.NaN;
+        _cachedSelectedBoneIndex = -1;
 
         if (skeleton == null || skeleton.Bones.Count == 0)
         {
@@ -336,12 +348,20 @@ internal sealed class SceneGpuCache : IDisposable
         return CreateLineResources(deviceResources, [.. vertices]);
     }
 
-    private static LineListResources? CreateBoneAxisResources(DeviceResources deviceResources, IReadOnlyList<BoneDebugPose> bones, float axisLength)
+    private static LineListResources? CreateBoneAxisResources(
+        DeviceResources deviceResources,
+        IReadOnlyList<BoneDebugPose> bones,
+        float axisLength,
+        int selectedBoneIndex)
     {
         if (bones.Count == 0)
         {
             return null;
         }
+
+        const float selectedAxisR = 1.0f;
+        const float selectedAxisG = 0.84f;
+        const float selectedAxisB = 0.22f;
 
         var vertices = new LineVertex[bones.Count * 6];
         var vertexIndex = 0;
@@ -349,6 +369,14 @@ internal sealed class SceneGpuCache : IDisposable
         for (var i = 0; i < bones.Count; i++)
         {
             var bone = bones[i];
+            if (i == selectedBoneIndex)
+            {
+                AddAxisLine(vertices, ref vertexIndex, bone.Origin, bone.Origin + (bone.XAxis * axisLength), selectedAxisR, selectedAxisG, selectedAxisB);
+                AddAxisLine(vertices, ref vertexIndex, bone.Origin, bone.Origin + (bone.YAxis * axisLength), selectedAxisR, selectedAxisG, selectedAxisB);
+                AddAxisLine(vertices, ref vertexIndex, bone.Origin, bone.Origin + (bone.ZAxis * axisLength), selectedAxisR, selectedAxisG, selectedAxisB);
+                continue;
+            }
+
             AddAxisLine(vertices, ref vertexIndex, bone.Origin, bone.Origin + (bone.XAxis * axisLength), 1.0f, 0.0f, 0.0f);
             AddAxisLine(vertices, ref vertexIndex, bone.Origin, bone.Origin + (bone.YAxis * axisLength), 0.0f, 1.0f, 0.0f);
             AddAxisLine(vertices, ref vertexIndex, bone.Origin, bone.Origin + (bone.ZAxis * axisLength), 0.0f, 0.0f, 1.0f);

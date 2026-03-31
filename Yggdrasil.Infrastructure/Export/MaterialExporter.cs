@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Yggdrasil.Application.Abstractions;
 using Yggdrasil.Domain.Scene;
+using Yggdrasil.Types;
 
 namespace Yggdrasil.Infrastructure.Export
 {
@@ -167,33 +168,23 @@ namespace Yggdrasil.Infrastructure.Export
             if (materialSettings.Phong.HasValue && materialSettings.Phong.Value)
             {
                 sb.AppendLine($"\t\"$phong\" \"1\"");
+                sb.AppendLine($"\t\"$phongboost\" \"{materialSettings.PhongBoost ?? SourceMaterialDefaults.PhongBoost}\"");
 
-                if (materialSettings.PhongBoost.HasValue)
-                {
-                    sb.AppendLine($"\t\"$phongboost\" \"{materialSettings.PhongBoost.Value}\"");
-                }
-
-                if (materialSettings.PhongFresnelRanges.HasValue)
-                {
-                    var ranges = materialSettings.PhongFresnelRanges.Value;
-                    sb.AppendLine($"\t\"$phongfresnelranges\" \"[{ranges.X} {ranges.Y} {ranges.Z}]\"");
-                }
+                var ranges = materialSettings.PhongFresnelRanges ?? SourceMaterialDefaults.PhongFresnelRanges;
+                sb.AppendLine($"\t\"$phongfresnelranges\" \"[{ranges.X} {ranges.Y} {ranges.Z}]\"");
 
                 if (!string.IsNullOrEmpty(materialSettings.PhongExponentTexture))
                 {
                     var phongExponentTexturePath = uniqueTextureNames[materialSettings.PhongExponentTexture];
                     sb.AppendLine($"\t\"$phongexponenttexture\" \"{BuildMaterialReferencePath(relativePath, phongExponentTexturePath)}\"");
                 }
-                else if (materialSettings.PhongExponent.HasValue)
+                else
                 {
-                    sb.AppendLine($"\t\"$phongexponent\" \"{materialSettings.PhongExponent.Value}\"");
+                    sb.AppendLine($"\t\"$phongexponent\" \"{materialSettings.PhongExponent ?? SourceMaterialDefaults.PhongExponent}\"");
                 }
 
-                if (materialSettings.PhongTint.HasValue)
-                {
-                    var phongTint = materialSettings.PhongTint.Value;
-                    sb.AppendLine($"\t\"$phongtint\" \"[{phongTint.R} {phongTint.G} {phongTint.B}]\"");
-                }
+                var phongTint = materialSettings.PhongTint ?? SourceMaterialDefaults.PhongTint;
+                sb.AppendLine($"\t\"$phongtint\" \"[{phongTint.R} {phongTint.G} {phongTint.B}]\"");
 
                 // Source uses the normal map alpha path for phong masking, so there is no separate texture slot here.
             }

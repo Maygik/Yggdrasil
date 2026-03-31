@@ -47,7 +47,6 @@ namespace Yggdrasil.Infrastructure.QC
             result = result.Replace("@MATERIAL_LINES@", cdmsb.ToString());
 
             result = result.Replace("@SURFACE_PROP@", config.SurfaceProp);
-            result = result.Replace("@ILLUM_POSITION@", config.IllumBone);
             return result;
         }
     }

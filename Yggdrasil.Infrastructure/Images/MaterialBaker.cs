@@ -31,6 +31,8 @@ namespace Yggdrasil.Infrastructure.Images
         {
             ArgumentNullException.ThrowIfNull(request);
 
+
+            // Get the list of textures to export
             var result = new ServiceResult(true);
             var exportJobs = BuildExportJobs(request, result);
             if (exportJobs.Count == 0)
@@ -71,6 +73,7 @@ namespace Yggdrasil.Infrastructure.Images
                         continue;
                     }
 
+                    // Export the staged source texture to VTF
                     var writeResult = _vtfWriter.WriteVtf(new VtfWriteRequest
                     {
                         ToolPath = request.VtfCmdPath,
@@ -122,6 +125,12 @@ namespace Yggdrasil.Infrastructure.Images
             }
         }
 
+        /// <summary>
+        /// Builds the list of texture export jobs based on the material bake request, applying source-specific rules
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="result"></param>
+        /// <returns></returns>
         private static Dictionary<string, TextureExportJob> BuildExportJobs(
             MaterialBakeRequest request,
             ServiceResult result)

@@ -14,6 +14,7 @@ internal static class RendererDiagnostics
         "Yggdrasil",
         "renderer-diagnostics.log");
 
+    // Reset the diagnostics log. This is called at the start of each rendering session to ensure we have a clean log for each session.
     public static void Reset()
     {
         lock (Sync)
@@ -33,6 +34,7 @@ internal static class RendererDiagnostics
         }
     }
 
+    // Writes a message to the diagnostics log with a timestamp. This is thread-safe and can be called from any part of the renderer to log important information or errors.
     public static void Write(string message)
     {
         lock (Sync)

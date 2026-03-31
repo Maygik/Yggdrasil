@@ -8,6 +8,7 @@ namespace Yggdrasil.Domain.Rigging
         string GetBoneName(RigSlot slot);
     }
 
+    // Export bone naming conventions are used to determine how to name bones in the exported model based on the rig slots in Yggdrasil. This allows for flexibility in matching different target engine requirements or user preferences.
     public static class ExportBoneNamingConventions
     {
         public static IExportBoneNamingConvention ValveBiped { get; } =

@@ -10,8 +10,8 @@ namespace Yggdrasil.Domain.Project
 
     public sealed class MaterialExportSettings
     {
-        public VtfImageFormat DefaultTextureFormat { get; set; } = VtfImageFormat.Dxt5;
-        public VtfImageFormat NormalMapFormat { get; set; } = VtfImageFormat.Bgra8888;
+        public VtfImageFormat DefaultTextureFormat { get; set; } = VtfImageFormat.Dxt5; // DXT5 works for almost everything. Technically less optimised for some than DXT1, but DXT1 has some compatability issues.
+        public VtfImageFormat NormalMapFormat { get; set; } = VtfImageFormat.Bgra8888; // BGRA8888 is better for normal maps, DXT5 can cause artifacts. Stores uncompressed.
 
         public override string ToString()
         {

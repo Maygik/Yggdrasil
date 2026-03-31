@@ -4,6 +4,9 @@ using Yggdrasil.Domain.Scene;
 
 namespace Yggdrasil.Application.UseCases
 {
+    /// <summary>
+    /// Handles importing a model file into the project. This includes reading the model file, extracting mesh groups and bones, and updating the project state accordingly.
+    /// </summary>
     public class ImportModelUseCase
     {
         private readonly IModelImporter _modelImporter;
@@ -26,7 +29,7 @@ namespace Yggdrasil.Application.UseCases
                 request.Project.Scene = scene;
                 if (scene.RootBone != null)
                 {
-                    request.Project.Qc.IllumBone = scene.RootBone.Name;
+                    request.Project.Qc.IllumPosition = scene.RootBone.WorldPosition;
                 }
 
                 var result = new ImportModelResult(true, null);

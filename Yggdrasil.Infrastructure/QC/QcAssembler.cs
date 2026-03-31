@@ -27,6 +27,7 @@ namespace Yggdrasil.Infrastructure.QC
             // Make sure the config has meshes
             if (config.Bodygroups == null || config.Bodygroups.Count == 0 || config.Bodygroups.Any(bg => bg.Submeshes == null || bg.Submeshes.Count == 0))
             {
+
                 throw new InvalidOperationException("QcConfig must have at least one bodygroup with meshes defined.");
             }
             var firstBodygroup = config.Bodygroups.First();
@@ -41,6 +42,12 @@ namespace Yggdrasil.Infrastructure.QC
             // Start with the core template which includes the basic structure and common directives
             // The core template will have placeholders for model path, materials, bodygroups, etc. that we replace using the QcPlaceholderReplacer
             sb.Append(QcPlaceholderReplacer.ReplacePlaceholders(_qcTemplateStore.Get("core"), config));
+
+            sb.AppendLine();
+            sb.AppendLine();
+
+            // Illumposition
+            sb.AppendLine($"$illumposition {config.IllumPosition.X} {config.IllumPosition.Y} {config.IllumPosition.Z}");
 
             sb.AppendLine();
             sb.AppendLine();

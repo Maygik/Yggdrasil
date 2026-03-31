@@ -18,11 +18,13 @@ public static class OrbitRotationMath
             ClampPitch(pitchRadians - (pointerDelta.Y * orbitSensitivity)));
     }
 
+    // Make sure the pitch doesn't exceed the limits to avoid gimbal lock and unnatural flipping
     public static float ClampPitch(float pitchRadians)
     {
         return Math.Clamp(pitchRadians, -PitchLimitRadians, PitchLimitRadians);
     }
 
+    // Convert yaw and pitch angles into a direction vector for the camera to look towards
     public static Vector3 CalculateDirection(float yawRadians, float pitchRadians)
     {
         var clampedPitch = ClampPitch(pitchRadians);
@@ -37,6 +39,7 @@ public static class OrbitRotationMath
             sinPitch).Normalized();
     }
 
+    // Convert a direction vector back into yaw and pitch angles for the camera
     public static (float YawRadians, float PitchRadians) CalculateAngles(Vector3 direction)
     {
         if (direction.LengthSquared() <= float.Epsilon)

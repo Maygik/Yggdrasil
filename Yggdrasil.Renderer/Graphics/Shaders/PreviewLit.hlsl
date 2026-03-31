@@ -82,7 +82,8 @@ struct VSOutput
     float3 WorldPosition : TEXCOORD1;
     float2 TexCoord : TEXCOORD2;
     float3 Tangent : TANGENT;
-    float3 Bitangent: BINORMAL;
+    float3 Bitangent : BINORMAL;
+    float VertexLighting : TEXCOORD3;
 };
 
 VSOutput VSMain(VSInput input)
@@ -92,10 +93,27 @@ VSOutput VSMain(VSInput input)
     float4 worldPosition = mul(float4(input.Position, 1.0f), World);
     float3 worldNormal = normalize(mul(float4(input.Normal, 0.0f), World).xyz);
 
+    float3 worldTangent = normalize(mul(float4(input.Tangent, 0.0f), World).xyz);
+    float3 worldBitangent = normalize(mul(float4(input.Bitangent, 0.0f), World).xyz);
+
     output.Position = mul(worldPosition, ViewProjection);
     output.WorldNormal = worldNormal;
     output.WorldPosition = worldPosition.xyz;
     output.TexCoord = float2(input.TexCoord.x, -input.TexCoord.y); // Flip the V coordinate for DirectX
+    output.Tangent = worldTangent;
+    output.Bitangent = worldBitangent;
+    
+    float3 lightDirection = normalize(-LightDirection);
+    float lambertDot = dot(worldNormal, lightDirection);
+
+    if (HalfLambert > 0.5f)
+    {
+        lambertDot = lambertDot * 0.5f + 0.5f;
+        lambertDot = lambertDot * lambertDot; // Square the result for a softer falloff
+    }
+
+    output.VertexLighting = saturate(lambertDot);
+
     return output;
 }
 
@@ -123,14 +141,13 @@ float Fresnel(float3 vNormal, float3 vEyeDir, float3 vRanges)
 }
 
 
-
-
 float4 PSMain(VSOutput input) : SV_TARGET
 {
     // Normalize the normal and light direction
     float3 normal = normalize(input.WorldNormal);
+    float3 tangent = normalize(input.Tangent);
+    float3 bitangent = normalize(input.Bitangent);
     float3 lightDirection = normalize(-LightDirection);
-
 
     // Use the normal map
     float3 normalSample = HasNormalTexture > 0.5f
@@ -141,12 +158,13 @@ float4 PSMain(VSOutput input) : SV_TARGET
     normalSample = (normalSample * 2.0f) - float3(1.0f, 1.0f, 1.0f);
 
     // Reconstruct the normal in world space using the tangent, bitangent, and normal from the vertex shader
-    normal = (normalSample.x * input.Tangent) + (normalSample.y * input.Bitangent) + (normalSample.z * input.WorldNormal);
+    normal = (normalSample.x * tangent) + (normalSample.y * bitangent) + (normalSample.z * normal);
 
     normal = normalize(normal);
 
     // Calculate Lambertian diffuse lighting
     float lambertDot = dot(normal, lightDirection);
+
     if (HalfLambert > 0.5f)
     {
         lambertDot = lambertDot * 0.5f + 0.5f;
@@ -155,8 +173,9 @@ float4 PSMain(VSOutput input) : SV_TARGET
     float lambert = saturate(lambertDot);
 
     // Combine ambient and diffuse lighting
-    float3 lighting = saturate(AmbientStrength + ((1.0f - AmbientStrength) * lambert * 0.5));
 
+    
+    float3 lighting = Phong > 0.5f ? saturate(AmbientStrength + ((1.0f - AmbientStrength) * lambert)) : input.VertexLighting;
 
     float4 baseSample = HasBaseTexture > 0.5f
         ? BaseTextureMap.Sample(MaterialSampler, input.TexCoord)
@@ -185,7 +204,7 @@ float4 PSMain(VSOutput input) : SV_TARGET
 
 
     // $color2
-    float3 baseColor = lerp(baseSample.rgb * Tint, baseSample.rgb, 1-NoTint);
+    float3 baseColor = lerp(baseSample.rgb * Tint, baseSample.rgb, NoTint);
 
 
 
@@ -226,4 +245,3 @@ float4 PSMain(VSOutput input) : SV_TARGET
 
     return float4(finalColor, baseSample.a);
 }
-

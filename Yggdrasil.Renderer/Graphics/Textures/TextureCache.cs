@@ -8,11 +8,24 @@ using Yggdrasil.Renderer.Runtime;
 
 namespace Yggdrasil.Renderer.Graphics.Textures;
 
+/// <summary>
+/// Handles loading and caching of textures.
+/// Textures are loaded on demand when requested by absolute file path.
+/// If a texture has already been loaded for a given path, the cached version is returned.
+/// If the path is invalid, the file does not exist, or loading fails, null is returned. The cache can be cleared to release all loaded textures and free memory.
+/// Massively increases performance by avoiding redundant disk reads and texture creation for the same file. Also centralizes error handling and logging for texture loading operations.
+/// </summary>
 internal sealed class TextureCache : IDisposable
 {
     private readonly Dictionary<string, ID3D11ShaderResourceView> _textures = new(StringComparer.OrdinalIgnoreCase);
     private IWICImagingFactory? _imagingFactory;
 
+    /// <summary>
+    /// Gets a cached texture for the specified absolute path, or loads it if not already cached. Returns null if the path is invalid, the file does not exist, or loading fails.
+    /// </summary>
+    /// <param name="deviceResources"></param>
+    /// <param name="absolutePath"></param>
+    /// <returns></returns>
     public ID3D11ShaderResourceView? GetTexture(DeviceResources deviceResources, string? absolutePath)
     {
         if (string.IsNullOrWhiteSpace(absolutePath))
@@ -76,6 +89,7 @@ internal sealed class TextureCache : IDisposable
         Clear();
     }
 
+    // Loads a texture into the cache from disk using WIC for decoding and D3D11 for texture creation. Returns null if loading fails.
     private unsafe ID3D11ShaderResourceView? LoadTexture(DeviceResources deviceResources, string absolutePath)
     {
         var device = deviceResources.Device

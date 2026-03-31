@@ -179,6 +179,7 @@ internal sealed class PreviewShaderFamily : IDisposable
                 deviceContext.UpdateSubresource(in perObject, _perObjectBuffer!);
                 deviceContext.VSSetConstantBuffers(1, new[] { _perObjectBuffer! });
                 deviceContext.PSSetConstantBuffers(1, new[] { _perObjectBuffer! });
+                deviceContext.VSSetConstantBuffers(2, new[] { materialResources.MaterialConstantsBuffer });
                 deviceContext.PSSetConstantBuffers(2, new[] { materialResources.MaterialConstantsBuffer });
                 deviceContext.PSSetShaderResources(
                     0,

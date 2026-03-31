@@ -1,6 +1,5 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.Windows.Storage.Pickers;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -175,25 +174,16 @@ namespace Yggdrasil.Presentation.Pages
 
             if (project is null)
                 return;
-            else if (string.IsNullOrWhiteSpace(project.Directory))
+
+            var folder = await Host.FileDialogs.ShowFolderDialogAsync(
+                title: "Choose Output Directory",
+                historyKey: PickerSettingsIds.ExportOutputDirectory,
+                fallbackDirectory: ResolveProjectDirectory(project, project.Build.OutputDirectory));
+
+            if (string.IsNullOrWhiteSpace(folder))
                 return;
 
-            if (App.Instance.MainWindow is null)
-                return;
-
-            var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(App.Instance.MainWindow);
-            var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
-
-            var picker = new FolderPicker(windowId);
-
-            // Suggested location is the current path set in the project, if that's null then documents
-            picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
-
-            var folder = await picker.PickSingleFolderAsync();
-            if (folder is null)
-                return;
-
-            var relativePath = Host.Backend.ProjectEditor.NormalizeProjectRelativePath(project, folder.Path);
+            var relativePath = Host.Backend.ProjectEditor.NormalizeProjectRelativePath(project, folder);
 
             _isRefreshing = true;
             OutputDirectoryTextBox.Text = relativePath;
@@ -203,6 +193,21 @@ namespace Yggdrasil.Presentation.Pages
             project.Build.OutputDirectory = relativePath;
             ResolvedOutputDirectoryTextBlock.Text = ResolveOutputDirectory(project);
             UpdateExportAvailability();
+        }
+
+        private static string? ResolveProjectDirectory(Project project, string? configuredPath)
+        {
+            if (string.IsNullOrWhiteSpace(configuredPath))
+            {
+                return project.Directory;
+            }
+
+            if (Path.IsPathRooted(configuredPath) || string.IsNullOrWhiteSpace(project.Directory))
+            {
+                return configuredPath;
+            }
+
+            return Path.Combine(project.Directory, configuredPath);
         }
 
         private void ExportOptionCheckBox_Changed(object sender, RoutedEventArgs e)

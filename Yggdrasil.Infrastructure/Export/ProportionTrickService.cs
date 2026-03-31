@@ -818,7 +818,7 @@ namespace Yggdrasil.Infrastructure.Export
             Console.WriteLine($"Applied world rotation, new LocalRotation: {proportionsBone.LocalRotation}");
         }
 
-
+        // Check if any child bone (recursively) is mapped to a rig slot
         private static bool HasMappedChild(Bone bone, Project project)
         {
             if (bone.Children.Count == 0)
@@ -840,6 +840,7 @@ namespace Yggdrasil.Infrastructure.Export
             return false;
         }
 
+        // Find the first child bone (recursively) that is mapped to a rig slot, or null if there are no mapped descendants
         private static Bone? FindFirstMappedDescendant(Bone bone, Project project)
         {
             foreach (var child in bone.Children)
@@ -861,6 +862,7 @@ namespace Yggdrasil.Infrastructure.Export
             return null;
         }
 
+        // Recursively collect the world transforms of a bone and all its descendants, optionally ignoring any bones with names in the ignore list
         private static void CollectDescendantTransforms(Bone bone, List<(Bone bone, Vector3 worldPos, Quaternion worldRot)> transforms, List<string> ignore = null)
         {
             if (ignore == null)
@@ -883,6 +885,7 @@ namespace Yggdrasil.Infrastructure.Export
             }
         }
 
+        // Try to resolve the rig bone name for a rig slot by checking the assigned bone and logical bone, and return null if neither of them are valid rig bones in the rig bone map
         private static string? ResolveRigBoneName(RigSlot slot, IReadOnlyDictionary<string, Bone> rigBoneMap)
         {
             ArgumentNullException.ThrowIfNull(slot);

@@ -109,6 +109,8 @@ public sealed class SceneToRenderSnapshotMapper
 
             foreach (var mesh in meshGroup.Meshes)
             {
+                var (tangents, bitangents) = ResolveTangentBasis(mesh);
+
                 meshes.Add(new RenderMeshSnapshot
                 {
                     Name = BuildMeshName(meshGroup, mesh),
@@ -116,8 +118,8 @@ public sealed class SceneToRenderSnapshotMapper
                     ModelMatrix = modelMatrix.Copy(),
                     Vertices = mesh.Vertices.ToArray(),
                     Normals = mesh.Normals.ToArray(),
-                    Tangents = mesh.Tangents.ToArray(),
-                    BiTangents = mesh.BiTangents.ToArray(),
+                    Tangents = tangents,
+                    BiTangents = bitangents,
                     UVs = mesh.UVs.ToArray(),
                     Indices = BuildIndices(mesh.Faces),
                     SkinWeights = BuildSkinWeights(mesh, boneIndicesByName)
@@ -306,6 +308,165 @@ public sealed class SceneToRenderSnapshotMapper
             Min = min,
             Max = max
         };
+    }
+
+    private static (Vector3[] Tangents, Vector3[] Bitangents) ResolveTangentBasis(MeshData mesh)
+    {
+        if (HasUsableTangentBasis(mesh))
+        {
+            return (mesh.Tangents.ToArray(), mesh.BiTangents.ToArray());
+        }
+
+        return GenerateTangentBasis(mesh);
+    }
+
+    private static bool HasUsableTangentBasis(MeshData mesh)
+    {
+        if (mesh.Tangents.Count != mesh.Vertices.Count || mesh.BiTangents.Count != mesh.Vertices.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < mesh.Vertices.Count; i++)
+        {
+            if (mesh.Tangents[i].LengthSquared() > float.Epsilon
+                && mesh.BiTangents[i].LengthSquared() > float.Epsilon)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static (Vector3[] Tangents, Vector3[] Bitangents) GenerateTangentBasis(MeshData mesh)
+    {
+        var vertexCount = mesh.Vertices.Count;
+        if (vertexCount == 0)
+        {
+            return (Array.Empty<Vector3>(), Array.Empty<Vector3>());
+        }
+
+        var tangentSums = new Vector3[vertexCount];
+        var bitangentSums = new Vector3[vertexCount];
+
+        foreach (var face in mesh.Faces)
+        {
+            if (face.Vertex1 < 0 || face.Vertex1 >= vertexCount
+                || face.Vertex2 < 0 || face.Vertex2 >= vertexCount
+                || face.Vertex3 < 0 || face.Vertex3 >= vertexCount)
+            {
+                continue;
+            }
+
+            var position0 = mesh.Vertices[face.Vertex1];
+            var position1 = mesh.Vertices[face.Vertex2];
+            var position2 = mesh.Vertices[face.Vertex3];
+
+            var uv0 = GetMeshVector2(mesh.UVs, face.Vertex1);
+            var uv1 = GetMeshVector2(mesh.UVs, face.Vertex2);
+            var uv2 = GetMeshVector2(mesh.UVs, face.Vertex3);
+
+            var edge1 = position1 - position0;
+            var edge2 = position2 - position0;
+            var deltaUv1 = uv1 - uv0;
+            var deltaUv2 = uv2 - uv0;
+            var determinant = (deltaUv1.X * deltaUv2.Y) - (deltaUv1.Y * deltaUv2.X);
+
+            if (MathF.Abs(determinant) <= 1e-8f)
+            {
+                continue;
+            }
+
+            var inverseDeterminant = 1.0f / determinant;
+            var tangent = ((edge1 * deltaUv2.Y) - (edge2 * deltaUv1.Y)) * inverseDeterminant;
+            var bitangent = ((edge2 * deltaUv1.X) - (edge1 * deltaUv2.X)) * inverseDeterminant;
+
+            tangentSums[face.Vertex1] += tangent;
+            tangentSums[face.Vertex2] += tangent;
+            tangentSums[face.Vertex3] += tangent;
+
+            bitangentSums[face.Vertex1] += bitangent;
+            bitangentSums[face.Vertex2] += bitangent;
+            bitangentSums[face.Vertex3] += bitangent;
+        }
+
+        var tangents = new Vector3[vertexCount];
+        var bitangents = new Vector3[vertexCount];
+
+        for (var vertexIndex = 0; vertexIndex < vertexCount; vertexIndex++)
+        {
+            var normal = GetMeshVector3(mesh.Normals, vertexIndex);
+            var tangent = tangentSums[vertexIndex];
+            var bitangent = bitangentSums[vertexIndex];
+
+            tangents[vertexIndex] = OrthonormalizeTangent(normal, tangent);
+            bitangents[vertexIndex] = OrthonormalizeBitangent(normal, tangents[vertexIndex], bitangent);
+        }
+
+        return (tangents, bitangents);
+    }
+
+    private static Vector3 OrthonormalizeTangent(Vector3 normal, Vector3 tangent)
+    {
+        if (normal.LengthSquared() <= float.Epsilon)
+        {
+            return tangent.LengthSquared() <= float.Epsilon
+                ? Vector3.Zero
+                : tangent.Normalized();
+        }
+
+        var orthogonalTangent = tangent - (normal * Vector3.Dot(normal, tangent));
+        if (orthogonalTangent.LengthSquared() <= float.Epsilon)
+        {
+            var fallbackAxis = MathF.Abs(normal.Z) < 0.999f
+                ? new Vector3(0.0f, 0.0f, 1.0f)
+                : new Vector3(0.0f, 1.0f, 0.0f);
+            orthogonalTangent = Vector3.Cross(fallbackAxis, normal);
+        }
+
+        return orthogonalTangent.LengthSquared() <= float.Epsilon
+            ? Vector3.Zero
+            : orthogonalTangent.Normalized();
+    }
+
+    private static Vector3 OrthonormalizeBitangent(Vector3 normal, Vector3 tangent, Vector3 bitangent)
+    {
+        if (normal.LengthSquared() <= float.Epsilon || tangent.LengthSquared() <= float.Epsilon)
+        {
+            return bitangent.LengthSquared() <= float.Epsilon
+                ? Vector3.Zero
+                : bitangent.Normalized();
+        }
+
+        var derivedBitangent = Vector3.Cross(normal, tangent);
+        if (derivedBitangent.LengthSquared() <= float.Epsilon)
+        {
+            return bitangent.LengthSquared() <= float.Epsilon
+                ? Vector3.Zero
+                : bitangent.Normalized();
+        }
+
+        var handedness = bitangent.LengthSquared() > float.Epsilon
+            && Vector3.Dot(derivedBitangent, bitangent) < 0.0f
+                ? -1.0f
+                : 1.0f;
+
+        return (derivedBitangent * handedness).Normalized();
+    }
+
+    private static Vector3 GetMeshVector3(IReadOnlyList<Vector3> values, int index)
+    {
+        return index >= 0 && index < values.Count
+            ? values[index]
+            : Vector3.Zero;
+    }
+
+    private static Vector2 GetMeshVector2(IReadOnlyList<Vector2> values, int index)
+    {
+        return index >= 0 && index < values.Count
+            ? values[index]
+            : Vector2.Zero;
     }
 
     private static Vector3 TransformPoint(Matrix4x4 matrix, Vector3 point)

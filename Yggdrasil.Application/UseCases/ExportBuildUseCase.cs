@@ -4,9 +4,14 @@ using Yggdrasil.Domain.QC;
 using Yggdrasil.Domain.Scene;
 using Yggdrasil.Domain.Rigging;
 using System.Collections.Generic;
+using Yggdrasil.Types;
 
 namespace Yggdrasil.Application.UseCases
 {
+    /// <summary>
+    /// Handles exporting the project to the output format. This includes exporting meshes, animations and QC files based on the project state and user selections.
+    /// The export process may involve applying bone renames based on the rig mapping, building proportion trick animations if needed, and assembling the final QC file using the QcAssembler.
+    /// </summary>
     public class ExportBuildUseCase
     {
         private readonly IMeshExporter _exporter;
@@ -142,6 +147,50 @@ namespace Yggdrasil.Application.UseCases
 
             if (request.exportQc)
             {
+                // Get the illum position
+                // Use pelvis + a little bit if it exists
+                // Otherwise use the root bone + a little bit
+                // Otherwise center of the bounding box
+
+                if (request.Project.Scene.RootBone != null)
+                {
+                    Transform illumBone = request.Project.Scene.RootBone;
+                    var illumPos = illumBone.WorldPosition + new Vector3(0, 0, 10);
+                    request.Project.Qc.IllumPosition = illumPos;
+                    result.Messages.Add($"Set Illum position to {illumPos} based on root bone.");
+                }
+                else if (request.Project.Scene.MeshGroups.Count > 0)
+                {
+                    Vector3 totalMin = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+                    Vector3 totalMax = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+
+                    foreach (var meshGroup in request.Project.Scene.MeshGroups)
+                    {
+                        meshGroup.GetBoundingBox(out var min, out var max);
+                        totalMin = new Vector3(
+                            Math.Min(totalMin.X, min.X),
+                            Math.Min(totalMin.Y, min.Y),
+                            Math.Min(totalMin.Z, min.Z)
+                        );
+                        totalMax = new Vector3(
+                            Math.Max(totalMax.X, max.X),
+                            Math.Max(totalMax.Y, max.Y),
+                            Math.Max(totalMax.Z, max.Z)
+                        );
+                    }
+
+                    var illumPos = (totalMin + totalMax) / 2;
+                    request.Project.Qc.IllumPosition = illumPos;
+                    result.Messages.Add($"Set Illum position to {illumPos} based on bounding box center.");
+                }
+                else
+                {
+                    result.Warnings.Add("Scene has no root bone or meshes. Illum position will be at the origin.");
+                    request.Project.Qc.IllumPosition = new Vector3(0, 0, 0);
+                }
+
+
+
                 var qc = _assembler.AssembleQc(request.Project.Qc);
                 var qcPath = System.IO.Path.Combine(outputDirectory, $"{request.Project.Name}.qc");
                 System.IO.File.WriteAllText(qcPath, qc);
@@ -156,6 +205,7 @@ namespace Yggdrasil.Application.UseCases
             return result;
         }
 
+        // Rename real bones to match the mapped slot names
         private static void ApplyAssignedBoneRenames(
             SceneModel scene,
             SourceBoneMapping rigMapping,
@@ -174,6 +224,7 @@ namespace Yggdrasil.Application.UseCases
             scene.RenameBones(renameMap);
         }
 
+        // Rename real bones to match the logical bone names based on the mapped slots
         private static void ApplyLogicalBoneRenames(
             SceneModel scene,
             SourceBoneMapping rigMapping,

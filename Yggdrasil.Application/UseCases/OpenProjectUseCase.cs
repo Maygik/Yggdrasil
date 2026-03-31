@@ -3,6 +3,9 @@ using Yggdrasil.Domain.Project;
 
 namespace Yggdrasil.Application.UseCases
 {
+    /// <summary>
+    /// Handles opening an existing project file. This includes validating the file path, loading the project data using the IProjectStore, and returning the loaded project along with any relevant messages or errors.
+    /// </summary>
     public sealed class OpenProjectUseCase
     {
         private readonly IProjectStore _projectStore;

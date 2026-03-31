@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Yggdrasil.Types;
 
 namespace Yggdrasil.Domain.QC
 {
@@ -18,7 +19,7 @@ namespace Yggdrasil.Domain.QC
         public List<Bodygroup> Bodygroups { get; set; } = new();      // Bodygroup definitions. Tuple: (bodygroup name, list of submeshes)
 
         public string SurfaceProp { get; set; } = "flesh";                              // $surfaceprop value.
-        public string IllumBone { get; set; } = "ValveBiped.Bip01_Pelvis";              // $illumposition bone name. Used to reduce lighting artifacts.
+        public Vector3 IllumPosition { get; set; } = new Vector3(0,0,20);              // $illumposition bone name. Used to reduce lighting artifacts.
 
         
         public AnimationProfile AnimationProfile { get; set; } = AnimationProfile.None;
@@ -30,7 +31,7 @@ namespace Yggdrasil.Domain.QC
             sb.AppendLine($"$modelname \"{ModelPath}\"");
             sb.AppendLine($"$cdmaterials \"{string.Join(" ", CdMaterialsPaths)}\"");
             sb.AppendLine($"$surfaceprop \"{SurfaceProp}\"");
-            sb.AppendLine($"$illumposition \"{IllumBone}\"");
+            sb.AppendLine($"$illumposition {IllumPosition.X} {IllumPosition.Y} {IllumPosition.Z}");
             if (Bodygroups.Count > 0)
             {
                 sb.AppendLine("$bodygroups");

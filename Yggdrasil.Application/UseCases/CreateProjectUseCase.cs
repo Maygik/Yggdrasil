@@ -9,6 +9,9 @@ using Yggdrasil.Domain.Project;
 
 namespace Yggdrasil.Application.UseCases
 {
+    /// <summary>
+    /// Handle the creation of a new project. This includes validating input, setting up the project structure, and saving the initial project file.
+    /// </summary>
     public sealed class CreateProjectUseCase
     {
         private readonly IProjectStore _projectStore;
@@ -30,17 +33,20 @@ namespace Yggdrasil.Application.UseCases
                 return new CreateProjectResult(false, null, null, "Project directory cannot be empty.");
             }
 
+            // Ensure the project directory exists
             if (!Directory.Exists(request.ProjectDirectory))
             {
                 Directory.CreateDirectory(request.ProjectDirectory);
             }
 
+            // Make the project
             var project = new Project
             {
                 Name = request.Name,
                 Directory = request.ProjectDirectory
             };
 
+            // Set up default project structure
             project.Build.OutputDirectory = Path.Combine(request.ProjectDirectory, "output");
 
             var projectFilePath = Path.Combine(request.ProjectDirectory, $"{request.Name}.yggproj");
