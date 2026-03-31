@@ -601,6 +601,54 @@ namespace Yggdrasil.Infrastructure.Export
             }
 
 
+            // Neck should point at the head, and the head's local X axis should be
+            // tilted 10 degrees forwards from world up to match the reference pose.
+            {
+                string neckBoneName = "ValveBiped.Bip01_Neck1";
+                string headBoneName = "ValveBiped.Bip01_Head1";
+                Bone? neckBone = proportionsBoneMap.GetValueOrDefault(neckBoneName);
+                Bone? headBone = proportionsBoneMap.GetValueOrDefault(headBoneName);
+
+                if (neckBone != null && headBone != null)
+                {
+                    Vector3 directionToHead = (headBone.WorldPosition - neckBone.WorldPosition).Normalised();
+                    AlignBoneLocalXAxisWithWorldDirection(
+                        neckBone,
+                        directionToHead,
+                        0.01f,
+                        $"neck bone \"{neckBoneName}\" to point at head \"{headBoneName}\"");
+                }
+                else
+                {
+                    Console.WriteLine($"Could not find both neck bone \"{neckBoneName}\" and head bone \"{headBoneName}\" for neck adjustment");
+                }
+
+                if (headBone != null)
+                {
+                    const float headForwardTiltDegrees = 15f;
+                    float headForwardTiltRadians = headForwardTiltDegrees * (float)Math.PI / 180f;
+                    // The desired head frame is rotated 90 degrees around world X from the
+                    // original solve, so the "up/forward" basis becomes Z-up and -Y-forward.
+                    Vector3 worldUp = new Vector3(0, 0, 1);
+                    Vector3 worldForward = new Vector3(0, -1, 0);
+                    Vector3 targetHeadXAxis =
+                        ((worldUp * (float)Math.Cos(headForwardTiltRadians))
+                        + (worldForward * (float)Math.Sin(headForwardTiltRadians)))
+                        .Normalised();
+
+                    AlignBoneLocalXAxisWithWorldDirection(
+                        headBone,
+                        targetHeadXAxis,
+                        0.01f,
+                        $"head bone \"{headBoneName}\" so local X is {headForwardTiltDegrees} degrees forward from world up");
+                }
+                else
+                {
+                    Console.WriteLine($"Could not find head bone \"{headBoneName}\" for head adjustment");
+                }
+            }
+
+
             Console.WriteLine("Adding additional bones to proportions armature");
             var finalProportionsBones = result.Proportions.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
             int initialBoneCount = finalProportionsBones.Count;
@@ -862,8 +910,60 @@ namespace Yggdrasil.Infrastructure.Export
             return null;
         }
 
+        private static bool AlignBoneLocalXAxisWithWorldDirection(Bone bone, Vector3 targetDirection, float minAngleDegrees, string description)
+        {
+            ArgumentNullException.ThrowIfNull(bone);
+            ArgumentException.ThrowIfNullOrWhiteSpace(description);
+
+            if (targetDirection.LengthSquared() <= 1e-8f)
+            {
+                Console.WriteLine($"Skipping {description} because the target direction was zero");
+                return false;
+            }
+
+            Vector3 localXAxisDirection = bone.WorldRotation.Rotate(new Vector3(1, 0, 0));
+            Vector3 normalisedTargetDirection = targetDirection.Normalised();
+            float angleToTarget = Vector3.Angle(localXAxisDirection, normalisedTargetDirection);
+
+            if (angleToTarget <= minAngleDegrees)
+            {
+                Console.WriteLine($"{description} was already aligned (angle to target was {angleToTarget} degrees)");
+                return false;
+            }
+
+            Quaternion rotationDelta = Quaternion.FromToRotation(localXAxisDirection, normalisedTargetDirection);
+            var descendantTransforms = CaptureDescendantTransforms(bone);
+            bone.WorldRotation = rotationDelta * bone.WorldRotation;
+            RestoreDescendantTransforms(descendantTransforms);
+            Console.WriteLine($"Adjusted {description} (angle to target was {angleToTarget} degrees)");
+            return true;
+        }
+
+        private static List<(Bone bone, Vector3 worldPos, Quaternion worldRot)> CaptureDescendantTransforms(Bone bone, List<string>? ignore = null)
+        {
+            var descendantTransforms = new List<(Bone bone, Vector3 worldPos, Quaternion worldRot)>();
+            foreach (var child in bone.Children)
+            {
+                if (child is Bone childBone)
+                {
+                    CollectDescendantTransforms(childBone, descendantTransforms, ignore);
+                }
+            }
+
+            return descendantTransforms;
+        }
+
+        private static void RestoreDescendantTransforms(IEnumerable<(Bone bone, Vector3 worldPos, Quaternion worldRot)> descendantTransforms)
+        {
+            foreach (var (bone, worldPos, worldRot) in descendantTransforms)
+            {
+                bone.WorldPosition = worldPos;
+                bone.WorldRotation = worldRot;
+            }
+        }
+
         // Recursively collect the world transforms of a bone and all its descendants, optionally ignoring any bones with names in the ignore list
-        private static void CollectDescendantTransforms(Bone bone, List<(Bone bone, Vector3 worldPos, Quaternion worldRot)> transforms, List<string> ignore = null)
+        private static void CollectDescendantTransforms(Bone bone, List<(Bone bone, Vector3 worldPos, Quaternion worldRot)> transforms, List<string>? ignore = null)
         {
             if (ignore == null)
             {

@@ -305,7 +305,7 @@ namespace Yggdrasil.Domain.Scene
             }
         }
 
-
+        // Rotates the given vector by this quaternion. The vector is treated as a pure quaternion (with w=0) and rotated using the formula: v' = q * v * q^-1
         public Vector3 Rotate(Vector3 vector)
         {
             // Using the formula: v' = q * v * q^-1
@@ -334,7 +334,7 @@ namespace Yggdrasil.Domain.Scene
         }
 
 
-        // Creates a quaternion representing a rotation of "angle" degrees around the specified "axis". The "axis" vector is expected to be normalized.
+        // Creates a quaternion representing a rotation of "angle" radians around the specified "axis". The axis is expected to be a normalized vector.
         public static Quaternion FromAngleAxis(float angle, Vector3 axis)
         {
             float halfAngle = angle * 0.5f;
