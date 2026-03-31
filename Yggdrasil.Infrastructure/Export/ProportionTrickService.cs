@@ -12,6 +12,7 @@ using Yggdrasil.Domain.Rigging;
 using Yggdrasil.Domain.Scene;
 using Yggdrasil.Infrastructure.Import;
 
+using Matrix4x4 = Yggdrasil.Types.Matrix4x4;
 using Vector3 = Yggdrasil.Types.Vector3;
 
 namespace Yggdrasil.Infrastructure.Export
@@ -19,6 +20,19 @@ namespace Yggdrasil.Infrastructure.Export
     public class ProportionTrickService : IProportionTrickService
     {
         private AnimationTemplateStore? _animationStore;
+
+        private readonly struct BoneRotationSnapshot
+        {
+            public BoneRotationSnapshot(Quaternion localRotation, Quaternion worldRotation)
+            {
+                LocalRotation = localRotation;
+                WorldRotation = worldRotation;
+            }
+
+            public Quaternion LocalRotation { get; }
+
+            public Quaternion WorldRotation { get; }
+        }
 
         public ProportionTrickService()
         {
@@ -61,10 +75,11 @@ namespace Yggdrasil.Infrastructure.Export
             // Build a bone map for the original proportions model as well as the project model
             Dictionary<string, Bone> proportionsBoneMap = result.Proportions.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
             Dictionary<string, Bone> rigBoneMap = project.Scene.RootBone.GetAllDescendantsAndSelf().ToDictionary(b => b.Name);
+            IReadOnlyDictionary<string, BoneRotationSnapshot> originalArmRotationSnapshots = CaptureOriginalArmRotationSnapshots(proportionsBoneMap);
 
             // Root bone just gets moved to the rig equivalent
 
-            var rigSlot = project.RigMapping.TryGetRigSlotFromName(result.Proportions.RootBone.Name);
+            var rigSlot = TryGetMappedRigSlotForBoneName(project, result.Proportions.RootBone.Name);
             if (rigSlot != null)
             {
                 var rigBone = ResolveRigBoneName(rigSlot, rigBoneMap);
@@ -93,7 +108,7 @@ namespace Yggdrasil.Infrastructure.Export
 
                 try
                 {
-                    ProcessBone(proportionsBone, project, rigBoneMap, collapsedBones);
+                    ProcessBone(proportionsBone, project, rigBoneMap, collapsedBones, originalArmRotationSnapshots);
                 }
                 catch (Exception ex)
                 {
@@ -106,6 +121,8 @@ namespace Yggdrasil.Infrastructure.Export
             Console.WriteLine("Finished initial processing of proportions bones");
 
             Console.WriteLine("Applying additional adjustments to proportions armature");
+
+            ApplyDedicatedArmSolve(project, proportionsBoneMap, originalArmRotationSnapshots);
 
             // Additional adjustments for specific bones that need slight tweaks
             // Wrist should be rotated to point exactly in between the middle and ring fingers
@@ -513,94 +530,6 @@ namespace Yggdrasil.Infrastructure.Export
                 }
             }
 
-
-            // Do a once over of the clavicles
-            {
-                var leftClavicleName = "ValveBiped.Bip01_L_Clavicle";
-                var rightClavicleName = "ValveBiped.Bip01_R_Clavicle";
-
-                var leftUpperArmName = "ValveBiped.Bip01_L_UpperArm";
-                var rightUpperArmName = "ValveBiped.Bip01_R_UpperArm";
-
-                // Same logic as spines
-                if (proportionsBoneMap.ContainsKey(leftClavicleName) && proportionsBoneMap.ContainsKey(leftUpperArmName))
-                {
-                    var leftClavicle = proportionsBoneMap[leftClavicleName];
-                    var leftUpperArm = proportionsBoneMap[leftUpperArmName];
-                    Vector3 leftDirectionToTarget = (leftUpperArm.WorldPosition - leftClavicle.WorldPosition).Normalised();
-                    Vector3 leftForwardDirection = leftClavicle.WorldRotation.Rotate(new Vector3(1, 0, 0));
-            float leftAngleToTarget = Vector3.Angle(leftForwardDirection, leftDirectionToTarget);
-                    if (leftAngleToTarget > 10f)
-                    {
-                        Quaternion leftRotationDelta = Quaternion.FromToRotation(leftForwardDirection, leftDirectionToTarget);
-                        
-                        // Store original world transforms for all descendants
-                        var descendantTransforms = new List<(Bone bone, Vector3 worldPos, Quaternion worldRot)>();
-                        foreach (var child in leftClavicle.Children)
-                        {
-                            if (child is Bone childBone)
-                            {
-                                CollectDescendantTransforms(childBone, descendantTransforms);
-                            }
-                        }
-                        
-                        // Apply rotation to parent bone
-                        leftClavicle.WorldRotation = leftRotationDelta * leftClavicle.WorldRotation;
-                        
-                        // Restore all descendants to their original world transforms
-                        foreach (var (descendant, worldPos, worldRot) in descendantTransforms)
-                        {
-                            descendant.WorldPosition = worldPos;
-                            descendant.WorldRotation = worldRot;
-                        }
-                        Console.WriteLine($"Adjusted rotation of clavicle bone \"{leftClavicleName}\" to point at upper arm \"{leftUpperArmName}\" (angle to target was {leftAngleToTarget} degrees)");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"Could not find bones for left clavicle adjustment");
-                }
-
-                if (proportionsBoneMap.ContainsKey(rightClavicleName) && proportionsBoneMap.ContainsKey(rightUpperArmName))
-                {
-                    var rightClavicle = proportionsBoneMap[rightClavicleName];
-                    var rightUpperArm = proportionsBoneMap[rightUpperArmName];
-                    Vector3 rightDirectionToTarget = (rightUpperArm.WorldPosition - rightClavicle.WorldPosition).Normalised();
-                    Vector3 rightForwardDirection = rightClavicle.WorldRotation.Rotate(new Vector3(1, 0, 0));
-            float rightAngleToTarget = Vector3.Angle(rightForwardDirection, rightDirectionToTarget);
-                    if (rightAngleToTarget > 10f)
-                    {
-                        Quaternion rightRotationDelta = Quaternion.FromToRotation(rightForwardDirection, rightDirectionToTarget);
-
-                        // Store original world transforms for all descendants
-                        var descendantTransforms = new List<(Bone bone, Vector3 worldPos, Quaternion worldRot)>();
-                        foreach (var child in rightClavicle.Children)
-                        {
-                            if (child is Bone childBone)
-                            {
-                                CollectDescendantTransforms(childBone, descendantTransforms);
-                            }
-                        }
-
-                        // Apply rotation to parent bone
-                        rightClavicle.WorldRotation = rightRotationDelta * rightClavicle.WorldRotation;
-
-                        // Restore all descendants to their original world transforms
-                        foreach (var (descendant, worldPos, worldRot) in descendantTransforms)
-                        {
-                            descendant.WorldPosition = worldPos;
-                            descendant.WorldRotation = worldRot;
-                        }
-                        Console.WriteLine($"Adjusted rotation of clavicle bone \"{rightClavicleName}\" to point at upper arm \"{rightUpperArmName}\" (angle to target was {rightAngleToTarget} degrees)");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"Could not find bones for right clavicle adjustment");
-                }
-            }
-
-
             // Neck should point at the head, and the head's local X axis should be
             // tilted 10 degrees forwards from world up to match the reference pose.
             {
@@ -783,12 +712,17 @@ namespace Yggdrasil.Infrastructure.Export
         }
 
 
-        private static void ProcessBone(Bone proportionsBone, Project project, Dictionary<string, Bone> rigBoneMap, HashSet<Bone> collapsedBones)
+        private static void ProcessBone(
+            Bone proportionsBone,
+            Project project,
+            Dictionary<string, Bone> rigBoneMap,
+            HashSet<Bone> collapsedBones,
+            IReadOnlyDictionary<string, BoneRotationSnapshot> originalArmRotationSnapshots)
         {
             Console.WriteLine($"\n=== Processing bone: {proportionsBone.Name} ===");
 
             // Find the corresponding rig bone
-            var rigSlot = project.RigMapping.TryGetRigSlotFromName(proportionsBone.Name);
+            var rigSlot = TryGetMappedRigSlotForBoneName(project, proportionsBone.Name);
             if (rigSlot == null )
             {
                 Console.WriteLine($"Proportions bone {proportionsBone.Name} does not have a corresponding rig slot, skipping");
@@ -807,7 +741,7 @@ namespace Yggdrasil.Infrastructure.Export
                 Bone? firstMappedDescendant = FindFirstMappedDescendant(proportionsBone, project);
                 if (firstMappedDescendant != null)
                 {
-                    ProcessBone(firstMappedDescendant, project, rigBoneMap, collapsedBones);
+                    ProcessBone(firstMappedDescendant, project, rigBoneMap, collapsedBones, originalArmRotationSnapshots);
                     proportionsBone.WorldMatrix = firstMappedDescendant.WorldMatrix;
             firstMappedDescendant.LocalPosition = Vector3.Zero;
                     firstMappedDescendant.LocalRotation = Quaternion.Identity;
@@ -840,6 +774,13 @@ namespace Yggdrasil.Infrastructure.Export
             if (firstMappedProportionsDescendant == null)
             {
                 Console.WriteLine($"No mapped descendant bones, skipping rotation");
+                return;
+            }
+
+            if (IsDedicatedArmSolveBone(proportionsBone.Name)
+                && originalArmRotationSnapshots.ContainsKey(proportionsBone.Name))
+            {
+                Console.WriteLine($"Skipping generic rotation for arm bone \"{proportionsBone.Name}\" so the dedicated arm solve can handle it");
                 return;
             }
             
@@ -875,7 +816,7 @@ namespace Yggdrasil.Infrastructure.Export
             {
                 if (child is Bone childBone)
                 {
-                    if (childBone.Name != null && project.RigMapping.TryGetRigSlotFromName(childBone.Name) != null)
+                    if (childBone.Name != null && TryGetMappedRigSlotForBoneName(project, childBone.Name) != null)
                     {
                         return true;
                     }
@@ -895,7 +836,7 @@ namespace Yggdrasil.Infrastructure.Export
             {
                 if (child is Bone childBone)
                 {
-                    if (childBone.Name != null && project.RigMapping.TryGetRigSlotFromName(childBone.Name) != null)
+                    if (childBone.Name != null && TryGetMappedRigSlotForBoneName(project, childBone.Name) != null)
                     {
                         return childBone;
                     }
@@ -908,6 +849,261 @@ namespace Yggdrasil.Infrastructure.Export
                 }
             }
             return null;
+        }
+
+        private static RigSlot? TryGetMappedRigSlotForBoneName(Project project, string boneName)
+        {
+            ArgumentNullException.ThrowIfNull(project);
+
+            if (string.IsNullOrWhiteSpace(boneName))
+            {
+                return null;
+            }
+
+            RigSlot? rigSlot = project.RigMapping.TryGetRigSlotFromName(boneName);
+            if (rigSlot != null)
+            {
+                return rigSlot;
+            }
+
+            foreach (RigSlot slot in project.RigMapping.GetSlots())
+            {
+                if (string.Equals(slot.AssignedBone, boneName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return slot;
+                }
+            }
+
+            return null;
+        }
+
+        // Capture the original arm rotations from the packaged proportions model so the arm solve can preserve its roll.
+        private static IReadOnlyDictionary<string, BoneRotationSnapshot> CaptureOriginalArmRotationSnapshots(
+            IReadOnlyDictionary<string, Bone> proportionsBoneMap)
+        {
+            ArgumentNullException.ThrowIfNull(proportionsBoneMap);
+
+            string[] armSnapshotBoneNames =
+            {
+                "ValveBiped.Bip01_L_Clavicle",
+                "ValveBiped.Bip01_L_UpperArm",
+                "ValveBiped.Bip01_L_Forearm",
+                "ValveBiped.Bip01_L_Hand",
+                "ValveBiped.Bip01_R_Clavicle",
+                "ValveBiped.Bip01_R_UpperArm",
+                "ValveBiped.Bip01_R_Forearm",
+                "ValveBiped.Bip01_R_Hand"
+            };
+
+            Dictionary<string, BoneRotationSnapshot> snapshots = new(StringComparer.OrdinalIgnoreCase);
+            foreach (string boneName in armSnapshotBoneNames)
+            {
+                if (!proportionsBoneMap.TryGetValue(boneName, out Bone? bone))
+                {
+                    Console.WriteLine($"Could not capture original arm rotation snapshot for bone \"{boneName}\"");
+                    continue;
+                }
+
+                snapshots[boneName] = new BoneRotationSnapshot(bone.LocalRotation, bone.WorldRotation);
+            }
+
+            return snapshots;
+        }
+
+        // Run a dedicated solve for the arm chains so they can inherit swing from the import but keep roll from the original proportions pose.
+        private static void ApplyDedicatedArmSolve(
+            Project project,
+            IReadOnlyDictionary<string, Bone> proportionsBoneMap,
+            IReadOnlyDictionary<string, BoneRotationSnapshot> originalArmRotationSnapshots)
+        {
+            ArgumentNullException.ThrowIfNull(project);
+            ArgumentNullException.ThrowIfNull(proportionsBoneMap);
+            ArgumentNullException.ThrowIfNull(originalArmRotationSnapshots);
+
+            Console.WriteLine("Applying dedicated arm solve");
+
+            string[] leftArmBoneNames =
+            {
+                "ValveBiped.Bip01_L_Clavicle",
+                "ValveBiped.Bip01_L_UpperArm",
+                "ValveBiped.Bip01_L_Forearm"
+            };
+            string[] rightArmBoneNames =
+            {
+                "ValveBiped.Bip01_R_Clavicle",
+                "ValveBiped.Bip01_R_UpperArm",
+                "ValveBiped.Bip01_R_Forearm"
+            };
+
+            ApplyDedicatedArmSolveForChain("left", leftArmBoneNames, project, proportionsBoneMap, originalArmRotationSnapshots);
+            ApplyDedicatedArmSolveForChain("right", rightArmBoneNames, project, proportionsBoneMap, originalArmRotationSnapshots);
+        }
+
+        // Solve a single arm chain in parent-to-child order so each bone can aim at its mapped child.
+        private static void ApplyDedicatedArmSolveForChain(
+            string sideLabel,
+            IEnumerable<string> boneNames,
+            Project project,
+            IReadOnlyDictionary<string, Bone> proportionsBoneMap,
+            IReadOnlyDictionary<string, BoneRotationSnapshot> originalArmRotationSnapshots)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(sideLabel);
+            ArgumentNullException.ThrowIfNull(boneNames);
+            ArgumentNullException.ThrowIfNull(project);
+            ArgumentNullException.ThrowIfNull(proportionsBoneMap);
+            ArgumentNullException.ThrowIfNull(originalArmRotationSnapshots);
+
+            foreach (string boneName in boneNames)
+            {
+                if (!proportionsBoneMap.TryGetValue(boneName, out Bone? bone))
+                {
+                    Console.WriteLine($"Skipping {sideLabel} arm solve for \"{boneName}\" because the bone was not found");
+                    continue;
+                }
+
+                if (!originalArmRotationSnapshots.TryGetValue(boneName, out BoneRotationSnapshot originalSnapshot))
+                {
+                    Console.WriteLine($"Skipping {sideLabel} arm solve for \"{boneName}\" because the original rotation snapshot was missing");
+                    continue;
+                }
+
+                Bone? targetBone = FindFirstMappedDescendant(bone, project);
+                if (targetBone == null)
+                {
+                    Console.WriteLine($"Skipping {sideLabel} arm solve for \"{boneName}\" because no mapped child target was found");
+                    continue;
+                }
+
+                if (!TryBuildArmTargetWorldRotation(bone, targetBone, originalSnapshot, out Quaternion targetWorldRotation, out string failureReason))
+                {
+                    Console.WriteLine($"Skipping {sideLabel} arm solve for \"{boneName}\": {failureReason}");
+                    continue;
+                }
+
+                // Preserve the current solved chain positions while replacing only this bone's rotation.
+                var descendantTransforms = CaptureDescendantTransforms(bone);
+                bone.WorldRotation = targetWorldRotation;
+                RestoreDescendantTransforms(descendantTransforms);
+                Console.WriteLine($"Applied dedicated {sideLabel} arm solve to \"{boneName}\" using target \"{targetBone.Name}\"");
+            }
+        }
+
+        // Build a target world rotation whose local X aims at the child while local roll stays aligned with the original proportions armature.
+        private static bool TryBuildArmTargetWorldRotation(
+            Bone bone,
+            Bone targetBone,
+            BoneRotationSnapshot originalSnapshot,
+            out Quaternion targetWorldRotation,
+            out string failureReason)
+        {
+            ArgumentNullException.ThrowIfNull(bone);
+            ArgumentNullException.ThrowIfNull(targetBone);
+            ArgumentNullException.ThrowIfNull(originalSnapshot.LocalRotation);
+            ArgumentNullException.ThrowIfNull(originalSnapshot.WorldRotation);
+
+            targetWorldRotation = Quaternion.Identity;
+            failureReason = string.Empty;
+
+            Vector3 desiredXAxis = (targetBone.WorldPosition - bone.WorldPosition).Normalised();
+            if (desiredXAxis.LengthSquared() <= 1e-8f)
+            {
+                failureReason = "desired child direction was zero";
+                return false;
+            }
+
+            // Keep the original proportions Y axis as the preferred roll reference, falling back to Z if it becomes parallel to the new X axis.
+            Vector3 preservedYAxis = ProjectOntoPlane(
+                originalSnapshot.WorldRotation.Rotate(new Vector3(0, 1, 0)),
+                desiredXAxis);
+            if (preservedYAxis.LengthSquared() <= 1e-8f)
+            {
+                preservedYAxis = ProjectOntoPlane(
+                    originalSnapshot.WorldRotation.Rotate(new Vector3(0, 0, 1)),
+                    desiredXAxis);
+            }
+
+            if (preservedYAxis.LengthSquared() <= 1e-8f)
+            {
+                failureReason = "could not construct a preserved secondary axis";
+                return false;
+            }
+
+            Vector3 zAxis = Vector3.Cross(desiredXAxis, preservedYAxis).Normalised();
+            if (zAxis.LengthSquared() <= 1e-8f)
+            {
+                failureReason = "constructed Z axis was degenerate";
+                return false;
+            }
+
+            Vector3 yAxis = Vector3.Cross(zAxis, desiredXAxis).Normalised();
+            if (yAxis.LengthSquared() <= 1e-8f)
+            {
+                failureReason = "constructed Y axis was degenerate";
+                return false;
+            }
+
+            // Rebuild an orthonormal basis so the bone gets the new swing with the preserved roll.
+            targetWorldRotation = BuildRotationFromBasis(desiredXAxis, yAxis, zAxis);
+            return true;
+        }
+
+        // Arm bones use the dedicated arm pass instead of the generic rotation solve.
+        private static bool IsDedicatedArmSolveBone(string boneName)
+        {
+            return boneName switch
+            {
+                "ValveBiped.Bip01_L_Clavicle" => true,
+                "ValveBiped.Bip01_L_UpperArm" => true,
+                "ValveBiped.Bip01_L_Forearm" => true,
+                "ValveBiped.Bip01_R_Clavicle" => true,
+                "ValveBiped.Bip01_R_UpperArm" => true,
+                "ValveBiped.Bip01_R_Forearm" => true,
+                _ => false
+            };
+        }
+
+        // Project a vector onto the plane perpendicular to the given normal and normalise the result.
+        private static Vector3 ProjectOntoPlane(Vector3 vector, Vector3 planeNormal)
+        {
+            Vector3 normalisedPlaneNormal = planeNormal.Normalised();
+            if (normalisedPlaneNormal.LengthSquared() <= 1e-8f)
+            {
+                return Vector3.Zero;
+            }
+
+            Vector3 projected = vector - (normalisedPlaneNormal * Vector3.Dot(vector, normalisedPlaneNormal));
+            return projected.Normalised();
+        }
+
+        // Build a world rotation from orthonormal X, Y and Z basis vectors.
+        private static Quaternion BuildRotationFromBasis(Vector3 xAxis, Vector3 yAxis, Vector3 zAxis)
+        {
+            Matrix4x4 rotationMatrix = new(
+                xAxis.X, yAxis.X, zAxis.X, 0f,
+                xAxis.Y, yAxis.Y, zAxis.Y, 0f,
+                xAxis.Z, yAxis.Z, zAxis.Z, 0f,
+                0f, 0f, 0f, 1f);
+
+            return NormalizeQuaternion(Quaternion.FromMatrix(rotationMatrix));
+        }
+
+        // Normalise a quaternion and guard against zero-length inputs.
+        private static Quaternion NormalizeQuaternion(Quaternion quaternion)
+        {
+            ArgumentNullException.ThrowIfNull(quaternion);
+
+            float magnitude = MathF.Sqrt(
+                (quaternion.W * quaternion.W)
+                + (quaternion.X * quaternion.X)
+                + (quaternion.Y * quaternion.Y)
+                + (quaternion.Z * quaternion.Z));
+
+            if (magnitude <= 1e-8f)
+            {
+                return Quaternion.Identity;
+            }
+
+            return quaternion / magnitude;
         }
 
         private static bool AlignBoneLocalXAxisWithWorldDirection(Bone bone, Vector3 targetDirection, float minAngleDegrees, string description)
