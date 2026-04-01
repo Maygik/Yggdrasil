@@ -21,7 +21,7 @@
     <ResolvedBuildPlatform Condition="'$(ResolvedBuildPlatform)' == ''">$(Platform)</ResolvedBuildPlatform>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$(ResolvedBuildPlatform)</RuntimeIdentifier>
     <PlatformTarget Condition="'$(PlatformTarget)' == ''">$(ResolvedBuildPlatform)</PlatformTarget>
-    <PublishProfile>win-$(ResolvedBuildPlatform).pubxml</PublishProfile>
+    <PublishProfile Condition="'$(PublishProfile)' == '' and '$(BuildingInsideVisualStudio)' == 'true'">win-$(ResolvedBuildPlatform).pubxml</PublishProfile>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Assets\Yggdrasil.ico" />

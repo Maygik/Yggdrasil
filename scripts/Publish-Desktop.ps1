@@ -60,6 +60,7 @@ $publishArgs = @(
     "-r", $Runtime,
     "--self-contained", "true",
     "-p:Platform=$platform",
+    "-p:PublishProfile=",
     "-p:WindowsPackageType=None",
     "-p:WindowsAppSDKSelfContained=true",
     "-p:PublishSingleFile=false",
