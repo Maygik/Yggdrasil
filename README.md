@@ -1,6 +1,6 @@
 # Yggdrasil
 
-Yggdrasil is a tool designed to help simplify porting of source engine models. This tools attempts to replicate the VRChat workflow using rig slots and a built in material editor.
+Yggdrasil is a tool designed to help simplify porting of source engine models. This tools attempts to replicate the VRChat workflow using rig slots and a built in material editor with preview.
 
 # How to Use
 ## 1: Create a new project
@@ -30,9 +30,10 @@ For animation profiles outside of "None" and "Ragdoll Only", proportion trick wi
 1. Proportion trick animations looks a little hunched over
 2. Viewport preview is very dark
 3. Rimlight and Envmap material properties have no effect
+4. Player/NPC export does not include physics and hitboxes
 
 # Credits
-Developing Yggdrasil - Maygik
-Original Proportion Trick Method - CaptainBigButt
-Original Blender Proportion Trick Scripts - B L A Z E
-Test Dummy - An0nymoose
+Developing Yggdrasil - Maygik  
+Original Proportion Trick Method - CaptainBigButt  
+Original Blender Proportion Trick Scripts - B L A Z E  
+Test Dummy - An0nymoose  
