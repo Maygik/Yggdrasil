@@ -32,7 +32,7 @@ For animation profiles outside of "None" and "Ragdoll Only", proportion trick wi
 3. Rimlight and Envmap material properties have no effect
 
 # Credits
-Developing Yggdrasil - Maygik
-Original Proportion Trick Method - CaptainBigButt
-Original Blender Proportion Trick Scripts - B L A Z E
-Test Dummy - An0nymoose
+Developing Yggdrasil - Maygik  
+Original Proportion Trick Method - CaptainBigButt  
+Original Blender Proportion Trick Scripts - B L A Z E  
+Test Dummy - An0nymoose  
