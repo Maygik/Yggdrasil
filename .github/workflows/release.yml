@@ -1,0 +1,154 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version, for example 1.2.3 or v1.2.3"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
+
+jobs:
+  build-assets:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    outputs:
+      release_tag: ${{ steps.version.outputs.release_tag }}
+      release_version: ${{ steps.version.outputs.release_version }}
+      portable_asset_name: ${{ steps.version.outputs.portable_asset_name }}
+      installer_asset_name: ${{ steps.version.outputs.installer_asset_name }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Resolve release version
+        id: version
+        shell: pwsh
+        env:
+          MANUAL_VERSION: ${{ inputs.version }}
+        run: |
+          $manualVersion = $env:MANUAL_VERSION
+
+          if ($env:GITHUB_REF_TYPE -eq "tag" -and -not [string]::IsNullOrWhiteSpace($env:GITHUB_REF_NAME)) {
+              $releaseTag = $env:GITHUB_REF_NAME
+          }
+          elseif (-not [string]::IsNullOrWhiteSpace($manualVersion)) {
+              $releaseTag = if ($manualVersion.StartsWith("v", [System.StringComparison]::OrdinalIgnoreCase)) {
+                  $manualVersion
+              }
+              else {
+                  "v$manualVersion"
+              }
+          }
+          else {
+              throw "Unable to determine the release version."
+          }
+
+          $releaseVersion = if ($releaseTag.StartsWith("v", [System.StringComparison]::OrdinalIgnoreCase)) {
+              $releaseTag.Substring(1)
+          }
+          else {
+              $releaseTag
+          }
+
+          $portableAssetName = "Yggdrasil-portable-win-x64-$releaseVersion.zip"
+          $installerAssetName = "Yggdrasil-setup-win-x64-$releaseVersion.exe"
+
+          "release_tag=$releaseTag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "release_version=$releaseVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "portable_asset_name=$portableAssetName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "installer_asset_name=$installerAssetName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Publish portable desktop build
+        shell: pwsh
+        run: ./scripts/Publish-Desktop.ps1 -Configuration Release -Runtime win-x64 -OutputDir ./artifacts/release
+
+      - name: Create portable zip
+        shell: pwsh
+        run: |
+          $destination = Join-Path (Resolve-Path ./artifacts/release).Path '${{ steps.version.outputs.portable_asset_name }}'
+          if (Test-Path -LiteralPath $destination) {
+              Remove-Item -LiteralPath $destination -Force
+          }
+
+          Compress-Archive `
+              -Path ./artifacts/release/Yggdrasil-win-x64 `
+              -DestinationPath $destination `
+              -CompressionLevel Optimal
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        run: ./scripts/Build-Installer.ps1 -Version '${{ steps.version.outputs.release_version }}' -Runtime win-x64 -PublishDir ./artifacts/release/Yggdrasil-win-x64 -OutputDir ./artifacts/release
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-assets
+          if-no-files-found: error
+          compression-level: 0
+          path: |
+            ./artifacts/release/${{ steps.version.outputs.portable_asset_name }}
+            ./artifacts/release/${{ steps.version.outputs.installer_asset_name }}
+
+  publish-release:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    needs:
+      - build-assets
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@v8
+        with:
+          name: release-assets
+          path: ./artifacts/release-assets
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.build-assets.outputs.release_tag }}
+          RELEASE_VERSION: ${{ needs.build-assets.outputs.release_version }}
+          PORTABLE_ASSET_NAME: ${{ needs.build-assets.outputs.portable_asset_name }}
+          INSTALLER_ASSET_NAME: ${{ needs.build-assets.outputs.installer_asset_name }}
+        run: |
+          $assetRoot = (Resolve-Path ./artifacts/release-assets).Path
+          $portableAsset = Join-Path $assetRoot $env:PORTABLE_ASSET_NAME
+          $installerAsset = Join-Path $assetRoot $env:INSTALLER_ASSET_NAME
+
+          & gh release view $env:RELEASE_TAG 1>$null 2>$null
+
+          if ($LASTEXITCODE -eq 0) {
+              & gh release upload $env:RELEASE_TAG $portableAsset $installerAsset --clobber
+          }
+          else {
+              & gh release create $env:RELEASE_TAG $portableAsset $installerAsset --target $env:GITHUB_SHA --title "Yggdrasil $env:RELEASE_VERSION" --generate-notes
+          }
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "The GitHub release step failed with exit code $LASTEXITCODE."
+          }
