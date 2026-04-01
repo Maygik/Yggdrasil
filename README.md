@@ -36,4 +36,4 @@ For animation profiles outside of "None" and "Ragdoll Only", proportion trick wi
 Developing Yggdrasil - Maygik  
 Original Proportion Trick Method - CaptainBigButt  
 Original Blender Proportion Trick Scripts - B L A Z E  
-Test Dummy - An0nymoose  
+Test Dummy - An0nymooose  
