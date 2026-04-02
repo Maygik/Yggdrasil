@@ -38,6 +38,8 @@ public struct Vector2 : IEquatable<Vector2>
 
     public static Vector2 operator +(Vector2 left, Vector2 right) => new(left.X + right.X, left.Y + right.Y);
 
+    public static Vector2 operator -(Vector2 value) => new(-value.X, -value.Y);
+
     public static Vector2 operator -(Vector2 left, Vector2 right) => new(left.X - right.X, left.Y - right.Y);
 
     public static Vector2 operator *(Vector2 value, float scalar) => new(value.X * scalar, value.Y * scalar);
@@ -80,6 +82,8 @@ public struct Vector2i : IEquatable<Vector2i>
     public static explicit operator Vector2(Vector2i value) => new(value.X, value.Y);
 
     public static Vector2i operator +(Vector2i left, Vector2i right) => new(left.X + right.X, left.Y + right.Y);
+
+    public static Vector2i operator -(Vector2i value) => new(-value.X, -value.Y);
 
     public static Vector2i operator -(Vector2i left, Vector2i right) => new(left.X - right.X, left.Y - right.Y);
 
@@ -160,6 +164,8 @@ public struct Vector3 : IEquatable<Vector3>
 
     public static Vector3 operator +(Vector3 left, Vector3 right) => new(left.X + right.X, left.Y + right.Y, left.Z + right.Z);
 
+    public static Vector3 operator -(Vector3 value) => new(-value.X, -value.Y, -value.Z);
+
     public static Vector3 operator -(Vector3 left, Vector3 right) => new(left.X - right.X, left.Y - right.Y, left.Z - right.Z);
 
     public static Vector3 operator *(Vector3 value, float scalar) => new(value.X * scalar, value.Y * scalar, value.Z * scalar);
@@ -214,6 +220,8 @@ public struct Vector4 : IEquatable<Vector4>
     public static Vector4 Identity => new(0f, 0f, 0f, 1f);
 
     public static Vector4 operator +(Vector4 left, Vector4 right) => new(left.X + right.X, left.Y + right.Y, left.Z + right.Z, left.W + right.W);
+
+    public static Vector4 operator -(Vector4 value) => new(-value.X, -value.Y, -value.Z, -value.W);
 
     public static Vector4 operator -(Vector4 left, Vector4 right) => new(left.X - right.X, left.Y - right.Y, left.Z - right.Z, left.W - right.W);
 
