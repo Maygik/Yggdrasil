@@ -175,7 +175,10 @@ float4 PSMain(VSOutput input) : SV_TARGET
     // Combine ambient and diffuse lighting
 
     
-    float3 lighting = Phong > 0.5f ? saturate(AmbientStrength + ((1.0f - AmbientStrength) * lambert)) : input.VertexLighting;
+    // Combine ambient and diffuse lighting
+    // If Phong is enabled, we calculate lighting based on the normal map and light direction per pixel. Otherwise, we use the interpolated vertex lighting from the vertex shader.
+    float3 lighting = Phong > 0.5f ? saturate(AmbientStrength + ((1.0f - AmbientStrength) * lambert)) : saturate(AmbientStrength + ((1.0f - AmbientStrength) * input.VertexLighting));
+
 
     float4 baseSample = HasBaseTexture > 0.5f
         ? BaseTextureMap.Sample(MaterialSampler, input.TexCoord)

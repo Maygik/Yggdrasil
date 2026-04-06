@@ -10,7 +10,7 @@ public sealed class OrbitLightState
 
     public float PitchRadians { get; init; }
 
-    public float AmbientStrength { get; init; } = 0.28f;
+    public float AmbientStrength { get; init; } = 0.5f; // Looks to be about correct for HLMV, impossible to be exact and will could change massively depending on the environment
 
     private static OrbitLightState CreateDefault()
     {
@@ -19,7 +19,7 @@ public sealed class OrbitLightState
         {
             YawRadians = yawRadians,
             PitchRadians = pitchRadians,
-            AmbientStrength = 0.28f
+            AmbientStrength = 0.5f
         };
     }
 }
