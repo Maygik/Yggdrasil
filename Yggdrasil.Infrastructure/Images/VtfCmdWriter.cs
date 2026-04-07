@@ -52,10 +52,24 @@ namespace Yggdrasil.Infrastructure.Images
             };
 
             startInfo.ArgumentList.Add("-silent");
+
+            // Set the input and output paths
             startInfo.ArgumentList.Add("-file");
             startInfo.ArgumentList.Add(request.SourceImagePath);
             startInfo.ArgumentList.Add("-output");
             startInfo.ArgumentList.Add(request.OutputDirectory);
+
+            // Set the max image dimensions and resize mode
+            // (Stops 8k textures turning into 300MB monstrosities that don't work)
+            startInfo.ArgumentList.Add("-resize");
+            startInfo.ArgumentList.Add("-rclampwidth");
+            startInfo.ArgumentList.Add("4096");
+            startInfo.ArgumentList.Add("-rclampheight");
+            startInfo.ArgumentList.Add("4096");
+            startInfo.ArgumentList.Add("-rmethod");
+            startInfo.ArgumentList.Add("BIGGEST");
+
+            // Set the image format, e.g. rgba, dxt5, etc.
             startInfo.ArgumentList.Add("-format");
             startInfo.ArgumentList.Add(ToCommandArgument(request.Format));
             startInfo.ArgumentList.Add("-alphaformat");
