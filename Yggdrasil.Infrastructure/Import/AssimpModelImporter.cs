@@ -35,6 +35,8 @@ namespace Yggdrasil.Infrastructure.Import
             Console.WriteLine($"Importing model from file: {filePath}");
             Assimp.Scene assimpScene = ImportAssimp(filePath);
 
+
+
             Console.WriteLine($"Model imported successfully. Scene has {assimpScene.MeshCount} meshes and {assimpScene.MaterialCount} materials");
 
             Console.WriteLine($"Processing scene data...");
