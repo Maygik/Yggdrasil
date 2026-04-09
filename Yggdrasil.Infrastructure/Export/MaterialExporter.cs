@@ -119,8 +119,9 @@ namespace Yggdrasil.Infrastructure.Export
             }
             else if (!string.IsNullOrEmpty(materialSettings.EmissiveTexture))
             {
+                sb.AppendLine($"\t\"$emissiveblendenabled\" 1"); // Enable emissive blend
                 var emissiveTexturePath = uniqueTextureNames[materialSettings.EmissiveTexture];
-                sb.AppendLine($"\t\"$emissiveblendtexture\" \"{BuildMaterialReferencePath(relativePath, emissiveTexturePath)}\"");
+                sb.AppendLine($"\t\"$emissiveblendbasetexture\" \"{BuildMaterialReferencePath(relativePath, emissiveTexturePath)}\"");
                 if (materialSettings.EmissiveBlendStrength.HasValue)
                 {
                     sb.AppendLine($"\t\"$emissiveblendstrength\" \"{materialSettings.EmissiveBlendStrength.Value}\"");
@@ -130,8 +131,9 @@ namespace Yggdrasil.Infrastructure.Export
                 // 	$emissiveblendflowtexture "dev/null"
 	            //  $emissiveblendscrollvector "[0 0]"
 	            // $emissiveblendtexture "models/callybon/null" <-- Should be internal white
-                sb.AppendLine($"\t\"$emissiveblendflowtexture\" \"{BuildMaterialReferencePath(relativePath, "white")}\"");
+                //sb.AppendLine($"\t\"$emissiveblendflowtexture\" \"{BuildMaterialReferencePath(relativePath, "white")}\"");
                 sb.AppendLine($"\t\"$emissiveblendscrollvector\" \"[0 0]\"");
+                sb.AppendLine($"\t\"emissiveblendflowtexture\" \"dev/null\"");
                 sb.AppendLine($"\t\"$emissiveblendtexture\" \"{BuildMaterialReferencePath(relativePath, "white")}\"");
                 internalsUsed.Add("white");
             }
