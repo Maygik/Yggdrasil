@@ -431,17 +431,6 @@ namespace Yggdrasil.Infrastructure.Import
 
             // Get rootBone's world matrix from the root node
             rootBone.LocalMatrix = rootNode.Transform.ToMatrix4x4();
-
-            // TODO: Add an additional transform for the model as a whole so that we can fix the rotation for models that are exported in the wrong orientation (e.g. lying down instead of standing up).
-            // This is a common issue with fbx exports, where the model is rotated 90 degrees on the X axis.
-            // We can detect this by checking if the root bone has a rotation of 90 degrees on the X axis, and if so, we can apply an additional transform to rotate it back to the correct orientation.
-            // This way we can preserve the original transforms of the bones, which is important for animations to work correctly.
-            // But I don't want to apply this fix to all models, since some models are exported with the correct orientation, and applying the fix to those models would mess up their animations.
-            // Maybe just add UI options for the user to apply this fix if they want, and try to automatically detect if the fix is needed by checking the root bone's rotation?
-            // Alternatively, just a simple "Is not above pelvis by a certain threshold" to show a warning might work
-            // Then scale that threshold based on euclidean distance between them, so like 20% of the distance between head and pelvis
-
-
             // Debug output rootBone transform
             Console.WriteLine($"Root bone: {rootBone.Name}");
             Console.WriteLine($"Local matrix: {rootBone.LocalMatrix.ToHumanString()}");
