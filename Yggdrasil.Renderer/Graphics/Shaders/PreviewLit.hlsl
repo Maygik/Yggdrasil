@@ -149,10 +149,11 @@ float4 PSMain(VSOutput input) : SV_TARGET
     float3 bitangent = normalize(input.Bitangent);
     float3 lightDirection = normalize(-LightDirection);
 
-    // Use the normal map
-    float3 normalSample = HasNormalTexture > 0.5f
-        ? NormalTextureMap.Sample(MaterialSampler, input.TexCoord).rgb
-        : float3(0.5f, 0.5f, 1.0f);
+    // Use the normal map. VertexLitGeneric applies bumped diffuse lighting even when Phong is disabled.
+    float4 normalTextureSample = HasNormalTexture > 0.5f
+        ? NormalTextureMap.Sample(MaterialSampler, input.TexCoord)
+        : float4(0.5f, 0.5f, 1.0f, 1.0f);
+    float3 normalSample = normalTextureSample.rgb;
     
     // Transform the normal from [0, 1] range to [-1, 1] range
     normalSample = (normalSample * 2.0f) - float3(1.0f, 1.0f, 1.0f);
@@ -172,12 +173,10 @@ float4 PSMain(VSOutput input) : SV_TARGET
     }
     float lambert = saturate(lambertDot);
 
-    // Combine ambient and diffuse lighting
-
-    
-    // Combine ambient and diffuse lighting
-    // If Phong is enabled, we calculate lighting based on the normal map and light direction per pixel. Otherwise, we use the interpolated vertex lighting from the vertex shader.
-    float3 lighting = Phong > 0.5f ? saturate(AmbientStrength + ((1.0f - AmbientStrength) * lambert)) : saturate(AmbientStrength + ((1.0f - AmbientStrength) * input.VertexLighting));
+    // Combine ambient and diffuse lighting. Without a normal map, keep the cheaper interpolated
+    // vertex term; with a normal map, use the per-pixel bumped normal regardless of Phong.
+    float diffuseLighting = HasNormalTexture > 0.5f ? lambert : input.VertexLighting;
+    float3 lighting = saturate(AmbientStrength + ((1.0f - AmbientStrength) * diffuseLighting));
 
 
     float4 baseSample = HasBaseTexture > 0.5f
@@ -217,9 +216,7 @@ float4 PSMain(VSOutput input) : SV_TARGET
     if (Phong > 0.5f)
     {
         // Use normal map alpha as strength mask, otherwise 1
-        float phongMask = HasNormalTexture > 0.5f 
-            ? NormalTextureMap.Sample(MaterialSampler, input.TexCoord).a 
-            : 1.0f;
+        float phongMask = normalTextureSample.a;
 
         float boost = PhongBoost;
 
