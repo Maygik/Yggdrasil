@@ -16,6 +16,11 @@ using Yggdrasil.Types;
 
 namespace Yggdrasil.Renderer.Graphics.Shaders;
 
+/// <summary>
+/// Handles loading, resource management and rendering for the main preview shaders used to render the scene geometry,
+/// floor grid and debug lines in the viewport.
+/// The primary vertex and pixel shader are intended to replicate VertexLitGeneric
+/// </summary>
 internal sealed class PreviewShaderFamily : IDisposable
 {
     private readonly SamplerLibrary _samplerLibrary = new();
@@ -56,6 +61,8 @@ internal sealed class PreviewShaderFamily : IDisposable
             var device = deviceResources.Device
                 ?? throw new InvalidOperationException("D3D11 device has not been initialized.");
 
+            // Compile the shaders from file and get the bytecode for creating the shader objects and input layouts
+            // Simple enough shaders that we can compile at runtime without a significant performance hit
             using var vertexShaderBlob = CompileShader("PreviewLit.hlsl", "VSMain", "vs_5_0");
             using var pixelShaderBlob = CompileShader("PreviewLit.hlsl", "PSMain", "ps_5_0");
             using var floorVertexShaderBlob = CompileShader("FloorGrid.hlsl", "VSMain", "vs_5_0");
@@ -71,6 +78,7 @@ internal sealed class PreviewShaderFamily : IDisposable
             var debugLineVertexShaderBytes = GetBlobBytes(debugLineVertexShaderBlob);
             var debugLinePixelShaderBytes = GetBlobBytes(debugLinePixelShaderBlob);
 
+            // Create the shaders
             _vertexShader = device.CreateVertexShader(vertexShaderBytes);
             _pixelShader = device.CreatePixelShader(pixelShaderBytes);
             _floorVertexShader = device.CreateVertexShader(floorVertexShaderBytes);
@@ -80,6 +88,8 @@ internal sealed class PreviewShaderFamily : IDisposable
             _debugLinePixelShader = device.CreatePixelShader(debugLinePixelShaderBytes);
             _inputLayout = device.CreateInputLayout(CreateInputElements(), vertexShaderBytes);
             _debugLineInputLayout = device.CreateInputLayout(CreateDebugLineInputElements(), debugLineVertexShaderBytes);
+
+            // Create buffers for the per-frame and per-object constant data
 
             _perFrameBuffer = device.CreateBuffer(
                 (uint)Marshal.SizeOf<PerFrameConstants>(),
@@ -97,6 +107,8 @@ internal sealed class PreviewShaderFamily : IDisposable
                 ResourceOptionFlags.None,
                 0);
 
+            // Get the default sampler state from the sampler library
+            // We're not supporting changing sampler modes like point sample so we can just use default
             _defaultSampler = _samplerLibrary.GetDefaultSampler(deviceResources);
         }
         catch (Exception ex)
@@ -106,6 +118,7 @@ internal sealed class PreviewShaderFamily : IDisposable
         }
     }
 
+    // Draw the main scene geometry using the primary vertex and pixel shaders
     public void DrawScene(
         DeviceResources deviceResources,
         SwapChainResources swapChainResources,
@@ -140,6 +153,7 @@ internal sealed class PreviewShaderFamily : IDisposable
             stage = "UploadPerFrame";
             var perFrame = CreatePerFrameConstants(cameraState, pixelSize, lightState);
 
+            // Standard per-frame data setup
             deviceContext.UpdateSubresource(in perFrame, _perFrameBuffer!);
             deviceContext.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
             deviceContext.IASetInputLayout(_inputLayout);
@@ -153,6 +167,8 @@ internal sealed class PreviewShaderFamily : IDisposable
                 deviceContext.PSSetSamplers(0, new[] { _defaultSampler });
             }
 
+            // Iterate through the draw items and render each mesh with the appropriate material settings
+            // Effectively iterates through each submesh on each mesh
             for (var i = 0; i < drawItems.Count; i++)
             {
                 var drawItem = drawItems[i];
@@ -169,6 +185,8 @@ internal sealed class PreviewShaderFamily : IDisposable
                     continue;
                 }
 
+                // Set up the per-object constants
+                // World transform and material-based highlight
                 var perObject = new PerObjectConstants
                 {
                     World = PackedMatrix4x4.FromMatrix(modelTransform),
@@ -176,6 +194,7 @@ internal sealed class PreviewShaderFamily : IDisposable
                     IsHovered = IsHovered(drawItem.Mesh.MaterialName, selection) ? 1.0f : 0.0f
                 };
 
+                // Update the per-object buffer and set it, along with the material constants and textures
                 deviceContext.UpdateSubresource(in perObject, _perObjectBuffer!);
                 deviceContext.VSSetConstantBuffers(1, new[] { _perObjectBuffer! });
                 deviceContext.PSSetConstantBuffers(1, new[] { _perObjectBuffer! });
@@ -187,8 +206,11 @@ internal sealed class PreviewShaderFamily : IDisposable
                         ? materialResources.TextureViews
                         : EmptyMaterialTextures);
 
+                // Set the blend, depth/stencil and rasterizer state based on the material's shader key
+                // Translucent, additive and nocull set here
                 ApplyMaterialState(deviceContext, commonStates, materialResources.ShaderKey);
 
+                // For each vertex, draw it
                 var stride = (uint)Marshal.SizeOf<ModelVertex>();
                 const uint offset = 0;
                 deviceContext.IASetVertexBuffers(0, new[] { meshResources.VertexBuffer }, new[] { stride }, new uint[] { offset });
@@ -196,6 +218,7 @@ internal sealed class PreviewShaderFamily : IDisposable
                 deviceContext.DrawIndexed(meshResources.IndexCount, 0, 0);
             }
 
+            // Unbind the textures
             deviceContext.PSSetShaderResources(0, EmptyMaterialTextures);
         }
         catch (Exception ex)
@@ -205,6 +228,7 @@ internal sealed class PreviewShaderFamily : IDisposable
         }
     }
 
+    // Draw the floor grid using the floor vertex and pixel shaders
     public void DrawFloor(
         DeviceResources deviceResources,
         SwapChainResources swapChainResources,
@@ -268,6 +292,7 @@ internal sealed class PreviewShaderFamily : IDisposable
         }
     }
 
+    // Draws the height plane (Semi transparent orange square)
     public void DrawHeightPlane(
         DeviceResources deviceResources,
         SwapChainResources swapChainResources,
@@ -332,6 +357,8 @@ internal sealed class PreviewShaderFamily : IDisposable
         }
     }
 
+    // Draws debug lines using the debug line vertex and pixel shaders
+    // Used for bones
     public void DrawLines(
         DeviceResources deviceResources,
         SwapChainResources swapChainResources,
@@ -392,6 +419,7 @@ internal sealed class PreviewShaderFamily : IDisposable
         }
     }
 
+    // Dispose of all GPU resources used by the shader family.
     public void Dispose()
     {
         _defaultSampler?.Dispose();

@@ -498,6 +498,10 @@ namespace Yggdrasil.Infrastructure.Import
                 
                 MeshGroup meshGroup = new MeshGroup();
                 meshGroup.Name = nodeName;
+                // Clean the name so that it doesn't run into search problems within the QC
+                // Mostly . is a problem
+                meshGroup.Name = meshGroup.Name.Replace('.', '_');
+
                 // Set the local transform of the mesh group to match the node
                 // Else uses normal identity matrix, which *should* be fine
                 meshGroup.LocalMatrix = assimpScene.RootNode.FindNode(nodeName)?.Transform.ToMatrix4x4() ?? new Matrix4x4();

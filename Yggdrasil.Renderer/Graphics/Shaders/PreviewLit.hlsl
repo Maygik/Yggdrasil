@@ -39,18 +39,18 @@ cbuffer PerMaterialConstants : register(b2)
     float EmissiveBlendStrength;                // Used
     float UseEnvMapProbes;                      // 
     float EnvMapContrast;                       // 
-    float Phong;                                // 
+    float Phong;                                // Used
     float3 EnvMapTint;                          // 
-    float RimLight;                             // 
-    float PhongBoost;                           // 
-    float PhongExponent;                        // 
-    float RimLightExponent;                     // 
-    float RimLightBoost;                        // 
-    float3 PhongFresnelRanges;                  // 
+    float RimLight;                             // Used
+    float PhongBoost;                           // Used
+    float PhongExponent;                        // Used
+    float RimLightExponent;                     // Used
+    float RimLightBoost;                        // Used
+    float3 PhongFresnelRanges;                  // Used
     float Adjusted;                             // 
-    float3 PhongTint;                           // 
+    float3 PhongTint;                           // Used
     float MaterialPadding0;                     // 
-    float3 RimLightTint;                        // 
+    float3 RimLightTint;                        // Used, Actual VertexLitGeneric uses PhongTint though
     float MaterialPadding1;                     // 
 };
 
@@ -60,8 +60,8 @@ Texture2D EmissiveTextureMap : register(t2);    // Used
 Texture2D LightWarpTextureMap : register(t3);   // 
 Texture2D EnvMapTextureMap : register(t4);      // 
 Texture2D EnvMapMaskTextureMap : register(t5);  // 
-Texture2D PhongExponentTextureMap : register(t6);   //
-Texture2D PhongMaskTextureMap : register(t7);   // 
+Texture2D PhongExponentTextureMap : register(t6);   // Used
+Texture2D PhongMaskTextureMap : register(t7);   // Used
 SamplerState MaterialSampler : register(s0);
 
 struct VSInput
@@ -239,6 +239,13 @@ float4 PSMain(VSOutput input) : SV_TARGET
         litColor += specular * PhongTint;
     }
 
+    if (RimLight > 0.5f)
+    {
+        float3 viewDirection = normalize(CameraPosition - input.WorldPosition);
+        float rimDot = 1.0f - saturate(dot(normal, viewDirection));
+        float rimFactor = pow(rimDot, RimLightExponent) * RimLightBoost;
+        litColor += rimFactor * RimLightTint;
+    }
 
     float3 hoverColor = float3(0.28f, 0.70f, 1.00f);
     float3 finalColor = lerp(litColor, hoverColor, saturate(HighlightMix));
