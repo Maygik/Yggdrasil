@@ -89,7 +89,7 @@ internal sealed class TextureCache : IDisposable
         Clear();
     }
 
-    // Loads a texture into the cache from disk using WIC for decoding and D3D11 for texture creation. Returns null if loading fails.
+    // Loads a texture into the cache from disk, decoding with WIC or the TGA fallback before uploading it to D3D11.
     private unsafe ID3D11ShaderResourceView? LoadTexture(DeviceResources deviceResources, string absolutePath)
     {
         var device = deviceResources.Device
@@ -97,6 +97,26 @@ internal sealed class TextureCache : IDisposable
         var deviceContext = deviceResources.DeviceContext
             ?? throw new InvalidOperationException("D3D11 device context has not been initialized.");
 
+        TexturePixelData? textureData;
+        if (IsTgaTexture(absolutePath))
+        {
+            textureData = TgaTextureDecoder.Load(absolutePath);
+        }
+        else
+        {
+            textureData = LoadWicTexture(absolutePath);
+        }
+
+        if (textureData is null)
+        {
+            return null;
+        }
+
+        return CreateTexture(device, deviceContext, textureData.Value);
+    }
+
+    private unsafe TexturePixelData? LoadWicTexture(string absolutePath)
+    {
         using var fileHandle = File.OpenHandle(absolutePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         var nativeHandle = new UIntPtr(unchecked((ulong)fileHandle.DangerousGetHandle().ToInt64()));
         using var decoder = GetImagingFactory().CreateDecoderFromFileHandle(
@@ -114,7 +134,7 @@ internal sealed class TextureCache : IDisposable
             return null;
         }
 
-        var rowPitch = checked((uint)(width * 4));
+        var rowPitch = checked(width * 4u);
         var slicePitch = checked(rowPitch * height);
         var pixelBytes = new byte[checked((int)slicePitch)];
         var sourceRect = new Vortice.Mathematics.RectI(0, 0, checked((int)width), checked((int)height));
@@ -122,11 +142,25 @@ internal sealed class TextureCache : IDisposable
         fixed (byte* pixelBytePtr = pixelBytes)
         {
             formatConverter.CopyPixels(sourceRect, rowPitch, slicePitch, (nint)pixelBytePtr);
+        }
 
+        return new TexturePixelData(width, height, pixelBytes);
+    }
+
+    private unsafe ID3D11ShaderResourceView CreateTexture(
+        ID3D11Device device,
+        ID3D11DeviceContext deviceContext,
+        TexturePixelData textureData)
+    {
+        var rowPitch = checked(textureData.Width * 4u);
+        var slicePitch = checked(rowPitch * textureData.Height);
+
+        fixed (byte* pixelBytePtr = textureData.PixelBytes)
+        {
             var textureDescription = new Texture2DDescription(
                 Format.R8G8B8A8_UNorm,
-                width,
-                height,
+                textureData.Width,
+                textureData.Height,
                 1,
                 1,
                 BindFlags.ShaderResource,
@@ -141,6 +175,13 @@ internal sealed class TextureCache : IDisposable
 
             return device.CreateShaderResourceView(texture);
         }
+    }
+
+    private static bool IsTgaTexture(string absolutePath)
+    {
+        var extension = Path.GetExtension(absolutePath);
+        return string.Equals(extension, ".tga", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(extension, ".targa", StringComparison.OrdinalIgnoreCase);
     }
 
     private IWICImagingFactory GetImagingFactory()

@@ -5,6 +5,7 @@ namespace Yggdrasil.Renderer.Graphics.Textures;
 
 internal static class TgaTextureDecoder
 {
+    // Loads a TGA image from the specified absolute file path and returns its pixel data in RGBA format.
     public static TexturePixelData Load(string absolutePath)
     {
         using var stream = File.OpenRead(absolutePath);
@@ -26,6 +27,7 @@ internal static class TgaTextureDecoder
         return new TexturePixelData(header.Width, header.Height, pixelBytes);
     }
 
+    // Performs validation checks on the TGA header to ensure it represents a supported and well-formed image.
     private static void ValidateHeader(TgaHeader header)
     {
         if (header.Width == 0 || header.Height == 0)
@@ -77,6 +79,8 @@ internal static class TgaTextureDecoder
         }
     }
 
+    // Reads the color map entries from the TGA file and returns them as an array of TgaColor structures.
+    // Each color map entry is read according to the specified entry size and may include an alpha bit if applicable.
     private static TgaColor[] ReadColorMap(BinaryReader reader, TgaHeader header)
     {
         var colorMap = new TgaColor[header.ColorMapLength];
@@ -89,14 +93,18 @@ internal static class TgaTextureDecoder
         return colorMap;
     }
 
+    // Decodes the pixel data from the TGA file, handling both uncompressed and RLE-compressed formats.
     private static byte[] DecodePixels(BinaryReader reader, TgaHeader header, TgaColor[]? colorMap)
     {
         var totalPixels = checked((int)header.Width * (int)header.Height);
         var pixelBytes = new byte[checked(totalPixels * 4)];
         var pixelIndex = 0;
 
+        // For each pixel in the image
         while (pixelIndex < totalPixels)
         {
+            // If the image is not run-length encoded, read a single pixel and write it to the output array.
+            // This means that each pixel value is stored directly in the file without compression
             if (!header.IsRunLengthEncoded)
             {
                 var color = ReadPixel(reader, header, colorMap);
@@ -105,6 +113,7 @@ internal static class TgaTextureDecoder
                 continue;
             }
 
+            // If the image is run-length encoded, read a packet header to determine the packet type and length.
             var packetHeader = reader.ReadByte();
             var packetLength = (packetHeader & 0x7F) + 1;
             if (pixelIndex + packetLength > totalPixels)
@@ -112,6 +121,9 @@ internal static class TgaTextureDecoder
                 throw new InvalidDataException("TGA RLE packet exceeds image bounds.");
             }
 
+            // If the high bit of the packet header is set, this is a run-length packet where a single pixel value is repeated for the length of the packet.
+            // This means that the next pixel value read from the file should be duplicated for the number of pixels specified by the packet length.
+            // E.g. pixels are R R R R R R R R B B B so we repeat R for the first 8 pixels in one pass, and then write B for the last three pixels in the next pass.
             if ((packetHeader & 0x80) != 0)
             {
                 var color = ReadPixel(reader, header, colorMap);
@@ -124,6 +136,9 @@ internal static class TgaTextureDecoder
                 continue;
             }
 
+            // If the high bit of the packet header is not set, this is a raw packet where each pixel value is read directly from the file for the length of the packet.
+            // This means that the next set of pixel values read from the file should be written directly to the output array for the number of pixels specified by the packet length.
+            // E.g. pixels are R G B R G B R G B so we read each pixel value directly for all 9 pixels in one pass.
             for (var i = 0; i < packetLength; i++)
             {
                 var color = ReadPixel(reader, header, colorMap);
@@ -135,6 +150,7 @@ internal static class TgaTextureDecoder
         return pixelBytes;
     }
 
+    // Reads a single pixel from the TGA file according to the image type and color map information.
     private static TgaColor ReadPixel(BinaryReader reader, TgaHeader header, TgaColor[]? colorMap)
     {
         if (header.IsTrueColor)
@@ -167,6 +183,7 @@ internal static class TgaTextureDecoder
         return colorMap[normalizedIndex];
     }
 
+    // Reads a direct color pixel from the TGA file based on the specified pixel depth and whether to use an alpha bit for 16-bit formats.
     private static TgaColor ReadDirectColor(BinaryReader reader, byte pixelDepth, bool useAlphaBit)
     {
         return pixelDepth switch
@@ -179,6 +196,7 @@ internal static class TgaTextureDecoder
         };
     }
 
+    // Reads a grayscale pixel from the TGA file based on the specified pixel depth, creating a TgaColor with equal RGB components and an alpha value.
     private static TgaColor ReadGrayscaleColor(BinaryReader reader, byte pixelDepth)
     {
         return pixelDepth switch
@@ -189,6 +207,7 @@ internal static class TgaTextureDecoder
         };
     }
 
+    // Reads a packed color value from a 15 or 16-bit TGA pixel, extracting the red, green, blue, and optional alpha components based on the specified format.
     private static TgaColor ReadPackedColor(ushort packedValue, bool useAlphaBit)
     {
         var blue = Expand5To8(packedValue & 0x1F);
@@ -201,6 +220,9 @@ internal static class TgaTextureDecoder
         return new TgaColor(red, green, blue, alpha);
     }
 
+    // Reads a 24-bit RGB color from the TGA file,
+    // where each color component is stored as a separate byte in the order of blue, green, and red,
+    // and returns a TgaColor with an alpha value of 255.
     private static TgaColor ReadRgb24Color(BinaryReader reader)
     {
         var blue = reader.ReadByte();
@@ -209,6 +231,9 @@ internal static class TgaTextureDecoder
         return new TgaColor(red, green, blue, 255);
     }
 
+    // Reads a 32-bit RGBA color from the TGA file,
+    // where each color component is stored as a separate byte in the order of blue, green, red, and alpha,
+    // and returns a TgaColor with the corresponding RGBA values.
     private static TgaColor ReadRgba32Color(BinaryReader reader)
     {
         var blue = reader.ReadByte();
